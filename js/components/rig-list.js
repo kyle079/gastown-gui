@@ -21,10 +21,22 @@ export function renderRigList(container, rigs) {
 
   if (!rigs || rigs.length === 0) {
     container.innerHTML = `
-      <div class="empty-state">
-        <span class="material-icons empty-icon">folder_off</span>
-        <h3>No Rigs</h3>
-        <p>Add a rig to get started with multi-agent development</p>
+      <div class="empty-state enhanced">
+        <div class="empty-state-icon-wrapper">
+          <span class="material-icons">folder_special</span>
+        </div>
+        <h3>No Rigs Yet</h3>
+        <p>A rig connects your GitHub repository to Gas Town so AI agents can work on your code.</p>
+        <div class="empty-state-actions">
+          <button class="btn btn-primary" data-modal-open="new-rig">
+            <span class="material-icons">add</span>
+            Add Your First Rig
+          </button>
+        </div>
+        <div class="empty-state-hint">
+          <span class="material-icons">info</span>
+          <span>Tip: You can add multiple rigs for different projects</span>
+        </div>
       </div>
     `;
     return;

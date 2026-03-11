@@ -1188,6 +1188,67 @@ select {
   color: var(--text-muted);
 }
 
+.empty-state.enhanced {
+  padding: var(--space-xxl) var(--space-xl);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-xl);
+  max-width: 500px;
+  margin: var(--space-xl) auto;
+}
+
+.empty-state-icon-wrapper {
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(88, 166, 255, 0.1) 0%, rgba(163, 113, 247, 0.1) 100%);
+  border-radius: var(--radius-xl);
+  margin-bottom: var(--space-lg);
+}
+
+.empty-state-icon-wrapper .material-icons {
+  font-size: 40px;
+  color: var(--accent-primary);
+}
+
+.empty-state.enhanced h3 {
+  font-size: var(--text-xl);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-sm) 0;
+}
+
+.empty-state.enhanced p {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  max-width: 400px;
+  margin: 0 0 var(--space-lg) 0;
+  line-height: 1.6;
+}
+
+.empty-state-actions {
+  display: flex;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-lg);
+}
+
+.empty-state-hint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  padding: var(--space-sm) var(--space-md);
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+}
+
+.empty-state-hint .material-icons {
+  font-size: 14px;
+}
+
 .empty-state-icon {
   font-size: 48px;
   margin-bottom: var(--space-md);
@@ -5858,6 +5919,131 @@ select {
 .health-unknown {
   --health-color-rgb: 107, 114, 128;
   --health-color: #6b7280;
+}
+
+/* Getting Started Banner */
+.getting-started-banner {
+  background: linear-gradient(135deg, rgba(88, 166, 255, 0.1) 0%, rgba(163, 113, 247, 0.1) 100%);
+  border: 1px solid rgba(88, 166, 255, 0.3);
+  border-radius: var(--radius-xl);
+  padding: var(--space-xl);
+  margin-bottom: var(--space-lg);
+  animation: fadeIn 0.5s ease;
+}
+
+.getting-started-content {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  margin-bottom: var(--space-lg);
+}
+
+.getting-started-icon {
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+  border-radius: var(--radius-lg);
+  flex-shrink: 0;
+}
+
+.getting-started-icon .material-icons {
+  font-size: 32px;
+  color: white;
+}
+
+.getting-started-text {
+  flex: 1;
+}
+
+.getting-started-text h2 {
+  font-size: var(--text-xl);
+  font-weight: 700;
+  margin: 0 0 var(--space-xs) 0;
+  color: var(--text-primary);
+}
+
+.getting-started-text p {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.getting-started-actions {
+  display: flex;
+  gap: var(--space-sm);
+  flex-shrink: 0;
+}
+
+.btn-lg {
+  padding: var(--space-md) var(--space-xl);
+  font-size: var(--text-base);
+}
+
+.getting-started-steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-md);
+  padding: var(--space-md);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+}
+
+.getting-started-steps .step {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.getting-started-steps .step-number {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-primary);
+  color: white;
+  border-radius: var(--radius-full);
+  font-weight: 600;
+  font-size: var(--text-sm);
+  flex-shrink: 0;
+}
+
+.getting-started-steps .step-text {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.getting-started-steps .step-arrow {
+  color: var(--text-muted);
+}
+
+.getting-started-steps .step-arrow .material-icons {
+  font-size: 20px;
+}
+
+@media (max-width: 1024px) {
+  .getting-started-content {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .getting-started-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .getting-started-steps {
+    flex-wrap: wrap;
+  }
+  
+  .getting-started-steps .step-arrow {
+    display: none;
+  }
 }
 
 /* Metrics Grid - 4-column balanced design */

@@ -182,15 +182,14 @@ function renderDashboard(status, health) {
   const agents = state.get('agents') || [];
   const mail = state.get('mail') || [];
 
-  // Calculate metrics
   const metrics = calculateMetrics(rigs, convoys, work, agents, mail);
   const healthStatus = calculateHealthStatus(health);
+  const isEmpty = rigs.length === 0 && convoys.length === 0 && work.length === 0;
 
   container.innerHTML = `
-    <!-- Health Banner -->
+    ${isEmpty ? renderGettingStarted() : ''}
     ${renderHealthBanner(healthStatus)}
 
-    <!-- Metrics Grid -->
     <div class="dashboard-metrics">
       ${renderMetricCard('local_shipping', 'Active Convoys', metrics.activeConvoys, metrics.totalConvoys, 'convoys', '#3b82f6')}
       ${renderMetricCard('task_alt', 'Open Work', metrics.openWork, metrics.totalWork, 'work', '#22c55e')}
@@ -198,9 +197,7 @@ function renderDashboard(status, health) {
       ${renderMetricCard('mail', 'Unread Mail', metrics.unreadMail, metrics.totalMail, 'mail', '#f59e0b')}
     </div>
 
-    <!-- Main Content Grid -->
     <div class="dashboard-grid">
-      <!-- Quick Actions -->
       <div class="dashboard-card quick-actions">
         <div class="card-header">
           <span class="material-icons">bolt</span>
@@ -211,7 +208,6 @@ function renderDashboard(status, health) {
         </div>
       </div>
 
-      <!-- Agent Status -->
       <div class="dashboard-card agent-overview">
         <div class="card-header">
           <span class="material-icons">monitoring</span>
@@ -222,7 +218,6 @@ function renderDashboard(status, health) {
         </div>
       </div>
 
-      <!-- Recent Work -->
       <div class="dashboard-card recent-work">
         <div class="card-header">
           <span class="material-icons">history</span>
@@ -233,7 +228,6 @@ function renderDashboard(status, health) {
         </div>
       </div>
 
-      <!-- Rig Overview -->
       <div class="dashboard-card rig-overview">
         <div class="card-header">
           <span class="material-icons">folder_special</span>
@@ -246,9 +240,54 @@ function renderDashboard(status, health) {
     </div>
   `;
 
-  // Add event listeners for quick actions
   setupQuickActionHandlers();
 }
+
+function renderGettingStarted() {
+  return `
+    <div class="getting-started-banner">
+      <div class="getting-started-content">
+        <div class="getting-started-icon">
+          <span class="material-icons">rocket_launch</span>
+        </div>
+        <div class="getting-started-text">
+          <h2>Welcome to Gas Town!</h2>
+          <p>Get started by connecting your first project (rig) and creating work for your AI agents.</p>
+        </div>
+        <div class="getting-started-actions">
+          <button class="btn btn-primary btn-lg" data-modal-open="new-rig">
+            <span class="material-icons">add</span>
+            Add Your First Rig
+          </button>
+          <button class="btn btn-secondary" onclick="window.gastown?.startOnboarding?.()">
+            <span class="material-icons">school</span>
+            Show Setup Guide
+          </button>
+        </div>
+      </div>
+      <div class="getting-started-steps">
+        <div class="step">
+          <div class="step-number">1</div>
+          <div class="step-text">Connect a GitHub repo</div>
+        </div>
+        <div class="step-arrow"><span class="material-icons">arrow_forward</span></div>
+        <div class="step">
+          <div class="step-number">2</div>
+          <div class="step-text">Create a work item</div>
+        </div>
+        <div class="step-arrow"><span class="material-icons">arrow_forward</span></div>
+        <div class="step">
+          <div class="step-number">3</div>
+          <div class="step-text">Assign to an agent</div>
+        </div>
+        <div class="step-arrow"><span class="material-icons">arrow_forward</span></div>
+        <div class="step">
+          <div class="step-number">4</div>
+          <div class="step-text">Watch it work!</div>
+        </div>
+      </div>
+    </div>
+  `;
 
 /**
  * Calculate dashboard metrics

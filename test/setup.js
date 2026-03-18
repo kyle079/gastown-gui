@@ -113,8 +113,41 @@ export async function waitForConnection(page) {
  * Click a navigation tab and wait for view to switch
  */
 export async function switchView(page, viewName) {
-  await page.waitForSelector(`[data-view="${viewName}"]`, { timeout: 5000 });
-  await page.click(`[data-view="${viewName}"]`);
+  const selector = `[data-view="${viewName}"]`;
+  await page.waitForSelector(selector, { timeout: 5000 });
+
+  const clickVisibleTarget = async () => {
+    return page.evaluate((target) => {
+      const nodes = Array.from(document.querySelectorAll(`[data-view="${target}"]`));
+      const visible = nodes.find((el) => {
+        const rect = el.getBoundingClientRect();
+        const style = window.getComputedStyle(el);
+        return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none';
+      });
+      if (!visible) return false;
+      visible.click();
+      return true;
+    }, viewName);
+  };
+
+  let clicked = await clickVisibleTarget();
+  if (!clicked) {
+    await page.waitForSelector('.nav-dropdown-toggle', { timeout: 5000 });
+    await page.click('.nav-dropdown-toggle');
+    const dropdownItemSelector = `.nav-dropdown.open .nav-dropdown-item[data-view="${viewName}"]`;
+    await page.waitForSelector(dropdownItemSelector, { timeout: 5000 });
+    await page.evaluate((target) => {
+      const item = document.querySelector(`.nav-dropdown-item[data-view="${target}"]`);
+      if (!item) return;
+      item.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    }, viewName);
+    clicked = true;
+  }
+
+  if (!clicked) {
+    throw new Error(`Unable to click a visible nav item for view: ${viewName}`);
+  }
+
   await page.waitForSelector(`#view-${viewName}.active`, { timeout: 5000 });
 }
 

@@ -61,49 +61,60 @@
         <div class="nav-tabs">
           <button class="nav-tab active" data-view="dashboard" data-tooltip="System overview - health, metrics, and quick actions.">
             <span class="material-icons">dashboard</span>
-            Overview
+            <span class="nav-label">Overview</span>
           </button>
           <button class="nav-tab" data-view="convoys" data-tooltip="Groups of related work items. Track progress across multiple tasks.">
             <span class="material-icons">local_shipping</span>
-            Convoys
+            <span class="nav-label">Convoys</span>
           </button>
           <button class="nav-tab" data-view="work" data-tooltip="Individual tasks (beads) and their completion status.">
             <span class="material-icons">task_alt</span>
-            Work
+            <span class="nav-label">Work</span>
           </button>
           <button class="nav-tab" data-view="agents" data-tooltip="Worker agents: Mayor, Witness, Refinery, and Polecats.">
             <span class="material-icons">groups</span>
-            Agents
+            <span class="nav-label">Agents</span>
           </button>
           <button class="nav-tab" data-view="rigs" data-tooltip="Git projects with their agents and GitHub integration.">
             <span class="material-icons">folder_special</span>
-            Rigs
+            <span class="nav-label">Rigs</span>
           </button>
-          <button class="nav-tab" data-view="crews" data-tooltip="Teams of polecats for coordinated work.">
-            <span class="material-icons">groups</span>
-            Crews
-          </button>
-          <button class="nav-tab" data-view="prs" data-tooltip="GitHub Pull Requests across all connected repositories.">
-            <span class="material-icons">merge_type</span>
-            PRs
-          </button>
-          <button class="nav-tab" data-view="formulas" data-tooltip="Workflow templates for repeatable tasks.">
-            <span class="material-icons">science</span>
-            Formulas
-          </button>
-          <button class="nav-tab" data-view="issues" data-tooltip="GitHub Issues across connected repositories.">
-            <span class="material-icons">bug_report</span>
-            Issues
-          </button>
-          <button class="nav-tab" data-view="mail" data-tooltip="Messages between agents and the human overseer.">
-            <span class="material-icons">mail</span>
-            Mail
-            <span class="badge hidden" id="mail-badge">0</span>
-          </button>
-          <button class="nav-tab" data-view="health" data-tooltip="System health check - verify Gas Town configuration.">
-            <span class="material-icons">health_and_safety</span>
-            Health
-          </button>
+          <div class="nav-dropdown">
+            <button class="nav-tab nav-dropdown-toggle" data-tooltip="More options">
+              <span class="material-icons">more_horiz</span>
+              <span class="nav-label">More</span>
+              <span class="material-icons nav-dropdown-arrow">expand_more</span>
+            </button>
+            <div class="nav-dropdown-menu">
+              <button class="nav-dropdown-item" data-view="crews" data-tooltip="Teams of polecats for coordinated work.">
+                <span class="material-icons">groups</span>
+                Crews
+              </button>
+              <button class="nav-dropdown-item" data-view="formulas" data-tooltip="Workflow templates for repeatable tasks.">
+                <span class="material-icons">science</span>
+                Formulas
+              </button>
+              <div class="nav-dropdown-divider"></div>
+              <button class="nav-dropdown-item" data-view="prs" data-tooltip="GitHub Pull Requests across all connected repositories.">
+                <span class="material-icons">merge_type</span>
+                Pull Requests
+              </button>
+              <button class="nav-dropdown-item" data-view="issues" data-tooltip="GitHub Issues across connected repositories.">
+                <span class="material-icons">bug_report</span>
+                Issues
+              </button>
+              <div class="nav-dropdown-divider"></div>
+              <button class="nav-dropdown-item" data-view="mail" data-tooltip="Messages between agents and the human overseer.">
+                <span class="material-icons">mail</span>
+                Mail
+                <span class="badge hidden" id="mail-badge">0</span>
+              </button>
+              <button class="nav-dropdown-item" data-view="health" data-tooltip="System health check - verify Gas Town configuration.">
+                <span class="material-icons">health_and_safety</span>
+                Health
+              </button>
+            </div>
+          </div>
         </div>
       </div>
       <div class="header-right">

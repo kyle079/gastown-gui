@@ -214,28 +214,57 @@ async function init() {
 
 }
 
-// Navigation setup
 function setupNavigation() {
   navTabs.forEach(tab => {
     tab.addEventListener('click', () => {
       const viewId = tab.dataset.view;
-      switchView(viewId);
+      if (viewId) {
+        switchView(viewId);
+      }
+    });
+  });
+
+  document.querySelectorAll('.nav-dropdown-item').forEach(item => {
+    item.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const viewId = item.dataset.view;
+      if (viewId) {
+        switchView(viewId);
+        document.querySelectorAll('.nav-dropdown').forEach(d => d.classList.remove('open'));
+      }
+    });
+  });
+
+  document.querySelectorAll('.nav-dropdown-toggle').forEach(toggle => {
+    toggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const dropdown = toggle.closest('.nav-dropdown');
+      if (dropdown) {
+        dropdown.classList.toggle('open');
+      }
+    });
+  });
+
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.nav-dropdown').forEach(d => {
+      d.classList.remove('open');
     });
   });
 }
 
 function switchView(viewId) {
-  // Update tabs
   navTabs.forEach(tab => {
     tab.classList.toggle('active', tab.dataset.view === viewId);
   });
 
-  // Update views
+  document.querySelectorAll('.nav-dropdown-item').forEach(item => {
+    item.classList.toggle('active', item.dataset.view === viewId);
+  });
+
   views.forEach(view => {
     view.classList.toggle('active', view.id === `view-${viewId}`);
   });
 
-  // Load view-specific data
   if (viewId === 'dashboard') {
     loadDashboard();
   } else if (viewId === 'mail') {

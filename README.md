@@ -62,6 +62,68 @@ gastown-gui doctor
 
 ---
 
+## Nix / NixOS
+
+### Build with Nix flake
+
+```bash
+nix build .#gastown-gui
+./result/bin/gastown-gui start
+```
+
+### Run as a NixOS service
+
+Import the module from this repository's flake and enable it:
+
+```nix
+{
+  inputs.gastown-gui.url = "github:web3dev1337/gastown-gui";
+
+  outputs = { self, nixpkgs, gastown-gui, ... }: {
+    nixosConfigurations.my-host = nixpkgs.lib.nixosSystem {
+      system = "x86_64-linux";
+      modules = [
+        gastown-gui.nixosModules.deployment
+        ({
+          services.gastown-gui = {
+            enable = true;
+            host = "127.0.0.1";
+            port = 7667;
+            openFirewall = false; # keep false when reverse-proxying locally
+
+            # Optional: add runtime tools to PATH for service subprocesses
+            # gtPackage = pkgs.gastown-gt;
+            # beadsPackage = pkgs.beads;
+
+            # Defaults: create and run as system user/group "gastown"
+            # user = "gastown";
+            # group = "gastown";
+            # createUser = true;
+            # createGroup = true;
+
+            # Optional: where your Gas Town rigs live
+            # gtRoot = "/var/lib/gastown/gt";
+
+            # Optional: extra env vars
+            # environment = { CORS_ORIGINS = "http://localhost:3000"; };
+          };
+        })
+      ];
+    };
+  };
+}
+```
+
+Then rebuild your system:
+
+```bash
+sudo nixos-rebuild switch --flake .#my-host
+```
+
+Service hardening defaults are enabled in the module (for example `NoNewPrivileges`, `PrivateTmp`, `ProtectSystem`).
+
+---
+
 ## Features
 
 - **Rig Management** - Add, view, and organize project repositories

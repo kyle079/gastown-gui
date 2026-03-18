@@ -11,7 +11,7 @@ FRONTEND: js/ - Browser SPA (vanilla JS, no framework)
 BACKEND:  server/ - Refactored backend modules (services, gateways, routes)
 STYLES:   css/ - CSS custom properties + component styles
 TESTS:    test/ - Vitest unit + integration, Puppeteer E2E
-CONFIG:   vitest.config.js, vitest.unit.config.js, package.json
+CONFIG:   vitest.config.js, vitest.unit.config.js, package.json, flake.nix
 ASSETS:   assets/ - Favicons + screenshots
 DOCS:     refactoring-analysis/ - Refactor plans/reports, CLI-COMPATIBILITY.md
 ```
@@ -183,6 +183,8 @@ vitest.config.js - Main test config (all tests)
 vitest.unit.config.js - Unit-only test config
 bin/cli.js - CLI entry point (gastown-gui command)
 scripts/extract_user_prompts.mjs - Sanitized prompt log builder
+flake.nix - Flake outputs for package/app + NixOS module export
+nix/deployment.nix - NixOS module defining services.gastown-gui
 ```
 
 ## Documentation

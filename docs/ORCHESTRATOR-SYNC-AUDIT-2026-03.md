@@ -1,177 +1,125 @@
-# Orchestrator Sync Audit - March 2026
+# Gastown Upstream Sync Audit - March 2026
 
 ## Executive Summary
 
-If your orchestrator last synced with `gastown-gui` around the last major merge window on `2026-02-12`, use commit `92863ea` as the primary baseline. That merge window ended with GUI version `0.9.4`. Current `origin/master` is `b375753` / `v0.9.5`.
+This audit answers the actual sync question: what does `gastown-gui` need in order to stay aligned with upstream [`steveyegge/gastown`](https://github.com/steveyegge/gastown) and [`steveyegge/beads`](https://github.com/steveyegge/beads)?
 
-Between `0.9.4` and `0.9.5`, there are no new backend API contracts, no new WebSocket message types, and no new Gastown/Beads command compatibility fixes in the GUI server. The meaningful deltas are:
+Current conclusion:
 
-- Nix / NixOS packaging and service deployment support.
-- UI navigation changes that move several views under a `More` dropdown.
-- Empty-state and onboarding affordances for new users.
-- Test helper changes required for UI automation that assumed every view was a top-level tab.
-
-If your orchestrator is already aligned to the `2026-02-12` CLI-compatibility work, this is a low-risk sync. Most environments do not need server code changes. They may need deployment config changes and browser automation updates.
-
-## How The Baseline Was Inferred
-
-The "few weeks ago" sync point most likely maps to the big merge cluster on `2026-02-12`:
-
-- `d03cb14` - merge of PR `#9`, package version still `0.9.2`
-- `daf4261` - merge of PR `#10`, package version `0.9.3`
-- `92863ea` - merge of PR `#11`, package version `0.9.4`
-
-That is the last substantial merge window before the March work. The March changes start on `2026-03-03` and run through `2026-03-19`.
+- The February CLI-compatibility work already covered the major command/flag drift.
+- The main remaining upstream mismatch was tmux session naming.
+- Upstream `gastown` no longer assumes `gt-<rig>-<agent>` session names. It uses town-level `hq-*` names plus rig-specific prefixes loaded from `mayor/rigs.json`.
+- That mismatch is now fixed on this branch.
+- After this fix, the GUI is materially in sync with current upstream `gastown` for the server-side surfaces it uses.
 
 ## Upstream Reference Point
 
-This audit was checked against the upstream projects the GUI wraps:
+This audit was checked against these upstream heads:
 
-- Gastown: <https://github.com/steveyegge/gastown>
-- Beads: <https://github.com/steveyegge/beads>
+- `steveyegge/gastown` at `3b4460b` (`2026-03-18`)
+- `steveyegge/beads` at `27b24a2` (`2026-03-18`)
 
-For local command mapping history, see [CLI-COMPATIBILITY.md](../CLI-COMPATIBILITY.md).
+The key upstream session-name sources are:
 
-## Changes Since `92863ea` (`v0.9.4`)
+- `/tmp/gastown-upstream-e6xIMD/internal/session/names.go`
+- `/tmp/gastown-upstream-e6xIMD/internal/session/identity.go`
+- `/tmp/gastown-upstream-e6xIMD/internal/session/registry.go`
 
-### 1. Deployment and Packaging
+## What Changed Upstream That Matters To The GUI
 
-New Nix support was added in [flake.nix](../flake.nix) and [nix/deployment.nix](../nix/deployment.nix#L1). This introduces:
+### 1. Session names are now prefix-based, not rigid `gt-*`
 
-- A flake package and app entrypoint.
-- A NixOS module exposing `services.gastown-gui.*`.
-- Optional `gtPackage` and `beadsPackage` service-path injection so the service can find both CLIs.
-- Configurable `user`, `group`, `createUser`, and `createGroup`.
-- Optional `GT_ROOT` injection with an absolute-path assertion.
-- Systemd hardening defaults like `NoNewPrivileges`, `PrivateTmp`, and `ProtectSystem`.
+Upstream now resolves rig-level tmux session names from the rig prefix registry in `mayor/rigs.json`.
 
-Relevant references:
+Current upstream patterns:
 
-- [README.md](../README.md#L65) documents flake build and NixOS service setup.
-- [nix/deployment.nix](../nix/deployment.nix#L16) adds `gtPackage`.
-- [nix/deployment.nix](../nix/deployment.nix#L22) adds `beadsPackage`.
-- [nix/deployment.nix](../nix/deployment.nix#L46) adds service identity controls.
-- [nix/deployment.nix](../nix/deployment.nix#L70) adds `gtRoot`.
-- [nix/deployment.nix](../nix/deployment.nix#L112) builds the runtime `PATH`.
-- [nix/deployment.nix](../nix/deployment.nix#L119) defines the hardened `systemd` service.
+- Mayor: `hq-mayor`
+- Deacon: `hq-deacon`
+- Witness: `<prefix>-witness`
+- Refinery: `<prefix>-refinery`
+- Crew: `<prefix>-crew-<name>`
+- Polecat: `<prefix>-<name>`
 
-### 2. UI Navigation Restructure
+The rig prefix is not necessarily `gt`. It is resolved per rig from `mayor/rigs.json`, with fallback behavior if a rig is unknown.
 
-The header nav was compacted. Several views are no longer first-class top-level tabs:
+### 2. The GUI still had hardcoded legacy assumptions
 
-- `crews`
-- `formulas`
-- `prs`
-- `issues`
-- `mail`
-- `health`
+Before this branch, the GUI still assumed old-style tmux naming in multiple places:
 
-They now live under a `More` dropdown in [index.html](../index.html#L61). The app wiring in [js/app.js](../js/app.js#L218) was updated to:
+- `server/domain/values/AgentPath.js` generated `gt-<rig>-<agent>`.
+- `server/services/StatusService.js` parsed `tmux ls` output as `gt-rig-agent`.
+- `server.js` used hardcoded session names like `gt-mayor`, `gt-${name}`, and `gt-${target}` for status, output, restart, stop, and nudge behavior.
 
-- Handle dropdown-item clicks.
-- Toggle dropdown open/closed state.
-- Mark the dropdown toggle active when a dropdown view is selected.
-- Mirror unread mail count onto the new `more-badge`.
+That made the GUI drift out of sync with upstream `gastown` even though the CLI commands themselves were mostly already compatible.
 
-This was also stabilized after PR `#13` so dropdown views actually switch correctly:
+## Fix Implemented On This Branch
 
-- [js/app.js](../js/app.js#L256)
-- [test/setup.js](../test/setup.js#L115)
+This branch adds registry-aware session handling that mirrors the upstream model.
 
-### 3. New-User UX Additions
+### New code
 
-The dashboard now shows a getting-started banner when the system is empty:
+- `server/domain/session/SessionNames.js`
+  - reads `mayor/rigs.json` first and falls back to `rigs.json`
+  - caches prefix registry data
+  - maps addresses to current tmux session names
+  - parses current tmux session names back into agent identities
+  - preserves compatibility for legacy `rig/polecats/name` addressing
 
-- [js/components/dashboard.js](../js/components/dashboard.js#L185)
-- [js/components/dashboard.js](../js/components/dashboard.js#L246)
+### Updated code
 
-The rigs view empty state now includes a first-rig CTA:
+- `server/domain/values/AgentPath.js`
+  - now requires a rig prefix when deriving a tmux session name
+- `server/services/StatusService.js`
+  - now parses tmux sessions through the registry-aware parser
+  - correctly marks witness, refinery, and polecat hooks as running under current upstream names
+- `server.js`
+  - resolves mayor output through `hq-mayor`
+  - resolves polecat stop/restart/output/transcript through the rig prefix registry
+  - resolves nudge targets through current upstream session naming
+  - resolves service status/down fallback behavior through the same registry
+  - clears the session registry cache after rig add/remove operations
 
-- [js/components/rig-list.js](../js/components/rig-list.js#L22)
+### Tests added or updated
 
-To make those dynamically rendered CTA buttons work, modal opening was changed from static binding to delegated click handling:
+- `test/unit/sessionNames.test.js`
+- `test/unit/agentPath.test.js`
+- `test/unit/statusService.test.js`
 
-- [js/components/modals.js](../js/components/modals.js#L102)
-
-### 4. Non-Functional Metadata
-
-These do not require orchestrator changes:
-
-- Sponsor links added to [README.md](../README.md#L3)
-- Version bump to `0.9.5` in [package.json](../package.json#L1)
-
-## Required Changes In The Orchestrator
-
-### Required If You Deploy Through Nix / NixOS
-
-If your orchestrator consumes the GUI as a Nix package or NixOS service, update it to match the new service contract in [nix/deployment.nix](../nix/deployment.nix#L1):
-
-- Pass both `gtPackage` and `beadsPackage` if the service environment does not already expose `gt` and `bd`.
-- Set `user` and `group` explicitly if you do not want the default `gastown:gastown`.
-- Set `createUser = false` and `createGroup = false` if you already manage the service account elsewhere.
-- Ensure `gtRoot` is absolute if you set it.
-- Expect the service to run with stronger systemd hardening than before.
-
-If you do not use the Nix/NixOS path, this section is not required.
-
-### Required If You Have Browser Automation Or Screenshot Flows
-
-Any orchestration that clicks top navigation items by assuming they are always visible must be updated. Since [index.html](../index.html#L82), `prs`, `mail`, `issues`, `formulas`, `crews`, and `health` may require opening the dropdown first.
-
-Minimum change:
-
-- Do not assume `[data-view=\"prs\"]` is a visible top-level tab.
-- Do not assume `[data-view="prs"]` is a visible top-level tab.
-- Use a visible-element click strategy or explicitly open `.nav-dropdown-toggle` first.
-- Mirror the logic in [test/setup.js](../test/setup.js#L115) if you have Puppeteer or Playwright flows.
-
-Without this change, automation can report false failures even though the app is working.
-
-## Recommended Changes In The Orchestrator
-
-- If you surface guided onboarding or first-run screenshots, account for the new welcome banner and rig empty-state cards in [js/components/dashboard.js](../js/components/dashboard.js#L246) and [js/components/rig-list.js](../js/components/rig-list.js#L22).
-- If you rely on unread mail badges in the header, note that unread counts now also appear on `#more-badge` in [js/app.js](../js/app.js#L767).
-- If you had custom modal-open hooks bound only at page load, align them with the delegated click behavior in [js/components/modals.js](../js/components/modals.js#L102).
-
-## No Changes Required
-
-Assuming your local sync already includes the `2026-02-12` compatibility work, no new changes are required for:
-
-- REST API endpoints
-- WebSocket message schema
-- CLI flag compatibility with upstream Gastown / Beads
-- Server-side request payloads
-- Security model around CLI execution
-
-There were no new backend route files, gateway changes, or `server.js` behavior changes after `92863ea`.
-
-## Important Caveat If Your Real Baseline Was Older Than `0.9.4`
-
-If your orchestrator actually stopped at `0.9.2` or earlier, then you are missing the February CLI-compatibility work, which was material:
-
-- Current Gastown command mappings
-- Current Beads command mappings
-- Witness/refinery rig handling fixes
-- XSS and review-driven fixes from the February review cycle
-
-In that case, do not treat this as a March-only sync. You need the February compatibility set first. The main references are:
-
-- [CLI-COMPATIBILITY.md](../CLI-COMPATIBILITY.md)
-- merge `d03cb14`
-- merge `daf4261`
-- merge `92863ea`
-
-## Verification
-
-Current `origin/master` was validated locally with the full test suite:
+Verification result:
 
 - `npm test`
-- Result: `36` test files passed, `316` tests passed
+- `37` test files passed
+- `321` tests passed
+
+## Remaining Required Sync Work
+
+No additional required backend sync work was found after the session-prefix fix.
+
+Specifically, I did not find a newer upstream `gastown` or `beads` CLI contract change that currently forces another GUI server change in these areas:
+
+- convoy flows
+- sling/escalate flows
+- mail flows
+- formula run flows
+- beads create/list/show/update/close/defer flows
+- rig and crew flows already covered by the February compatibility pass
+
+In practical terms: if the goal is “make this GUI work correctly with current upstream Gastown,” the tmux session-name alignment was the material missing piece.
+
+## Optional Hardening
+
+These are optional, not blockers for upstream compatibility:
+
+- The GUI can eventually switch any text-parsed rig listing to `gt rig list --json` where appropriate.
+- More direct integration tests against a real upstream `gastown` checkout would reduce future drift risk.
+- A dedicated compatibility test that exercises non-`gt` rig prefixes would be useful beyond the current unit coverage.
 
 ## Recommendation
 
-Sync your orchestrator to current `origin/master` if your last integration point was around `2026-02-12`. Treat this as:
+Treat this branch as the upstream sync branch.
 
-- Deployment update required only for Nix/NixOS consumers.
-- UI automation update required for dropdown navigation consumers.
-- No backend integration migration required.
+After this change set:
+
+- the GUI’s server-side session handling matches current upstream `gastown` semantics
+- the previously identified session-name drift is resolved
+- no additional required upstream CLI migration was identified for the GUI surfaces currently in use

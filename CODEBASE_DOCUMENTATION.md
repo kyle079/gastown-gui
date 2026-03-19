@@ -13,7 +13,7 @@ STYLES:   css/ - CSS custom properties + component styles
 TESTS:    test/ - Vitest unit + integration, Puppeteer E2E
 CONFIG:   vitest.config.js, vitest.unit.config.js, package.json, flake.nix
 ASSETS:   assets/ - Favicons + screenshots
-DOCS:     refactoring-analysis/ - Refactor plans/reports, CLI-COMPATIBILITY.md
+DOCS:     docs/, refactoring-analysis/, CLI-COMPATIBILITY.md
 ```
 
 ## Backend — Entry & App
@@ -190,6 +190,7 @@ nix/deployment.nix - NixOS module defining services.gastown-gui
 ## Documentation
 
 ```
+docs/ - Project-specific audits and review writeups
 CLI-COMPATIBILITY.md - gt/bd CLI command compatibility audit
 refactoring-analysis/ - Refactor plans, reports, and analysis docs
 refactoring-analysis/trace/ - Sanitized prompt/trace exports

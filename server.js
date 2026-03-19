@@ -20,6 +20,15 @@ import readline from 'readline';
 import { fileURLToPath } from 'url';
 
 import { createApp } from './server/app/createApp.js';
+import {
+  buildSessionRegistryFromTown,
+  clearSessionRegistryCache,
+  mayorSessionName,
+  parseTmuxSessions,
+  runningAddressesFromTmux,
+  sessionNameForAgentAddress,
+  sessionNameForService,
+} from './server/domain/session/SessionNames.js';
 import { AgentPath } from './server/domain/values/AgentPath.js';
 import { CommandRunner } from './server/infrastructure/CommandRunner.js';
 import { CacheRegistry } from './server/infrastructure/CacheRegistry.js';
@@ -247,25 +256,15 @@ function addMayorMessage(target, message, status, response = null) {
   return entry;
 }
 
-// Get running tmux sessions for polecats
-async function getRunningPolecats() {
+async function getSessionRegistry() {
+  return buildSessionRegistryFromTown(GT_ROOT);
+}
+
+async function getRunningAgentAddresses() {
   try {
+    const registry = await getSessionRegistry();
     const { stdout } = await execFileAsync('tmux', ['ls']);
-    const sessions = new Set();
-    // Parse tmux ls output: "gt-rig-polecat: 1 windows (created ...)"
-    for (const line of String(stdout || '').split('\n')) {
-      const match = line.match(/^(gt-[^:]+):/);
-      if (match) {
-        // Convert "gt-hytopia-map-compression-capable" to "hytopia-map-compression/capable"
-        const parts = match[1].replace('gt-', '').split('-');
-        if (parts.length >= 2) {
-          const name = parts.pop();
-          const rig = parts.join('-');
-          sessions.add(`${rig}/${name}`);
-        }
-      }
-    }
-    return sessions;
+    return runningAddressesFromTmux(stdout, registry);
   } catch {
     return new Set();
   }
@@ -591,7 +590,8 @@ app.post('/api/nudge', async (req, res) => {
 
   // Default to mayor if no target specified
   const nudgeTarget = target || 'mayor';
-  const sessionName = `gt-${nudgeTarget}`;
+  const registry = await getSessionRegistry();
+  const sessionName = sessionNameForAgentAddress(nudgeTarget, registry) || `gt-${nudgeTarget}`;
 
   try {
     // Check if target session is running
@@ -770,9 +770,9 @@ app.get('/api/agents', async (req, res) => {
     if (cached) return res.json(cached);
   }
 
-  const [result, runningPolecats] = await Promise.all([
+  const [result, runningAddresses] = await Promise.all([
     executeGT(['status', '--json', '--fast'], { timeout: 30000 }),
-    getRunningPolecats()
+    getRunningAgentAddresses()
   ]);
 
   if (result.success) {
@@ -781,15 +781,15 @@ app.get('/api/agents', async (req, res) => {
 
     // Enhance agents with running state
     for (const agent of agents) {
-      agent.running = runningPolecats.has(agent.address?.replace(/\/$/, ''));
+      agent.running = runningAddresses.has(agent.address?.replace(/\/$/, ''));
     }
 
     // Also include running polecats from rigs
     const polecats = [];
     for (const rig of data?.rigs || []) {
       for (const hook of rig.hooks || []) {
-        const isRunning = runningPolecats.has(hook.agent) ||
-          runningPolecats.has(hook.agent?.replace(/\//, '/polecats/'));
+        const isRunning = runningAddresses.has(hook.agent) ||
+          runningAddresses.has(hook.agent?.replace(/\//, '/polecats/'));
         polecats.push({
           name: hook.agent,
           rig: rig.name,
@@ -801,7 +801,7 @@ app.get('/api/agents', async (req, res) => {
       }
     }
 
-    const response = { agents, polecats, runningPolecats: Array.from(runningPolecats) };
+    const response = { agents, polecats, runningPolecats: Array.from(runningAddresses) };
     setCache('agents', response, CACHE_TTL.agents);
     res.json(response);
   } else {
@@ -812,7 +812,7 @@ app.get('/api/agents', async (req, res) => {
 // Get Mayor output (tmux buffer)
 app.get('/api/mayor/output', async (req, res) => {
   const lines = parseInt(req.query.lines) || 100;
-  const sessionName = 'gt-mayor';
+  const sessionName = mayorSessionName();
 
   try {
     const output = await getPolecatOutput(sessionName, lines);
@@ -839,7 +839,8 @@ app.get('/api/polecat/:rig/:name/output', async (req, res) => {
   const agent = requireAgentPath(req, res);
   if (!agent) return;
   const lines = parseInt(req.query.lines) || 50;
-  const sessionName = agent.toSessionName();
+  const registry = await getSessionRegistry();
+  const sessionName = agent.toSessionName(registry.prefixForRig(agent.rig.value));
 
   const output = await getPolecatOutput(sessionName, lines);
   if (output !== null) {
@@ -855,7 +856,8 @@ app.get('/api/polecat/:rig/:name/transcript', async (req, res) => {
   if (!agent) return;
   const rig = agent.rig.value;
   const name = agent.name.value;
-  const sessionName = agent.toSessionName();
+  const registry = await getSessionRegistry();
+  const sessionName = agent.toSessionName(registry.prefixForRig(rig));
 
   try {
     // First try to get tmux output (full history)
@@ -945,7 +947,8 @@ app.post('/api/polecat/:rig/:name/stop', async (req, res) => {
   if (!agent) return;
   const rig = agent.rig.value;
   const name = agent.name.value;
-  const sessionName = agent.toSessionName();
+  const registry = await getSessionRegistry();
+  const sessionName = agent.toSessionName(registry.prefixForRig(rig));
 
   console.log(`[Agent] Stopping ${rig}/${name}...`);
 
@@ -973,7 +976,8 @@ app.post('/api/polecat/:rig/:name/restart', async (req, res) => {
   const rig = agent.rig.value;
   const name = agent.name.value;
   const agentPath = agent.toString();
-  const sessionName = agent.toSessionName();
+  const registry = await getSessionRegistry();
+  const sessionName = agent.toSessionName(registry.prefixForRig(rig));
 
   console.log(`[Agent] Restarting ${agentPath}...`);
 
@@ -1106,6 +1110,8 @@ app.post('/api/rigs', async (req, res) => {
   const hasError = result.data && (result.data.includes('Error:') || result.data.includes('error:'));
 
   if (result.success && !hasError) {
+    clearSessionRegistryCache(GT_ROOT);
+
     // Create agent beads for witness and refinery (targeted, not gt doctor --fix)
     const agentRoles = ['witness', 'refinery'];
     for (const role of agentRoles) {
@@ -1171,6 +1177,7 @@ app.delete('/api/rigs/:name', async (req, res) => {
   const result = await executeGT(['rig', 'remove', name]);
 
   if (result.success) {
+    clearSessionRegistryCache(GT_ROOT);
     broadcast({ type: 'rig_removed', data: { name } });
     res.json({ success: true, name, raw: result.data });
   } else {
@@ -1437,6 +1444,7 @@ app.post('/api/service/:name/down', async (req, res) => {
   console.log(`[Service] Stopping ${name}...`);
 
   try {
+    const registry = await getSessionRegistry();
     const args = [name, 'stop'];
     if (rig) args.push(rig);
     const result = await executeGT(args, { timeout: 10000 });
@@ -1446,8 +1454,9 @@ app.post('/api/service/:name/down', async (req, res) => {
       res.json({ success: true, service: name, message: `${name} stopped`, raw: result.data });
     } else {
       // Try killing tmux session directly
-      const sessionName = `gt-${name}`;
+      const sessionName = sessionNameForService({ name, rig, registry });
       try {
+        if (!sessionName) throw new Error('No direct tmux session fallback available');
         await execFileAsync('tmux', ['kill-session', '-t', sessionName]);
         broadcast({ type: 'service_stopped', data: { service: name } });
         res.json({ success: true, service: name, message: `${name} stopped via tmux` });
@@ -1511,21 +1520,30 @@ app.post('/api/service/:name/restart', async (req, res) => {
 // Get service status
 app.get('/api/service/:name/status', async (req, res) => {
   const { name } = req.params;
+  const rig = req.query.rig;
 
   try {
-    const runningPolecats = await getRunningPolecats();
-    const sessionName = `gt-${name}`;
+    const registry = await getSessionRegistry();
+    const sessionName = sessionNameForService({ name, rig, registry });
 
-    // Check if service has a tmux session
     let running = false;
-    try {
-      const { stdout } = await execFileAsync('tmux', ['ls']);
-      running = String(stdout || '').includes(sessionName);
-    } catch {
-      running = false;
+    let resolvedSession = sessionName;
+    const { stdout } = await execFileAsync('tmux', ['ls']);
+
+    if (sessionName) {
+      running = await isSessionRunning(sessionName);
+    } else {
+      const identities = parseTmuxSessions(stdout, registry);
+      const match = identities.find((identity) => {
+        if (identity.role !== String(name || '').toLowerCase()) return false;
+        if (!rig) return true;
+        return identity.rig === rig;
+      });
+      running = !!match;
+      resolvedSession = match?.session || null;
     }
 
-    res.json({ service: name, running, session: running ? sessionName : null });
+    res.json({ service: name, running, session: running ? resolvedSession : null });
   } catch (err) {
     res.json({ service: name, running: false, error: err.message });
   }

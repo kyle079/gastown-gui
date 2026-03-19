@@ -12,10 +12,22 @@ describe('StatusService', () => {
 
   beforeAll(async () => {
     gtRoot = await fsPromises.mkdtemp(path.join(os.tmpdir(), 'gastown-status-'));
+    await fsPromises.mkdir(path.join(gtRoot, 'mayor'), { recursive: true });
     await fsPromises.mkdir(path.join(gtRoot, 'rig-one'), { recursive: true });
     await fsPromises.writeFile(
       path.join(gtRoot, 'rig-one', 'config.json'),
       JSON.stringify({ git_url: 'https://github.com/example/rig-one' }),
+      'utf8',
+    );
+    await fsPromises.writeFile(
+      path.join(gtRoot, 'mayor', 'rigs.json'),
+      JSON.stringify({
+        rigs: {
+          'rig-one': {
+            beads: { prefix: 'r1' },
+          },
+        },
+      }),
       'utf8',
     );
   });
@@ -24,7 +36,7 @@ describe('StatusService', () => {
     await fsPromises.rm(gtRoot, { recursive: true, force: true });
   });
 
-  it('enriches rigs with git_url and hook.running based on tmux sessions', async () => {
+  it('enriches rigs with git_url and hook.running based on current tmux session names', async () => {
     const cache = new CacheRegistry();
     const gtGateway = {
       calls: 0,
@@ -38,7 +50,10 @@ describe('StatusService', () => {
             rigs: [
               {
                 name: 'rig-one',
-                hooks: [{ agent: 'rig-one/agent-a', role: 'refinery' }],
+                hooks: [
+                  { agent: 'rig-one/agent-a', role: 'polecat' },
+                  { agent: 'rig-one/witness', role: 'witness' },
+                ],
               },
             ],
           },
@@ -46,7 +61,7 @@ describe('StatusService', () => {
       },
     };
     const tmuxGateway = {
-      listSessions: async () => 'gt-rig-one-agent-a: 1 windows (created)\ngt-mayor: 1 windows\n',
+      listSessions: async () => 'r1-agent-a: 1 windows (created)\nr1-witness: 1 windows\nhq-mayor: 1 windows\n',
     };
 
     const service = new StatusService({ gtGateway, tmuxGateway, cache, gtRoot });
@@ -55,6 +70,7 @@ describe('StatusService', () => {
     expect(gtGateway.calls).toBe(1);
     expect(status.rigs[0].git_url).toBe('https://github.com/example/rig-one');
     expect(status.rigs[0].hooks[0].running).toBe(true);
+    expect(status.rigs[0].hooks[1].running).toBe(true);
     expect(status.runningPolecats).toEqual(['rig-one/agent-a']);
   });
 
@@ -116,4 +132,3 @@ describe('StatusService', () => {
     expect(second.rigs[0].git_url).toBe('https://github.com/example/rig-one');
   });
 });
-

@@ -13,7 +13,7 @@ STYLES:   css/ - CSS custom properties + component styles
 TESTS:    test/ - Vitest unit + integration, Puppeteer E2E
 CONFIG:   vitest.config.js, vitest.unit.config.js, package.json, flake.nix
 ASSETS:   assets/ - Favicons + screenshots
-DOCS:     refactoring-analysis/ - Refactor plans/reports, CLI-COMPATIBILITY.md
+DOCS:     docs/, refactoring-analysis/, CLI-COMPATIBILITY.md
 ```
 
 ## Backend — Entry & App
@@ -31,6 +31,8 @@ server/app/createApp.js - Express app factory with CORS config
 ## Backend — Domain Values
 
 ```
+server/domain/session/SessionNames.js - Upstream-compatible tmux session naming + rigs.json prefix registry
+
 server/domain/values/AgentPath.js - Validates rig/agent path pairs
 └─ Enforces SafeSegment on both segments
 
@@ -160,8 +162,9 @@ test/integration/endpoints.test.js - API endpoint contract tests
 test/integration/websocket.test.js - WebSocket lifecycle tests
 test/integration/cache.test.js - Cache invalidation tests
 
-test/unit/ - 31 unit test files covering:
+test/unit/ - 32 unit test files covering:
 ├─ Domain values: safeSegment, agentPath
+├─ Session naming: sessionNames
 ├─ Gateways: gtGateway, bdGateway, githubGateway, gitGateway, tmuxGateway
 ├─ Infrastructure: cacheRegistry, commandRunner, eventBus
 ├─ Services: statusService, targetService, githubService, convoyService,
@@ -190,6 +193,7 @@ nix/deployment.nix - NixOS module defining services.gastown-gui
 ## Documentation
 
 ```
+docs/ - Project-specific audits and review writeups
 CLI-COMPATIBILITY.md - gt/bd CLI command compatibility audit
 refactoring-analysis/ - Refactor plans, reports, and analysis docs
 refactoring-analysis/trace/ - Sanitized prompt/trace exports

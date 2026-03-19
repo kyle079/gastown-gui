@@ -19,8 +19,11 @@ export class AgentPath {
     return `${this.rig}/${this.name}`;
   }
 
-  toSessionName() {
-    return `gt-${this.rig}-${this.name}`;
+  toSessionName(rigPrefix) {
+    if (!rigPrefix) {
+      throw new Error('AgentPath.toSessionName requires rigPrefix');
+    }
+    return `${rigPrefix}-${this.name}`;
   }
 
   equals(other) {
@@ -29,4 +32,3 @@ export class AgentPath {
       && this.name.value === other.name.value;
   }
 }
-

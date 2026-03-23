@@ -130,6 +130,22 @@ function setCache(key, data, ttl) {
   cache.set(key, { data, expires: Date.now() + ttl });
 }
 
+/**
+ * Parse rig names from `gt rig list` text output.
+ * Handles both legacy "  rigname" and current "🟢 rigname" / "🛑 rigname" formats.
+ */
+function parseRigNames(text) {
+  const rigs = [];
+  for (const line of text.split('\n')) {
+    // Match "  rigname" (2-space indent) or "emoji rigname" (status indicator prefix)
+    const match = line.match(/^(?:\s{1,2}|\S+\s+)([a-zA-Z0-9_-]+)$/);
+    if (match) {
+      rigs.push({ name: match[1] });
+    }
+  }
+  return rigs;
+}
+
 // Rig config cache TTL (5 minutes - rig configs rarely change)
 const RIG_CONFIG_TTL = 300000;
 
@@ -1064,20 +1080,22 @@ app.get('/api/setup/status', async (req, res) => {
     status.workspace_initialized = false;
   }
 
-  // Get rigs
+  // Get rigs — prefer --json output, fall back to text parsing
   try {
-    const rigResult = await executeGT(['rig', 'list']);
+    const rigResult = await executeGT(['rig', 'list', '--json']);
     if (rigResult.success) {
-      // Parse text output
-      const rigs = [];
-      const lines = rigResult.data.split('\n');
-      for (const line of lines) {
-        const match = line.match(/^  ([a-zA-Z0-9_-]+)$/);
-        if (match) {
-          rigs.push({ name: match[1] });
+      try {
+        const parsed = JSON.parse(rigResult.data);
+        status.rigs = parsed.map(r => ({ name: r.name }));
+      } catch {
+        // JSON parse failed — fall back to text parsing
+        const textResult = await executeGT(['rig', 'list']);
+        if (textResult.success) {
+          status.rigs = parseRigNames(textResult.data);
+        } else {
+          status.rigs = [];
         }
       }
-      status.rigs = rigs;
     }
   } catch {
     status.rigs = [];
@@ -1138,7 +1156,7 @@ app.post('/api/rigs', async (req, res) => {
   }
 });
 
-// List rigs
+// List rigs — prefer --json output, fall back to text parsing
 app.get('/api/rigs', async (req, res) => {
   // Check cache
   if (req.query.refresh !== 'true') {
@@ -1146,19 +1164,24 @@ app.get('/api/rigs', async (req, res) => {
     if (cached) return res.json(cached);
   }
 
-  const result = await executeGT(['rig', 'list']);
+  const result = await executeGT(['rig', 'list', '--json']);
 
   if (result.success) {
-    // Parse text output: "  rigname\n    Polecats: 0..."
-    const rigs = [];
-    const lines = result.data.split('\n');
-    for (const line of lines) {
-      // Rig names are indented with 2 spaces, not 4
-      const match = line.match(/^  ([a-zA-Z0-9_-]+)$/);
-      if (match) {
-        rigs.push({ name: match[1] });
-      }
+    try {
+      const parsed = JSON.parse(result.data);
+      const rigs = parsed.map(r => ({ name: r.name }));
+      setCache('rigs', rigs, CACHE_TTL.rigs);
+      res.json(rigs);
+      return;
+    } catch {
+      // JSON parse failed — fall through to text parsing
     }
+  }
+
+  // Fallback: text parsing
+  const textResult = await executeGT(['rig', 'list']);
+  if (textResult.success) {
+    const rigs = parseRigNames(textResult.data);
     setCache('rigs', rigs, CACHE_TTL.rigs);
     res.json(rigs);
   } else {

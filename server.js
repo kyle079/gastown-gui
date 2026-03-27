@@ -32,6 +32,11 @@ import {
 import { AgentPath } from './server/domain/values/AgentPath.js';
 import { CommandRunner } from './server/infrastructure/CommandRunner.js';
 import { CacheRegistry } from './server/infrastructure/CacheRegistry.js';
+import {
+  DEFAULT_BD_FALLBACK_PATHS,
+  DEFAULT_GT_FALLBACK_PATHS,
+  resolveExecutable,
+} from './server/infrastructure/ExecutableResolver.js';
 import { BDGateway } from './server/gateways/BDGateway.js';
 import { GTGateway } from './server/gateways/GTGateway.js';
 import { GitHubGateway } from './server/gateways/GitHubGateway.js';
@@ -60,10 +65,20 @@ const PORT = process.env.GASTOWN_PORT || 7667;
 const HOST = process.env.HOST || '127.0.0.1';
 const HOME = process.env.HOME || os.homedir();
 const GT_ROOT = process.env.GT_ROOT || path.join(HOME, 'gt');
+const GT_EXECUTABLE = resolveExecutable({
+  command: 'gt',
+  envVarName: 'GT_BIN',
+  fallbackPaths: DEFAULT_GT_FALLBACK_PATHS,
+});
+const BD_EXECUTABLE = resolveExecutable({
+  command: 'bd',
+  envVarName: 'BD_BIN',
+  fallbackPaths: DEFAULT_BD_FALLBACK_PATHS,
+});
 
 const commandRunner = new CommandRunner();
-const gtGateway = new GTGateway({ runner: commandRunner, gtRoot: GT_ROOT });
-const bdGateway = new BDGateway({ runner: commandRunner, gtRoot: GT_ROOT });
+const gtGateway = new GTGateway({ runner: commandRunner, gtRoot: GT_ROOT, executable: GT_EXECUTABLE });
+const bdGateway = new BDGateway({ runner: commandRunner, gtRoot: GT_ROOT, executable: BD_EXECUTABLE });
 const tmuxGateway = new TmuxGateway({ runner: commandRunner });
 const backendCache = new CacheRegistry();
 const convoyService = new ConvoyService({
@@ -467,11 +482,11 @@ async function getPolecatOutput(sessionName, lines = 50) {
 
 // Execute a Gas Town command
 async function executeGT(args, options = {}) {
-  const cmd = `gt ${args.join(' ')}`;
+  const cmd = `${GT_EXECUTABLE} ${args.join(' ')}`;
   console.log(`[GT] Executing: ${cmd}`);
 
   try {
-    const { stdout, stderr } = await execFileAsync('gt', args, {
+    const { stdout, stderr } = await execFileAsync(GT_EXECUTABLE, args, {
       cwd: options.cwd || GT_ROOT,
       timeout: options.timeout || 30000,
       env: { ...process.env, ...options.env }
@@ -506,14 +521,14 @@ async function executeGT(args, options = {}) {
 
 // Execute a Beads command
 async function executeBD(args, options = {}) {
-  const cmd = `bd ${args.join(' ')}`;
+  const cmd = `${BD_EXECUTABLE} ${args.join(' ')}`;
   console.log(`[BD] Executing: ${cmd}`);
 
   // Set BEADS_DIR to ensure bd finds the database
   const beadsDir = path.join(GT_ROOT, '.beads');
 
   try {
-    const { stdout } = await execFileAsync('bd', args, {
+    const { stdout } = await execFileAsync(BD_EXECUTABLE, args, {
       cwd: options.cwd || GT_ROOT,
       timeout: options.timeout || 30000,
       env: { ...process.env, BEADS_DIR: beadsDir }
@@ -1174,7 +1189,7 @@ app.get('/api/setup/status', async (req, res) => {
 
   // Check gt
   try {
-    const gtResult = await execFileAsync('gt', ['version'], { timeout: 5000 });
+    const gtResult = await execFileAsync(GT_EXECUTABLE, ['version'], { timeout: 5000 });
     status.gt_installed = true;
     status.gt_version = String(gtResult.stdout || '').trim().split('\n')[0];
   } catch {
@@ -1183,7 +1198,7 @@ app.get('/api/setup/status', async (req, res) => {
 
   // Check bd
   try {
-    const bdResult = await execFileAsync('bd', ['version'], { timeout: 5000 });
+    const bdResult = await execFileAsync(BD_EXECUTABLE, ['version'], { timeout: 5000 });
     status.bd_installed = true;
     status.bd_version = String(bdResult.stdout || '').trim().split('\n')[0];
   } catch {
@@ -1713,6 +1728,18 @@ registerGitHubRoutes(app, { gitHubService });
 
 // Start activity stream
 let activityProcess = null;
+let activityRestartTimer = null;
+
+function scheduleActivityRestart() {
+  if (clients.size === 0) return;
+  if (activityRestartTimer) return;
+  activityRestartTimer = setTimeout(() => {
+    activityRestartTimer = null;
+    if (clients.size > 0) {
+      startActivityStream();
+    }
+  }, 5000);
+}
 
 function startActivityStream() {
   if (activityProcess) return;
@@ -1720,7 +1747,7 @@ function startActivityStream() {
   console.log('[WS] Starting activity stream...');
 
   // Use gt feed for comprehensive activity (beads + gt events + convoys)
-  activityProcess = spawn('gt', ['feed', '--plain', '--follow'], {
+  activityProcess = spawn(GT_EXECUTABLE, ['feed', '--plain', '--follow'], {
     cwd: GT_ROOT
   });
 
@@ -1738,13 +1765,16 @@ function startActivityStream() {
     console.error(`[BD Activity] stderr: ${data}`);
   });
 
+  activityProcess.on('error', (error) => {
+    console.error(`[BD Activity] Process error: ${error.message}`);
+    activityProcess = null;
+    scheduleActivityRestart();
+  });
+
   activityProcess.on('close', (code) => {
     console.log(`[BD Activity] Process exited with code ${code}`);
     activityProcess = null;
-    // Restart after delay if clients connected
-    if (clients.size > 0) {
-      setTimeout(startActivityStream, 5000);
-    }
+    scheduleActivityRestart();
   });
 }
 
@@ -1816,9 +1846,15 @@ wss.on('connection', (ws) => {
     clients.delete(ws);
 
     // Stop activity stream if no clients
-    if (clients.size === 0 && activityProcess) {
-      activityProcess.kill();
-      activityProcess = null;
+    if (clients.size === 0) {
+      if (activityRestartTimer) {
+        clearTimeout(activityRestartTimer);
+        activityRestartTimer = null;
+      }
+      if (activityProcess) {
+        activityProcess.kill();
+        activityProcess = null;
+      }
     }
   });
 

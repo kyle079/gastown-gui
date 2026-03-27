@@ -7,15 +7,16 @@ function parseJsonOrNull(text) {
 }
 
 export class GTGateway {
-  constructor({ runner, gtRoot }) {
+  constructor({ runner, gtRoot, executable = 'gt' }) {
     if (!runner?.exec) throw new Error('GTGateway requires a runner with exec()');
     if (!gtRoot) throw new Error('GTGateway requires gtRoot');
     this._runner = runner;
     this._gtRoot = gtRoot;
+    this._executable = executable;
   }
 
   async exec(args, options = {}) {
-    return this._runner.exec('gt', args, { cwd: this._gtRoot, ...options });
+    return this._runner.exec(this._executable, args, { cwd: this._gtRoot, ...options });
   }
 
   async status({ fast = true, allowExitCodes } = {}) {

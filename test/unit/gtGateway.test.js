@@ -31,6 +31,18 @@ describe('GTGateway', () => {
     });
   });
 
+  it('uses a custom gt executable when provided', async () => {
+    const runner = new FakeRunner();
+    const gateway = new GTGateway({
+      runner,
+      gtRoot: '/tmp/gt',
+      executable: '/opt/homebrew/bin/gt',
+    });
+
+    await gateway.exec(['status']);
+    expect(runner.calls[0].command).toBe('/opt/homebrew/bin/gt');
+  });
+
   it('status() builds correct args and parses JSON', async () => {
     const runner = new FakeRunner();
     runner.queue({ ok: true, exitCode: 0, stdout: '{"rigs":[]}', stderr: '', error: null, signal: null });

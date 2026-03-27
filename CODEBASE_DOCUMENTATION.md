@@ -159,6 +159,7 @@ test/mock-server.js - Mock Express server mimicking gt CLI responses
 test/e2e.test.js - Puppeteer browser tests (real server + browser)
 test/integration.test.js - Legacy integration tests
 test/integration/endpoints.test.js - API endpoint contract tests
+test/integration/cli-compatibility.test.js - Real server + stubbed CLI coverage for gt/bd old/new command fallback behavior
 test/integration/rig-parsing-fallback.test.js - Real server + stubbed CLI coverage for rig list fallback/emoji parsing
 test/integration/websocket.test.js - WebSocket lifecycle tests
 test/integration/cache.test.js - Cache invalidation tests

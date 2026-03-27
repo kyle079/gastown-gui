@@ -524,6 +524,119 @@ async function executeBD(args, options = {}) {
   }
 }
 
+const GT_UNKNOWN_SESSION_COMMAND_PATTERNS = [
+  /unknown command\s+"?session"?/i,
+  /unknown command:\s*session/i,
+];
+
+const GT_UNKNOWN_SESSION_SUBCOMMAND_PATTERNS = [
+  /unknown command\s+"?start"?\s+for\s+"?gt session"?/i,
+  /unknown command\s+"?stop"?\s+for\s+"?gt session"?/i,
+  /unknown command\s+"?restart"?\s+for\s+"?gt session"?/i,
+];
+
+const GT_UNKNOWN_POLECAT_WAKE_PATTERNS = [
+  /unknown command\s+"?wake"?\s+for\s+"?gt polecat"?/i,
+];
+
+const BD_UNKNOWN_AGENT_FLAG_PATTERNS = [
+  /unknown flag:\s*--agent-rig/i,
+  /unknown flag:\s*--role-type/i,
+];
+
+function commandResultText(result) {
+  return `${result?.error || ''}\n${result?.data || ''}`;
+}
+
+function matchesAnyPattern(text, patterns = []) {
+  return patterns.some((pattern) => pattern.test(text));
+}
+
+async function executeWithFallback(executor, attempts, options = {}) {
+  let lastResult = { success: false, error: 'No command attempts configured' };
+  for (const attempt of attempts) {
+    const result = await executor(attempt.args, options);
+    if (result.success) return result;
+    lastResult = result;
+    const text = commandResultText(result);
+    if (matchesAnyPattern(text, attempt.retryOn || [])) continue;
+    return result;
+  }
+  return lastResult;
+}
+
+async function startPolecatCompat(rig, name) {
+  const address = `${rig}/${name}`;
+  return executeWithFallback(executeGT, [
+    {
+      args: ['session', 'start', address],
+      retryOn: [
+        ...GT_UNKNOWN_SESSION_COMMAND_PATTERNS,
+        ...GT_UNKNOWN_SESSION_SUBCOMMAND_PATTERNS,
+      ],
+    },
+    {
+      args: ['polecat', 'wake', address],
+      retryOn: GT_UNKNOWN_POLECAT_WAKE_PATTERNS,
+    },
+    {
+      args: ['sling', '--rig', rig, '--agent', name],
+    },
+  ], { timeout: 30000 });
+}
+
+async function restartPolecatCompat(rig, name, sessionName) {
+  const address = `${rig}/${name}`;
+  const restartResult = await executeGT(['session', 'restart', address], { timeout: 30000 });
+  if (restartResult.success) return restartResult;
+
+  const restartText = commandResultText(restartResult);
+  const shouldFallback = matchesAnyPattern(restartText, [
+    ...GT_UNKNOWN_SESSION_COMMAND_PATTERNS,
+    ...GT_UNKNOWN_SESSION_SUBCOMMAND_PATTERNS,
+  ]);
+  if (!shouldFallback) return restartResult;
+
+  // Legacy fallback path: clean up any running tmux session and re-run start flow.
+  if (sessionName) {
+    try {
+      await execFileAsync('tmux', ['kill-session', '-t', sessionName]);
+    } catch {
+      // Session may not exist; safe to ignore.
+    }
+  }
+
+  return startPolecatCompat(rig, name);
+}
+
+async function createAgentBeadForRig(rigName, role) {
+  const title = `Setup ${role} for ${rigName}`;
+  return executeWithFallback(executeBD, [
+    {
+      args: [
+        'create',
+        title,
+        '--type', 'agent',
+        '--agent-rig', rigName,
+        '--role-type', role,
+        '--silent',
+      ],
+      retryOn: BD_UNKNOWN_AGENT_FLAG_PATTERNS,
+    },
+    {
+      args: [
+        'create',
+        title,
+        '--type', 'agent',
+        '--description', `Auto-created ${role} agent bead for rig ${rigName}`,
+        '--label', `agent-role:${role}`,
+        '--label', `agent-rig:${rigName}`,
+        '--silent',
+      ],
+    },
+  ], { timeout: 30000 });
+}
+
 // Parse JSON output from commands
 function parseJSON(output) {
   try {
@@ -1060,8 +1173,7 @@ app.post('/api/polecat/:rig/:name/start', async (req, res) => {
   console.log(`[Agent] Starting ${agentPath}...`);
 
   try {
-    // Use gt sling to start the agent on the target rig
-    const result = await executeGT(['sling', '--rig', rig, '--agent', name], { timeout: 30000 });
+    const result = await startPolecatCompat(rig, name);
 
     if (result.success) {
       emitMutationEvent('agent_started', { rig, name, agentPath });
@@ -1116,18 +1228,7 @@ app.post('/api/polecat/:rig/:name/restart', async (req, res) => {
   console.log(`[Agent] Restarting ${agentPath}...`);
 
   try {
-    // First try to kill existing session (ignore errors)
-    try {
-      await execFileAsync('tmux', ['kill-session', '-t', sessionName]);
-    } catch {
-      // Ignore - session might not exist
-    }
-
-    // Wait a moment for cleanup
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    // Start the agent via gt sling
-    const result = await executeGT(['sling', '--rig', rig, '--agent', name], { timeout: 30000 });
+    const result = await restartPolecatCompat(rig, name, sessionName);
 
     if (result.success) {
       emitMutationEvent('agent_restarted', { rig, name, agentPath });
@@ -1256,14 +1357,7 @@ app.post('/api/rigs', async (req, res) => {
     // Create agent beads for witness and refinery (targeted, not gt doctor --fix)
     const agentRoles = ['witness', 'refinery'];
     for (const role of agentRoles) {
-      const beadResult = await executeBD([
-        'create',
-        `Setup ${role} for ${name}`,  // Title is required
-        '--type', 'agent',
-        '--agent-rig', name,
-        '--role-type', role,
-        '--silent'
-      ]);
+      const beadResult = await createAgentBeadForRig(name, role);
       if (!beadResult.success) {
         console.warn(`[BD] Failed to create ${role} bead for ${name}:`, beadResult.error);
       } else {

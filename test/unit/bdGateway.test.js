@@ -18,6 +18,21 @@ class FakeRunner {
   }
 }
 
+function okResult(stdout = '') {
+  return { ok: true, exitCode: 0, stdout, stderr: '', error: null, signal: null };
+}
+
+function unknownNoDaemonResult() {
+  return {
+    ok: false,
+    exitCode: 1,
+    stdout: '',
+    stderr: 'Error: unknown flag: --no-daemon',
+    error: 'Command failed',
+    signal: null,
+  };
+}
+
 describe('BDGateway', () => {
   it('sets BEADS_DIR and cwd for exec', async () => {
     const runner = new FakeRunner();
@@ -30,29 +45,52 @@ describe('BDGateway', () => {
     expect(runner.calls[0].options.env).toEqual({ BEADS_DIR: '/tmp/gt/.beads' });
   });
 
-  it('list() builds args and parses JSON', async () => {
+  it('list() probes no-daemon support once and reuses cached support', async () => {
     const runner = new FakeRunner();
-    runner.queue({ ok: true, exitCode: 0, stdout: '[]', stderr: '', error: null, signal: null });
+    runner.queue(okResult('bd v0.44.0'));
+    runner.queue(okResult('[]'));
+    runner.queue(okResult('[]'));
     const gateway = new BDGateway({ runner, gtRoot: '/tmp/gt' });
 
     const result = await gateway.list({ status: 'open' });
+    const second = await gateway.list({ status: 'open' });
 
-    expect(runner.calls[0].args).toEqual(['--no-daemon', 'list', '--status=open', '--json']);
+    expect(runner.calls[0].args).toEqual(['--no-daemon', 'version']);
+    expect(runner.calls[1].args).toEqual(['--no-daemon', 'list', '--status=open', '--json']);
+    expect(runner.calls[2].args).toEqual(['--no-daemon', 'list', '--status=open', '--json']);
     expect(result.data).toEqual([]);
+    expect(second.data).toEqual([]);
   });
 
-  it('search() uses list when query is empty', async () => {
+  it('search() omits no-daemon when probe reports unsupported', async () => {
     const runner = new FakeRunner();
-    runner.queue({ ok: true, exitCode: 0, stdout: '[]', stderr: '', error: null, signal: null });
+    runner.queue(unknownNoDaemonResult());
+    runner.queue(okResult('[]'));
     const gateway = new BDGateway({ runner, gtRoot: '/tmp/gt' });
 
     await gateway.search('');
-    expect(runner.calls[0].args).toEqual(['--no-daemon', 'list', '--json']);
+    expect(runner.calls[0].args).toEqual(['--no-daemon', 'version']);
+    expect(runner.calls[1].args).toEqual(['list', '--json']);
+  });
+
+  it('retries without no-daemon when command fails with unknown flag', async () => {
+    const runner = new FakeRunner();
+    runner.queue(okResult('bd v0.44.0'));
+    runner.queue(unknownNoDaemonResult());
+    runner.queue(okResult('[]'));
+    const gateway = new BDGateway({ runner, gtRoot: '/tmp/gt' });
+
+    const result = await gateway.search('foo');
+    expect(result.data).toEqual([]);
+    expect(runner.calls[0].args).toEqual(['--no-daemon', 'version']);
+    expect(runner.calls[1].args).toEqual(['--no-daemon', 'search', 'foo', '--json']);
+    expect(runner.calls[2].args).toEqual(['search', 'foo', '--json']);
   });
 
   it('create() builds args and extracts beadId', async () => {
     const runner = new FakeRunner();
-    runner.queue({ ok: true, exitCode: 0, stdout: 'Created bead: gt-abc123\n', stderr: '', error: null, signal: null });
+    runner.queue(okResult('bd v0.44.0'));
+    runner.queue(okResult('Created bead: gt-abc123\n'));
     const gateway = new BDGateway({ runner, gtRoot: '/tmp/gt' });
 
     const result = await gateway.create({
@@ -62,7 +100,8 @@ describe('BDGateway', () => {
       labels: ['bug', 'ui'],
     });
 
-    expect(runner.calls[0].args).toEqual([
+    expect(runner.calls[0].args).toEqual(['--no-daemon', 'version']);
+    expect(runner.calls[1].args).toEqual([
       '--no-daemon',
       'new',
       'Fix login bug',
@@ -80,7 +119,7 @@ describe('BDGateway', () => {
 
   it('markDone() uses bd close with -r flag', async () => {
     const runner = new FakeRunner();
-    runner.queue({ ok: true, exitCode: 0, stdout: 'closed', stderr: '', error: null, signal: null });
+    runner.queue(okResult('closed'));
     const gateway = new BDGateway({ runner, gtRoot: '/tmp/gt' });
 
     await gateway.markDone({ beadId: 'bd-1', summary: 'ok' });
@@ -89,7 +128,7 @@ describe('BDGateway', () => {
 
   it('park() uses bd defer with -r flag', async () => {
     const runner = new FakeRunner();
-    runner.queue({ ok: true, exitCode: 0, stdout: 'deferred', stderr: '', error: null, signal: null });
+    runner.queue(okResult('deferred'));
     const gateway = new BDGateway({ runner, gtRoot: '/tmp/gt' });
 
     await gateway.park({ beadId: 'bd-2', reason: 'waiting on upstream' });
@@ -98,7 +137,7 @@ describe('BDGateway', () => {
 
   it('release() uses bd update --status open', async () => {
     const runner = new FakeRunner();
-    runner.queue({ ok: true, exitCode: 0, stdout: 'updated', stderr: '', error: null, signal: null });
+    runner.queue(okResult('updated'));
     const gateway = new BDGateway({ runner, gtRoot: '/tmp/gt' });
 
     await gateway.release('bd-3');
@@ -107,7 +146,7 @@ describe('BDGateway', () => {
 
   it('reassign() uses bd update --assignee', async () => {
     const runner = new FakeRunner();
-    runner.queue({ ok: true, exitCode: 0, stdout: 'updated', stderr: '', error: null, signal: null });
+    runner.queue(okResult('updated'));
     const gateway = new BDGateway({ runner, gtRoot: '/tmp/gt' });
 
     await gateway.reassign({ beadId: 'bd-4', target: 'mayor' });

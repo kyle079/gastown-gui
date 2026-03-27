@@ -1082,21 +1082,26 @@ app.get('/api/setup/status', async (req, res) => {
 
   // Get rigs — prefer --json output, fall back to text parsing
   try {
+    let rigs = null;
     const rigResult = await executeGT(['rig', 'list', '--json']);
+
     if (rigResult.success) {
       try {
         const parsed = JSON.parse(rigResult.data);
-        status.rigs = parsed.map(r => ({ name: r.name }));
+        rigs = parsed.map((rig) => ({ name: rig.name }));
       } catch {
-        // JSON parse failed — fall back to text parsing
-        const textResult = await executeGT(['rig', 'list']);
-        if (textResult.success) {
-          status.rigs = parseRigNames(textResult.data);
-        } else {
-          status.rigs = [];
-        }
+        // JSON parse failed — fall through to text parsing
       }
     }
+
+    if (!rigResult.success || rigs === null) {
+      const textResult = await executeGT(['rig', 'list']);
+      if (textResult.success) {
+        rigs = parseRigNames(textResult.data);
+      }
+    }
+
+    status.rigs = rigs || [];
   } catch {
     status.rigs = [];
   }

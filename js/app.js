@@ -44,6 +44,8 @@ const REFRESH_TOAST_DURATION_MS = 1000;
 const MAYOR_OUTPUT_POLL_INTERVAL_MS = 2000;
 const MAYOR_OUTPUT_TAIL_LINES = 80;
 const MAYOR_MESSAGE_PREVIEW_LENGTH = 40;
+const REALTIME_REFRESH_DEBOUNCE_MS = 250;
+const FOCUS_REFRESH_COOLDOWN_MS = 1500;
 
 // DOM Elements
 const elements = {
@@ -64,6 +66,10 @@ const elements = {
 
 // Initialization guard to prevent double-init
 let isInitialized = false;
+let realtimeRefreshTimer = null;
+let realtimeRefreshInFlight = false;
+let queuedRealtimeRefreshReason = null;
+let lastWindowActiveRefreshAt = 0;
 
 // Loading state helpers
 function showLoadingState(container, message = 'Loading...') {
@@ -154,22 +160,22 @@ async function init() {
 
   // Listen for onboarding completion
   document.addEventListener(ONBOARDING_COMPLETE, () => {
-    loadInitialData();
+    loadInitialData({ forceRefresh: true });
   });
 
   // Listen for status refresh (from service controls)
   document.addEventListener(STATUS_REFRESH, () => {
-    loadInitialData();
+    loadInitialData({ forceRefresh: true });
   });
 
   // Listen for dashboard refresh
   document.addEventListener(DASHBOARD_REFRESH, () => {
-    loadDashboard();
+    loadDashboard({ forceRefresh: true });
   });
 
   // Listen for rigs refresh (from agent controls)
   document.addEventListener(RIGS_REFRESH, () => {
-    loadRigs();
+    loadRigs({ forceRefresh: true });
   });
 
   // Listen for work refresh (from work actions)
@@ -179,7 +185,15 @@ async function init() {
 
   // Listen for mail refresh (from read/unread actions)
   document.addEventListener(MAIL_REFRESH, () => {
-    loadMail();
+    loadMail({ forceRefresh: true });
+  });
+
+  // Refresh immediately when the window/tab becomes active again
+  window.addEventListener('focus', refreshOnWindowActive);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      refreshOnWindowActive();
+    }
   });
 
   // Handle mail detail modal
@@ -296,6 +310,74 @@ function switchView(viewId) {
   }
 }
 
+function getActiveViewId() {
+  const activeView = document.querySelector('.view.active');
+  if (!activeView?.id) return 'dashboard';
+  return activeView.id.replace(/^view-/, '');
+}
+
+async function refreshActiveView({ forceRefresh = false } = {}) {
+  const activeView = getActiveViewId();
+
+  if (activeView === 'agents') {
+    await loadAgents({ forceRefresh });
+    return;
+  }
+  if (activeView === 'rigs') {
+    await loadRigs({ forceRefresh });
+    return;
+  }
+  if (activeView === 'mail') {
+    await loadMail({ forceRefresh });
+    return;
+  }
+  if (activeView === 'work') {
+    await loadWork();
+  }
+}
+
+function scheduleRealtimeRefresh(reason, { immediate = false } = {}) {
+  if (realtimeRefreshTimer || realtimeRefreshInFlight) {
+    queuedRealtimeRefreshReason = reason;
+    return;
+  }
+
+  const delay = immediate ? 0 : REALTIME_REFRESH_DEBOUNCE_MS;
+  realtimeRefreshTimer = setTimeout(async () => {
+    realtimeRefreshTimer = null;
+    realtimeRefreshInFlight = true;
+
+    try {
+      await loadInitialData({
+        forceRefresh: true,
+        silent: true,
+        includeMayorHistory: false,
+        preloadBackground: false,
+      });
+      await refreshActiveView({ forceRefresh: true });
+      console.log(`[App] Applied realtime refresh (${reason})`);
+    } catch (err) {
+      console.error('[App] Realtime refresh failed:', err);
+    } finally {
+      realtimeRefreshInFlight = false;
+      if (queuedRealtimeRefreshReason) {
+        const nextReason = queuedRealtimeRefreshReason;
+        queuedRealtimeRefreshReason = null;
+        scheduleRealtimeRefresh(`${nextReason}_queued`, { immediate: true });
+      }
+    }
+  }, delay);
+}
+
+function refreshOnWindowActive() {
+  const now = Date.now();
+  if (now - lastWindowActiveRefreshAt < FOCUS_REFRESH_COOLDOWN_MS) {
+    return;
+  }
+  lastWindowActiveRefreshAt = now;
+  scheduleRealtimeRefresh('window_active', { immediate: true });
+}
+
 // WebSocket connection
 function connectWebSocket() {
   updateConnectionStatus('connecting');
@@ -341,29 +423,35 @@ function handleWebSocketMessage(message) {
 
     case 'convoy_created':
     case 'convoy_updated':
-      state.updateConvoy(message.data);
+      if (message.data?.id) {
+        state.updateConvoy(message.data);
+      }
+      scheduleRealtimeRefresh(message.type);
       break;
 
     case 'work_slung':
       showToast(`Work slung: ${message.data?.bead || 'unknown'}`, 'success');
-      loadConvoys();
+      scheduleRealtimeRefresh(message.type);
       break;
 
     case 'bead_created':
       // Bead was created - refresh work list if visible
-      if (state.currentView === 'work') {
+      if (getActiveViewId() === 'work') {
         loadWork();
       }
       showToast('Work item created', 'success');
+      scheduleRealtimeRefresh(message.type);
       break;
 
     case 'rig_added':
       // Rig was added - refresh rigs list and status
       showToast(`Rig added: ${message.data?.name || 'unknown'}`, 'success');
-      api.getStatus(true); // Force refresh
-      if (state.currentView === 'rigs') {
-        loadRigs();
-      }
+      scheduleRealtimeRefresh(message.type);
+      break;
+
+    case 'rig_removed':
+      showToast(`Rig removed: ${message.data?.name || 'unknown'}`, 'info');
+      scheduleRealtimeRefresh(message.type);
       break;
 
     case 'mayor_message':
@@ -391,8 +479,22 @@ function handleWebSocketMessage(message) {
           service: message.data.service
         });
       }
-      // Refresh status and update state to re-render sidebar
-      api.getStatus().then(status => state.setStatus(status)).catch(console.error);
+      scheduleRealtimeRefresh(message.type);
+      break;
+
+    case 'service_stopped':
+    case 'service_restarted':
+    case 'agent_started':
+    case 'agent_stopped':
+    case 'agent_restarted':
+    case 'crew_added':
+    case 'crew_removed':
+    case 'work_done':
+    case 'work_parked':
+    case 'work_released':
+    case 'work_reassigned':
+    case 'escalation':
+      scheduleRealtimeRefresh(message.type);
       break;
 
     default:
@@ -415,24 +517,36 @@ function updateConnectionStatus(status) {
 }
 
 // Data loading
-async function loadInitialData() {
-  elements.statusMessage.textContent = 'Loading...';
+async function loadInitialData({
+  forceRefresh = false,
+  silent = false,
+  includeMayorHistory = true,
+  preloadBackground = true,
+} = {}) {
+  if (!silent) {
+    elements.statusMessage.textContent = 'Loading...';
+  }
 
   try {
     // Load all critical data in parallel using Promise.allSettled
     // This way a slow/failing request doesn't block others
-    const results = await Promise.allSettled([
-      api.getStatus().then(status => {
+    const tasks = [
+      api.getStatus(forceRefresh).then(status => {
         state.setStatus(status);
         return status;
       }),
-      loadConvoys(),
-      loadMayorMessageHistory(),
-      loadDashboard(),
-    ]);
+      loadConvoys({ forceRefresh }),
+    ];
+    const labels = ['status', 'convoys'];
+
+    if (includeMayorHistory) {
+      tasks.push(loadMayorMessageHistory());
+      labels.push('mayor history');
+    }
+
+    const results = await Promise.allSettled(tasks);
 
     // Check results and log any failures
-    const labels = ['status', 'convoys', 'mayor history', 'dashboard'];
     results.forEach((result, i) => {
       if (result.status === 'rejected') {
         console.error(`[App] Failed to load ${labels[i]}:`, result.reason);
@@ -440,19 +554,32 @@ async function loadInitialData() {
     });
 
     // If status failed, show warning
-    if (results[0].status === 'rejected') {
-      elements.statusMessage.textContent = 'Ready (status unavailable)';
-      showToast('Some data failed to load', 'warning');
-    } else {
-      elements.statusMessage.textContent = 'Ready';
+    if (!silent) {
+      if (results[0].status === 'rejected') {
+        elements.statusMessage.textContent = 'Ready (status unavailable)';
+        showToast('Some data failed to load', 'warning');
+      } else {
+        elements.statusMessage.textContent = 'Ready';
+      }
     }
 
+    // Reuse status from initial fetch so dashboard refresh doesn't issue
+    // a second status request on every realtime mutation.
+    const dashboardStatus = results[0].status === 'fulfilled'
+      ? results[0].value
+      : state.get('status') || null;
+    await loadDashboard({ forceRefresh, statusOverride: dashboardStatus });
+
     // Background preload of other data (don't await, let it load in background)
-    preloadBackgroundData();
+    if (preloadBackground) {
+      preloadBackgroundData();
+    }
   } catch (err) {
     console.error('[App] Failed to load initial data:', err);
-    elements.statusMessage.textContent = 'Cannot connect to server';
-    showToast('Cannot connect - is the server running? Check terminal for the correct URL.', 'error', CONNECTION_ERROR_TOAST_DURATION_MS);
+    if (!silent) {
+      elements.statusMessage.textContent = 'Cannot connect to server';
+      showToast('Cannot connect - is the server running? Check terminal for the correct URL.', 'error', CONNECTION_ERROR_TOAST_DURATION_MS);
+    }
   }
 }
 
@@ -483,10 +610,13 @@ async function preloadBackgroundData() {
 // Track convoy filter state
 let showAllConvoys = false;
 
-async function loadConvoys() {
+async function loadConvoys({ forceRefresh = false } = {}) {
   showLoadingState(elements.convoyList, 'Loading convoys...');
   try {
     const params = showAllConvoys ? { all: 'true' } : {};
+    if (forceRefresh) {
+      params.refresh = 'true';
+    }
     const convoys = await api.getConvoys(params);
     state.setConvoys(convoys);
   } catch (err) {
@@ -556,17 +686,18 @@ function setupConvoyFilters() {
 // Track mail filter state
 let mailFilter = 'mine'; // 'mine' = my inbox, 'all' = all system mail
 
-async function loadMail() {
+async function loadMail({ forceRefresh = false } = {}) {
   showLoadingState(elements.mailList, 'Loading mail...');
   try {
     let mail;
     if (mailFilter === 'all') {
       // Get all mail from feed (paginated response)
-      const response = await api.get('/api/mail/all');
+      const endpoint = forceRefresh ? '/api/mail/all?refresh=true' : '/api/mail/all';
+      const response = await api.get(endpoint);
       mail = response.items || response; // Handle both paginated and legacy responses
     } else {
       // Get my inbox only
-      mail = await api.getMail();
+      mail = await api.getMail(forceRefresh);
     }
     state.setMail(mail || []);
   } catch (err) {
@@ -609,7 +740,7 @@ function setupMailFilters() {
   }
 }
 
-async function loadAgents() {
+async function loadAgents({ forceRefresh = false } = {}) {
   // Show loading state only if we don't have cached data
   const hasCache = state.getAgents().length > 0;
   if (!hasCache) {
@@ -617,7 +748,7 @@ async function loadAgents() {
   }
 
   try {
-    const response = await api.getAgents();
+    const response = await api.getAgents(forceRefresh);
     // Combine agents and polecats into a flat list
     const allAgents = [
       ...(response.agents || []),
@@ -642,7 +773,7 @@ async function loadAgents() {
   }
 }
 
-async function loadRigs() {
+async function loadRigs({ forceRefresh = false } = {}) {
   // Show loading state only if we don't have cached data
   const hasCache = state.getRigs().length > 0;
   if (!hasCache) {
@@ -654,7 +785,7 @@ async function loadRigs() {
 
   try {
     // Get rigs from status (has more details than /api/rigs)
-    const status = await api.getStatus();
+    const status = await api.getStatus(forceRefresh);
     const rigs = status.rigs || [];
     state.setStatus(status); // Update state
     renderRigList(elements.rigList, rigs);
@@ -855,7 +986,7 @@ function setupKeyboardShortcuts() {
           break;
         case 'r':
           e.preventDefault();
-          loadInitialData();
+          loadInitialData({ forceRefresh: true });
           showToast('Refreshing...', 'info', REFRESH_TOAST_DURATION_MS);
           break;
         case 's':
@@ -1006,7 +1137,7 @@ function setupThemeToggle() {
 
 // Refresh button
 document.getElementById('refresh-btn').addEventListener('click', () => {
-  loadInitialData();
+  loadInitialData({ forceRefresh: true });
   showToast('Refreshing...', 'info', REFRESH_TOAST_DURATION_MS);
 });
 

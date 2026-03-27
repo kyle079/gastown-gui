@@ -162,6 +162,7 @@ test/integration/endpoints.test.js - API endpoint contract tests
 test/integration/rig-parsing-fallback.test.js - Real server + stubbed CLI coverage for rig list fallback/emoji parsing
 test/integration/websocket.test.js - WebSocket lifecycle tests
 test/integration/cache.test.js - Cache invalidation tests
+test/integration/realtime-cache-invalidation.test.js - Real server cache invalidation coverage for rig/service mutation freshness
 
 test/unit/ - 32 unit test files covering:
 ├─ Domain values: safeSegment, agentPath

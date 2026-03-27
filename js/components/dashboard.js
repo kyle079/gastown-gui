@@ -105,17 +105,17 @@ export function initDashboard() {
   refreshBtn = document.getElementById('dashboard-refresh');
 
   if (refreshBtn) {
-    refreshBtn.addEventListener('click', loadDashboard);
+    refreshBtn.addEventListener('click', () => loadDashboard({ forceRefresh: true }));
   }
 
   // Listen for status updates
-  document.addEventListener(STATUS_UPDATED, loadDashboard);
+  document.addEventListener(STATUS_UPDATED, () => loadDashboard({ forceRefresh: true }));
 }
 
 /**
  * Load and render dashboard
  */
-export async function loadDashboard() {
+export async function loadDashboard({ forceRefresh = false, statusOverride = null } = {}) {
   if (!container) return;
 
   // Show loading skeleton
@@ -124,9 +124,10 @@ export async function loadDashboard() {
   try {
     // Only load status - doctor is too slow for dashboard (15-20s)
     // User can click through to Health page for full diagnostics
-    const statusResult = await api.getStatus().catch(() => null);
-
-    const status = statusResult || state.get('status') || {};
+    const status = statusOverride
+      || await api.getStatus(forceRefresh).catch(() => null)
+      || state.get('status')
+      || {};
     // Derive basic health from status data (fast, no doctor call)
     const health = deriveHealthFromStatus(status);
 

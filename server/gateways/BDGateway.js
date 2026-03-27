@@ -15,6 +15,7 @@ export class BDGateway {
     this._runner = runner;
     this._gtRoot = gtRoot;
     this._beadsDir = path.join(gtRoot, '.beads');
+    this._supportsNoDaemon = null;
   }
 
   async exec(args, options = {}) {
@@ -22,28 +23,56 @@ export class BDGateway {
     return this._runner.exec('bd', args, { cwd: this._gtRoot, ...options, env });
   }
 
+  _resultText(result) {
+    return `${result?.stdout || ''}\n${result?.stderr || ''}\n${result?.error || ''}`;
+  }
+
+  _isUnknownNoDaemon(result) {
+    return /unknown flag:\s*--no-daemon/i.test(this._resultText(result));
+  }
+
+  async _supportsNoDaemonFlag() {
+    if (this._supportsNoDaemon !== null) return this._supportsNoDaemon;
+
+    const probe = await this.exec(['--no-daemon', 'version'], { timeoutMs: 5000, allowExitCodes: [0, 1] });
+    this._supportsNoDaemon = !this._isUnknownNoDaemon(probe);
+    return this._supportsNoDaemon;
+  }
+
+  async _execCompat(args, options = {}) {
+    const supportsNoDaemon = await this._supportsNoDaemonFlag();
+    if (!supportsNoDaemon) return this.exec(args, options);
+
+    const noDaemonArgs = ['--no-daemon', ...args];
+    const result = await this.exec(noDaemonArgs, options);
+    if (!this._isUnknownNoDaemon(result)) return result;
+
+    this._supportsNoDaemon = false;
+    return this.exec(args, options);
+  }
+
   async list({ status } = {}) {
-    const args = ['--no-daemon', 'list'];
+    const args = ['list'];
     if (status) args.push(`--status=${status}`);
     args.push('--json');
 
-    const result = await this.exec(args, { timeoutMs: 30000 });
+    const result = await this._execCompat(args, { timeoutMs: 30000 });
     const raw = (result.stdout || '').trim();
     return { ...result, raw, data: parseJsonOrNull(raw) };
   }
 
   async search(query) {
-    const args = ['--no-daemon', query ? 'search' : 'list'];
+    const args = [query ? 'search' : 'list'];
     if (query) args.push(query);
     args.push('--json');
 
-    const result = await this.exec(args, { timeoutMs: 30000 });
+    const result = await this._execCompat(args, { timeoutMs: 30000 });
     const raw = (result.stdout || '').trim();
     return { ...result, raw, data: parseJsonOrNull(raw) };
   }
 
   async create({ title, description, priority, labels } = {}) {
-    const args = ['--no-daemon', 'new', title];
+    const args = ['new', title];
     if (description) args.push('--description', description);
     if (priority) args.push('--priority', priority);
     if (Array.isArray(labels)) {
@@ -52,7 +81,7 @@ export class BDGateway {
       });
     }
 
-    const result = await this.exec(args, { timeoutMs: 30000 });
+    const result = await this._execCompat(args, { timeoutMs: 30000 });
     const raw = (result.stdout || '').trim();
 
     const match = raw.match(/(?:Created|created)\s*(?:bead|issue)?:?\s*(\S+)/i);

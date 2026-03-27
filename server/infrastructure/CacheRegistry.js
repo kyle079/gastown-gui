@@ -32,6 +32,25 @@ export class CacheRegistry {
     this._pending.delete(key);
   }
 
+  deleteByPrefix(prefix) {
+    const safePrefix = String(prefix || '');
+    if (!safePrefix) return 0;
+
+    let deleted = 0;
+    for (const key of this._entries.keys()) {
+      if (key.startsWith(safePrefix)) {
+        this._entries.delete(key);
+        deleted++;
+      }
+    }
+    for (const key of this._pending.keys()) {
+      if (key.startsWith(safePrefix)) {
+        this._pending.delete(key);
+      }
+    }
+    return deleted;
+  }
+
   clear() {
     this._entries.clear();
     this._pending.clear();
@@ -70,4 +89,3 @@ export class CacheRegistry {
     return promise;
   }
 }
-

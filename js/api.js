@@ -55,8 +55,9 @@ export const api = {
   },
 
   // === Status ===
-  getStatus() {
-    return this.get('/api/status');
+  getStatus(refresh = false) {
+    const query = refresh ? '?refresh=true' : '';
+    return this.get(`/api/status${query}`);
   },
 
   getHealth() {
@@ -93,8 +94,9 @@ export const api = {
   },
 
   // === Mail ===
-  getMail() {
-    return this.get('/api/mail');
+  getMail(refresh = false) {
+    const query = refresh ? '?refresh=true' : '';
+    return this.get(`/api/mail${query}`);
   },
 
   getMailMessage(id) {
@@ -114,8 +116,9 @@ export const api = {
   },
 
   // === Agents ===
-  getAgents() {
-    return this.get('/api/agents');
+  getAgents(refresh = false) {
+    const query = refresh ? '?refresh=true' : '';
+    return this.get(`/api/agents${query}`);
   },
 
   nudge(target, message, autoStart = true) {
@@ -215,8 +218,9 @@ export const api = {
     return this.get('/api/setup/status');
   },
 
-  getRigs() {
-    return this.get('/api/rigs');
+  getRigs(refresh = false) {
+    const query = refresh ? '?refresh=true' : '';
+    return this.get(`/api/rigs${query}`);
   },
 
   addRig(name, url) {
@@ -228,8 +232,9 @@ export const api = {
   },
 
   // === Crew Management ===
-  getCrews() {
-    return this.get('/api/crews');
+  getCrews(refresh = false) {
+    const query = refresh ? '?refresh=true' : '';
+    return this.get(`/api/crews${query}`);
   },
 
   getCrewStatus(name) {

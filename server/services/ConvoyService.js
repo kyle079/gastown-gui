@@ -10,7 +10,7 @@ export class ConvoyService {
     this._emit = emit ?? null;
   }
 
-  async list({ all = false, status, refresh = false, ttlMs = 10000 } = {}) {
+  async list({ all = false, status, refresh = false, ttlMs = 5000 } = {}) {
     const key = `convoys_${all ? 'true' : 'false'}_${status || 'all'}`;
 
     if (!refresh && this._cache?.getOrExecute) {
@@ -52,4 +52,3 @@ export class ConvoyService {
     return { ok: true, convoyId, raw: result.raw };
   }
 }
-

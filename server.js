@@ -68,18 +68,18 @@ const backendCache = new CacheRegistry();
 const convoyService = new ConvoyService({
   gtGateway,
   cache: backendCache,
-  emit: (type, data) => broadcast({ type, data }),
+  emit: (type, data) => emitMutationEvent(type, data),
 });
 const statusService = new StatusService({ gtGateway, tmuxGateway, cache: backendCache, gtRoot: GT_ROOT });
 const targetService = new TargetService({ statusService });
 const beadService = new BeadService({
   bdGateway,
-  emit: (type, data) => broadcast({ type, data }),
+  emit: (type, data) => emitMutationEvent(type, data),
 });
 const workService = new WorkService({
   gtGateway,
   bdGateway,
-  emit: (type, data) => broadcast({ type, data }),
+  emit: (type, data) => emitMutationEvent(type, data),
 });
 const gitHubGateway = new GitHubGateway({ runner: commandRunner });
 const gitHubService = new GitHubService({ gitHubGateway, statusService, cache: backendCache });
@@ -103,8 +103,8 @@ const CACHE_TTL = {
   status: 5000,       // 5 seconds for status (frequently changing)
   convoys: 10000,     // 10 seconds for convoys
   mail: 15000,        // 15 seconds for mail list
-  agents: 15000,      // 15 seconds for agents
-  rigs: 30000,        // 30 seconds for rigs (rarely changes)
+  agents: 5000,       // 5 seconds for agents
+  rigs: 5000,         // 5 seconds for rigs
   formulas: 60000,    // 1 minute for formulas (rarely changes)
   github_prs: 30000,  // 30 seconds for GitHub PRs
   github_issues: 30000, // 30 seconds for GitHub issues
@@ -128,6 +128,127 @@ function getCached(key) {
 
 function setCache(key, data, ttl) {
   cache.set(key, { data, expires: Date.now() + ttl });
+}
+
+const CACHE_INVALIDATION_BY_EVENT = {
+  rig_added: {
+    localKeys: ['rigs', 'agents', 'crews'],
+    localPrefixes: ['rig-config:'],
+    backendKeys: ['status'],
+    backendPrefixes: ['convoys_'],
+  },
+  rig_removed: {
+    localKeys: ['rigs', 'agents', 'crews'],
+    localPrefixes: ['rig-config:'],
+    backendKeys: ['status'],
+    backendPrefixes: ['convoys_'],
+  },
+  crew_added: {
+    localKeys: ['crews'],
+    backendKeys: ['status'],
+  },
+  crew_removed: {
+    localKeys: ['crews'],
+    backendKeys: ['status'],
+  },
+  agent_started: {
+    localKeys: ['agents'],
+    backendKeys: ['status'],
+  },
+  agent_stopped: {
+    localKeys: ['agents'],
+    backendKeys: ['status'],
+  },
+  agent_restarted: {
+    localKeys: ['agents'],
+    backendKeys: ['status'],
+  },
+  service_started: {
+    localKeys: ['agents'],
+    backendKeys: ['status'],
+  },
+  service_stopped: {
+    localKeys: ['agents'],
+    backendKeys: ['status'],
+  },
+  service_restarted: {
+    localKeys: ['agents'],
+    backendKeys: ['status'],
+  },
+  convoy_created: {
+    localKeys: ['agents'],
+    backendKeys: ['status'],
+    backendPrefixes: ['convoys_'],
+  },
+  convoy_updated: {
+    localKeys: ['agents'],
+    backendKeys: ['status'],
+    backendPrefixes: ['convoys_'],
+  },
+  work_slung: {
+    localKeys: ['agents'],
+    backendKeys: ['status'],
+    backendPrefixes: ['convoys_'],
+  },
+  work_done: {
+    backendKeys: ['status'],
+    backendPrefixes: ['convoys_'],
+  },
+  work_parked: {
+    backendKeys: ['status'],
+    backendPrefixes: ['convoys_'],
+  },
+  work_released: {
+    backendKeys: ['status'],
+    backendPrefixes: ['convoys_'],
+  },
+  work_reassigned: {
+    backendKeys: ['status'],
+    backendPrefixes: ['convoys_'],
+  },
+  bead_created: {
+    backendKeys: ['status'],
+    backendPrefixes: ['convoys_'],
+  },
+  escalation: {
+    backendKeys: ['status'],
+    backendPrefixes: ['convoys_'],
+  },
+};
+
+function deleteLocalCacheByPrefix(prefix) {
+  for (const key of cache.keys()) {
+    if (key.startsWith(prefix)) {
+      cache.delete(key);
+    }
+  }
+}
+
+function invalidateCaches(plan = {}) {
+  const {
+    localKeys = [],
+    localPrefixes = [],
+    backendKeys = [],
+    backendPrefixes = [],
+  } = plan;
+
+  for (const key of localKeys) {
+    cache.delete(key);
+  }
+  for (const prefix of localPrefixes) {
+    deleteLocalCacheByPrefix(prefix);
+  }
+  for (const key of backendKeys) {
+    backendCache.delete(key);
+  }
+  for (const prefix of backendPrefixes) {
+    backendCache.deleteByPrefix(prefix);
+  }
+}
+
+function emitMutationEvent(type, data) {
+  invalidateCaches(CACHE_INVALIDATION_BY_EVENT[type]);
+  broadcast({ type, data });
 }
 
 /**
@@ -638,7 +759,7 @@ app.post('/api/nudge', async (req, res) => {
         await new Promise(resolve => setTimeout(resolve, 2000));
 
         // Broadcast that Mayor was started
-        broadcast({ type: 'service_started', data: { service: 'mayor', autoStarted: true } });
+        emitMutationEvent('service_started', { service: 'mayor', autoStarted: true });
       } else if (!isRunning) {
         const entry = addMayorMessage(nudgeTarget, message, 'failed', `Session ${sessionName} not running`);
         return res.status(400).json({
@@ -943,7 +1064,7 @@ app.post('/api/polecat/:rig/:name/start', async (req, res) => {
     const result = await executeGT(['sling', '--rig', rig, '--agent', name], { timeout: 30000 });
 
     if (result.success) {
-      broadcast({ type: 'agent_started', data: { rig, name, agentPath } });
+      emitMutationEvent('agent_started', { rig, name, agentPath });
       res.json({ success: true, message: `Started ${agentPath}`, raw: result.data });
     } else {
       res.status(500).json({ success: false, error: result.error });
@@ -968,7 +1089,7 @@ app.post('/api/polecat/:rig/:name/stop', async (req, res) => {
   try {
     // Kill the tmux session
     await execFileAsync('tmux', ['kill-session', '-t', sessionName]);
-    broadcast({ type: 'agent_stopped', data: { rig, name, session: sessionName } });
+    emitMutationEvent('agent_stopped', { rig, name, session: sessionName });
     res.json({ success: true, message: `Stopped ${rig}/${name}` });
   } catch (err) {
     // Session might not exist, which is fine
@@ -1009,7 +1130,7 @@ app.post('/api/polecat/:rig/:name/restart', async (req, res) => {
     const result = await executeGT(['sling', '--rig', rig, '--agent', name], { timeout: 30000 });
 
     if (result.success) {
-      broadcast({ type: 'agent_restarted', data: { rig, name, agentPath } });
+      emitMutationEvent('agent_restarted', { rig, name, agentPath });
       res.json({ success: true, message: `Restarted ${agentPath}`, raw: result.data });
     } else {
       res.status(500).json({ success: false, error: result.error });
@@ -1150,7 +1271,7 @@ app.post('/api/rigs', async (req, res) => {
       }
     }
 
-    broadcast({ type: 'rig_added', data: { name, url } });
+    emitMutationEvent('rig_added', { name, url });
     res.json({ success: true, name, raw: result.data });
   } else {
     const errorMsg = hasError ? result.data : (result.error || 'Failed to add rig');
@@ -1203,7 +1324,7 @@ app.delete('/api/rigs/:name', async (req, res) => {
 
   if (result.success) {
     clearSessionRegistryCache(GT_ROOT);
-    broadcast({ type: 'rig_removed', data: { name } });
+    emitMutationEvent('rig_removed', { name });
     res.json({ success: true, name, raw: result.data });
   } else {
     res.status(500).json({ success: false, error: result.error });
@@ -1279,7 +1400,7 @@ app.post('/api/crews', async (req, res) => {
   const result = await executeGT(args);
 
   if (result.success) {
-    broadcast({ type: 'crew_added', data: { name, rig } });
+    emitMutationEvent('crew_added', { name, rig });
     res.status(201).json({ success: true, name, rig, raw: result.data });
   } else {
     res.status(500).json({ success: false, error: result.error });
@@ -1297,7 +1418,7 @@ app.delete('/api/crew/:name', async (req, res) => {
   const result = await executeGT(['crew', 'remove', name]);
 
   if (result.success) {
-    broadcast({ type: 'crew_removed', data: { name } });
+    emitMutationEvent('crew_removed', { name });
     res.json({ success: true, name, raw: result.data });
   } else {
     res.status(500).json({ success: false, error: result.error });
@@ -1440,7 +1561,7 @@ app.post('/api/service/:name/up', async (req, res) => {
     const result = await executeGT(args, { timeout: 30000 });
 
     if (result.success) {
-      broadcast({ type: 'service_started', data: { service: name } });
+      emitMutationEvent('service_started', { service: name });
       res.json({ success: true, service: name, message: `${name} started`, raw: result.data });
     } else {
       res.status(500).json({ success: false, error: result.error });
@@ -1475,7 +1596,7 @@ app.post('/api/service/:name/down', async (req, res) => {
     const result = await executeGT(args, { timeout: 10000 });
 
     if (result.success) {
-      broadcast({ type: 'service_stopped', data: { service: name } });
+      emitMutationEvent('service_stopped', { service: name });
       res.json({ success: true, service: name, message: `${name} stopped`, raw: result.data });
     } else {
       // Try killing tmux session directly
@@ -1483,7 +1604,7 @@ app.post('/api/service/:name/down', async (req, res) => {
       try {
         if (!sessionName) throw new Error('No direct tmux session fallback available');
         await execFileAsync('tmux', ['kill-session', '-t', sessionName]);
-        broadcast({ type: 'service_stopped', data: { service: name } });
+        emitMutationEvent('service_stopped', { service: name });
         res.json({ success: true, service: name, message: `${name} stopped via tmux` });
       } catch {
         res.status(500).json({ success: false, error: result.error });
@@ -1531,7 +1652,7 @@ app.post('/api/service/:name/restart', async (req, res) => {
     const result = await executeGT(startArgs, { timeout: 30000 });
 
     if (result.success) {
-      broadcast({ type: 'service_restarted', data: { service: name } });
+      emitMutationEvent('service_restarted', { service: name });
       res.json({ success: true, service: name, message: `${name} restarted`, raw: result.data });
     } else {
       res.status(500).json({ success: false, error: result.error });
@@ -1586,7 +1707,7 @@ const formulaService = new FormulaService({
   gtGateway,
   bdGateway,
   cache: formulaCache,
-  emit: (type, data) => broadcast({ type, data }),
+  emit: (type, data) => emitMutationEvent(type, data),
 });
 
 registerFormulaRoutes(app, { formulaService });

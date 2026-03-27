@@ -50,5 +50,17 @@ describe('CacheRegistry', () => {
     const cache = new CacheRegistry();
     expect(() => cache.set('k', undefined, 10)).toThrow(/undefined/i);
   });
-});
 
+  it('deletes cached entries by prefix', () => {
+    const cache = new CacheRegistry();
+    cache.set('convoys_all', ['a'], 1000);
+    cache.set('convoys_open', ['b'], 1000);
+    cache.set('status', { ok: true }, 1000);
+
+    const deleted = cache.deleteByPrefix('convoys_');
+    expect(deleted).toBe(2);
+    expect(cache.get('convoys_all')).toBeUndefined();
+    expect(cache.get('convoys_open')).toBeUndefined();
+    expect(cache.get('status')).toEqual({ ok: true });
+  });
+});

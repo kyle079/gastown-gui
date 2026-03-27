@@ -45,6 +45,18 @@ describe('BDGateway', () => {
     expect(runner.calls[0].options.env).toEqual({ BEADS_DIR: '/tmp/gt/.beads' });
   });
 
+  it('uses a custom bd executable when provided', async () => {
+    const runner = new FakeRunner();
+    const gateway = new BDGateway({
+      runner,
+      gtRoot: '/tmp/gt',
+      executable: '/opt/homebrew/bin/bd',
+    });
+
+    await gateway.exec(['version']);
+    expect(runner.calls[0].command).toBe('/opt/homebrew/bin/bd');
+  });
+
   it('list() probes no-daemon support once and reuses cached support', async () => {
     const runner = new FakeRunner();
     runner.queue(okResult('bd v0.44.0'));

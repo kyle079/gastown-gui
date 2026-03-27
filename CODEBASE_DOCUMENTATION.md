@@ -65,6 +65,7 @@ server/infrastructure/CommandRunner.js - Safe child_process.execFile wrapper
 
 server/infrastructure/CacheRegistry.js - TTL cache for CLI output
 server/infrastructure/EventBus.js - Internal pub/sub for cache invalidation
+server/infrastructure/ExecutableResolver.js - Resolves gt/bd binaries from PATH, env overrides, and Homebrew/Linuxbrew fallback paths
 ```
 
 ## Backend — Services
@@ -161,6 +162,7 @@ test/e2e.test.js - Puppeteer browser tests (real server + browser)
 test/integration.test.js - Legacy integration tests
 test/integration/endpoints.test.js - API endpoint contract tests
 test/integration/cli-compatibility.test.js - Real server + stubbed CLI coverage for gt/bd old/new command fallback behavior
+test/integration/cli-executable-resolution.test.js - Real server coverage for gt/bd executable path resolution and missing-gt activity-stream crash prevention
 test/integration/rig-parsing-fallback.test.js - Real server + stubbed CLI coverage for rig list fallback/emoji parsing
 test/integration/websocket.test.js - WebSocket lifecycle tests
 test/integration/cache.test.js - Cache invalidation tests
@@ -173,6 +175,7 @@ test/unit/ - 32 unit test files covering:
 ├─ Infrastructure: cacheRegistry, commandRunner, eventBus
 ├─ Services: statusService, targetService, githubService, convoyService,
 │            formulaService, beadService, workService
+├─ CLI resolution: executableResolver
 ├─ Routes: statusRoutes, targetRoutes, githubRoutes, convoyRoutes,
 │          formulaRoutes, beadRoutes, workRoutes
 ├─ Frontend: state, htmlUtils, quoteArg, formattingTime, animationsShared,

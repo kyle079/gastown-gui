@@ -9,18 +9,19 @@ function parseJsonOrNull(text) {
 }
 
 export class BDGateway {
-  constructor({ runner, gtRoot }) {
+  constructor({ runner, gtRoot, executable = 'bd' }) {
     if (!runner?.exec) throw new Error('BDGateway requires a runner with exec()');
     if (!gtRoot) throw new Error('BDGateway requires gtRoot');
     this._runner = runner;
     this._gtRoot = gtRoot;
+    this._executable = executable;
     this._beadsDir = path.join(gtRoot, '.beads');
     this._supportsNoDaemon = null;
   }
 
   async exec(args, options = {}) {
     const env = { BEADS_DIR: this._beadsDir, ...(options.env ?? {}) };
-    return this._runner.exec('bd', args, { cwd: this._gtRoot, ...options, env });
+    return this._runner.exec(this._executable, args, { cwd: this._gtRoot, ...options, env });
   }
 
   _resultText(result) {

@@ -177,6 +177,8 @@ gastown-gui help
 | `GASTOWN_PORT` | Server port | 7667 |
 | `HOST` | Server host | 127.0.0.1 |
 | `GT_ROOT` | Gas Town root directory | ~/gt |
+| `GT_BIN` | Override `gt` executable path | auto-detect (`PATH`, `/opt/homebrew/bin/gt`, `/usr/local/bin/gt`) |
+| `BD_BIN` | Override `bd` executable path | auto-detect (`PATH`, `/opt/homebrew/bin/bd`, `/usr/local/bin/bd`) |
 
 ---
 

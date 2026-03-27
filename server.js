@@ -704,11 +704,8 @@ app.get('/api/bead/:beadId/links', async (req, res) => {
       return res.json(links);
     }
 
-    // Parse rig names from output (lines with exactly 2 spaces before name, no colon)
-    const rigNames = rigsResult.data
-      .split('\n')
-      .filter(line => line.match(/^  \S/) && !line.includes(':'))
-      .map(line => line.trim());
+    // Parse rig names from both legacy and emoji-prefixed formats
+    const rigNames = parseRigNames(rigsResult.data).map((rig) => rig.name);
 
     console.log(`[Links] Found rigs: ${rigNames.join(', ')}`);
 

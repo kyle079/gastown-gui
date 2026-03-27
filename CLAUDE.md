@@ -23,6 +23,12 @@ Browser SPA (vanilla JS, no framework) backed by an Express server that wraps `g
 - **Real-time:** WebSocket client in `js/api.js`, server pipes `gt feed --json` output
 - **CLI entry:** `bin/cli.js` — supports `start`, `doctor`, `version`, `help`
 
+## File Size Discipline
+
+- **No god files/classes:** Do not keep adding logic to large files (especially `server.js`).
+- **Extract by responsibility:** New backend logic should be placed in focused modules under `server/` (services/gateways/routes/infrastructure) and imported into `server.js`.
+- **Refactor when touching:** If a change makes a file larger or more complex, extract helpers into dedicated files in the same PR.
+
 ## Commands
 
 ```bash

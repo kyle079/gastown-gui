@@ -77,6 +77,7 @@ server/services/BeadService.js - Bead CRUD via BDGateway
 server/services/WorkService.js - Work lifecycle (close, defer, reassign)
 server/services/GitHubService.js - PR/issue/repo queries via GitHubGateway
 server/services/TargetService.js - Available sling targets
+server/services/CLICompatibilityService.js - Old/new gt & bd command fallback orchestration for server endpoints
 ```
 
 ## Backend — Routes

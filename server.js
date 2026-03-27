@@ -43,6 +43,7 @@ import { GitHubService } from './server/services/GitHubService.js';
 import { StatusService } from './server/services/StatusService.js';
 import { TargetService } from './server/services/TargetService.js';
 import { WorkService } from './server/services/WorkService.js';
+import { createCLICompatibilityService } from './server/services/CLICompatibilityService.js';
 import { registerBeadRoutes } from './server/routes/beads.js';
 import { registerConvoyRoutes } from './server/routes/convoys.js';
 import { registerFormulaRoutes } from './server/routes/formulas.js';
@@ -523,6 +524,18 @@ async function executeBD(args, options = {}) {
     return { success: false, error: error.message };
   }
 }
+
+const cliCompatibilityService = createCLICompatibilityService({
+  executeGT: (args, options) => executeGT(args, options),
+  executeBD: (args, options) => executeBD(args, options),
+  killTmuxSession: async (sessionName) => {
+    try {
+      await execFileAsync('tmux', ['kill-session', '-t', sessionName]);
+    } catch {
+      // Session may not exist; safe to ignore.
+    }
+  },
+});
 
 // Parse JSON output from commands
 function parseJSON(output) {
@@ -1060,8 +1073,7 @@ app.post('/api/polecat/:rig/:name/start', async (req, res) => {
   console.log(`[Agent] Starting ${agentPath}...`);
 
   try {
-    // Use gt sling to start the agent on the target rig
-    const result = await executeGT(['sling', '--rig', rig, '--agent', name], { timeout: 30000 });
+    const result = await cliCompatibilityService.startPolecat({ rig, name });
 
     if (result.success) {
       emitMutationEvent('agent_started', { rig, name, agentPath });
@@ -1116,18 +1128,7 @@ app.post('/api/polecat/:rig/:name/restart', async (req, res) => {
   console.log(`[Agent] Restarting ${agentPath}...`);
 
   try {
-    // First try to kill existing session (ignore errors)
-    try {
-      await execFileAsync('tmux', ['kill-session', '-t', sessionName]);
-    } catch {
-      // Ignore - session might not exist
-    }
-
-    // Wait a moment for cleanup
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    // Start the agent via gt sling
-    const result = await executeGT(['sling', '--rig', rig, '--agent', name], { timeout: 30000 });
+    const result = await cliCompatibilityService.restartPolecat({ rig, name, sessionName });
 
     if (result.success) {
       emitMutationEvent('agent_restarted', { rig, name, agentPath });
@@ -1256,14 +1257,7 @@ app.post('/api/rigs', async (req, res) => {
     // Create agent beads for witness and refinery (targeted, not gt doctor --fix)
     const agentRoles = ['witness', 'refinery'];
     for (const role of agentRoles) {
-      const beadResult = await executeBD([
-        'create',
-        `Setup ${role} for ${name}`,  // Title is required
-        '--type', 'agent',
-        '--agent-rig', name,
-        '--role-type', role,
-        '--silent'
-      ]);
+      const beadResult = await cliCompatibilityService.createAgentBeadForRig({ rigName: name, role });
       if (!beadResult.success) {
         console.warn(`[BD] Failed to create ${role} bead for ${name}:`, beadResult.error);
       } else {

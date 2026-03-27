@@ -77,6 +77,7 @@ server/services/BeadService.js - Bead CRUD via BDGateway
 server/services/WorkService.js - Work lifecycle (close, defer, reassign)
 server/services/GitHubService.js - PR/issue/repo queries via GitHubGateway
 server/services/TargetService.js - Available sling targets
+server/services/CLICompatibilityService.js - Old/new gt & bd command fallback orchestration for server endpoints
 ```
 
 ## Backend — Routes
@@ -159,6 +160,7 @@ test/mock-server.js - Mock Express server mimicking gt CLI responses
 test/e2e.test.js - Puppeteer browser tests (real server + browser)
 test/integration.test.js - Legacy integration tests
 test/integration/endpoints.test.js - API endpoint contract tests
+test/integration/cli-compatibility.test.js - Real server + stubbed CLI coverage for gt/bd old/new command fallback behavior
 test/integration/rig-parsing-fallback.test.js - Real server + stubbed CLI coverage for rig list fallback/emoji parsing
 test/integration/websocket.test.js - WebSocket lifecycle tests
 test/integration/cache.test.js - Cache invalidation tests

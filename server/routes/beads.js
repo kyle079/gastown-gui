@@ -5,8 +5,9 @@ export function registerBeadRoutes(app, { beadService } = {}) {
     try {
       const data = await beadService.list({ status: req.query.status });
       res.json(data);
-    } catch {
-      res.json([]);
+    } catch (err) {
+      console.error('[API] Failed to list beads:', err);
+      res.status(500).json({ error: err.message || 'Failed to list beads' });
     }
   });
 

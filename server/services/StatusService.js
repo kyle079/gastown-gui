@@ -98,6 +98,13 @@ export class StatusService {
     }
 
     data.runningPolecats = Array.from(runningPolecats);
+    const allRigAgents = rigs.flatMap(rig => Array.isArray(rig.agents) ? rig.agents : []);
+    const activeHooks = allRigAgents.filter(agent => agent.running && (agent.has_work || agent.hook_bead)).length;
+    data.summary = {
+      ...(data.summary || {}),
+      active_hooks: activeHooks,
+      rig_count: data.summary?.rig_count ?? rigs.length,
+    };
     return data;
   }
 

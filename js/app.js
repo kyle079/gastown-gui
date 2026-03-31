@@ -44,8 +44,6 @@ const REFRESH_TOAST_DURATION_MS = 1000;
 const MAYOR_OUTPUT_POLL_INTERVAL_MS = 2000;
 const MAYOR_OUTPUT_TAIL_LINES = 80;
 const MAYOR_MESSAGE_PREVIEW_LENGTH = 40;
-const REALTIME_REFRESH_DEBOUNCE_MS = 250;
-const FOCUS_REFRESH_COOLDOWN_MS = 1500;
 
 // DOM Elements
 const elements = {
@@ -66,10 +64,6 @@ const elements = {
 
 // Initialization guard to prevent double-init
 let isInitialized = false;
-let realtimeRefreshTimer = null;
-let realtimeRefreshInFlight = false;
-let queuedRealtimeRefreshReason = null;
-let lastWindowActiveRefreshAt = 0;
 
 // Loading state helpers
 function showLoadingState(container, message = 'Loading...') {
@@ -151,31 +145,39 @@ async function init() {
 
   // Check for first-time users - show onboarding wizard
   const showOnboarding = await shouldShowOnboarding();
+  const hasExistingTownActivity = Boolean(
+    state.get('status')?.rigs?.length ||
+    state.get('convoys')?.length ||
+    state.get('work')?.length ||
+    state.get('agents')?.length
+  );
   if (showOnboarding) {
     setTimeout(() => startOnboarding(), ONBOARDING_START_DELAY_MS);
-  } else if (shouldShowTutorial()) {
+  } else if (!hasExistingTownActivity && shouldShowTutorial()) {
     // Show tutorial only if onboarding was already completed
     setTimeout(() => startTutorial(), TUTORIAL_START_DELAY_MS);
+  } else if (hasExistingTownActivity) {
+    localStorage.setItem('gastown-tutorial-complete', 'true');
   }
 
   // Listen for onboarding completion
   document.addEventListener(ONBOARDING_COMPLETE, () => {
-    loadInitialData({ forceRefresh: true });
+    loadInitialData();
   });
 
   // Listen for status refresh (from service controls)
   document.addEventListener(STATUS_REFRESH, () => {
-    loadInitialData({ forceRefresh: true });
+    loadInitialData();
   });
 
   // Listen for dashboard refresh
   document.addEventListener(DASHBOARD_REFRESH, () => {
-    loadDashboard({ forceRefresh: true });
+    loadDashboard();
   });
 
   // Listen for rigs refresh (from agent controls)
   document.addEventListener(RIGS_REFRESH, () => {
-    loadRigs({ forceRefresh: true });
+    loadRigs();
   });
 
   // Listen for work refresh (from work actions)
@@ -185,15 +187,7 @@ async function init() {
 
   // Listen for mail refresh (from read/unread actions)
   document.addEventListener(MAIL_REFRESH, () => {
-    loadMail({ forceRefresh: true });
-  });
-
-  // Refresh immediately when the window/tab becomes active again
-  window.addEventListener('focus', refreshOnWindowActive);
-  document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) {
-      refreshOnWindowActive();
-    }
+    loadMail();
   });
 
   // Handle mail detail modal
@@ -310,74 +304,6 @@ function switchView(viewId) {
   }
 }
 
-function getActiveViewId() {
-  const activeView = document.querySelector('.view.active');
-  if (!activeView?.id) return 'dashboard';
-  return activeView.id.replace(/^view-/, '');
-}
-
-async function refreshActiveView({ forceRefresh = false } = {}) {
-  const activeView = getActiveViewId();
-
-  if (activeView === 'agents') {
-    await loadAgents({ forceRefresh });
-    return;
-  }
-  if (activeView === 'rigs') {
-    await loadRigs({ forceRefresh });
-    return;
-  }
-  if (activeView === 'mail') {
-    await loadMail({ forceRefresh });
-    return;
-  }
-  if (activeView === 'work') {
-    await loadWork();
-  }
-}
-
-function scheduleRealtimeRefresh(reason, { immediate = false } = {}) {
-  if (realtimeRefreshTimer || realtimeRefreshInFlight) {
-    queuedRealtimeRefreshReason = reason;
-    return;
-  }
-
-  const delay = immediate ? 0 : REALTIME_REFRESH_DEBOUNCE_MS;
-  realtimeRefreshTimer = setTimeout(async () => {
-    realtimeRefreshTimer = null;
-    realtimeRefreshInFlight = true;
-
-    try {
-      await loadInitialData({
-        forceRefresh: true,
-        silent: true,
-        includeMayorHistory: false,
-        preloadBackground: false,
-      });
-      await refreshActiveView({ forceRefresh: true });
-      console.log(`[App] Applied realtime refresh (${reason})`);
-    } catch (err) {
-      console.error('[App] Realtime refresh failed:', err);
-    } finally {
-      realtimeRefreshInFlight = false;
-      if (queuedRealtimeRefreshReason) {
-        const nextReason = queuedRealtimeRefreshReason;
-        queuedRealtimeRefreshReason = null;
-        scheduleRealtimeRefresh(`${nextReason}_queued`, { immediate: true });
-      }
-    }
-  }, delay);
-}
-
-function refreshOnWindowActive() {
-  const now = Date.now();
-  if (now - lastWindowActiveRefreshAt < FOCUS_REFRESH_COOLDOWN_MS) {
-    return;
-  }
-  lastWindowActiveRefreshAt = now;
-  scheduleRealtimeRefresh('window_active', { immediate: true });
-}
-
 // WebSocket connection
 function connectWebSocket() {
   updateConnectionStatus('connecting');
@@ -423,35 +349,29 @@ function handleWebSocketMessage(message) {
 
     case 'convoy_created':
     case 'convoy_updated':
-      if (message.data?.id) {
-        state.updateConvoy(message.data);
-      }
-      scheduleRealtimeRefresh(message.type);
+      state.updateConvoy(message.data);
       break;
 
     case 'work_slung':
       showToast(`Work slung: ${message.data?.bead || 'unknown'}`, 'success');
-      scheduleRealtimeRefresh(message.type);
+      loadConvoys();
       break;
 
     case 'bead_created':
       // Bead was created - refresh work list if visible
-      if (getActiveViewId() === 'work') {
+      if (state.currentView === 'work') {
         loadWork();
       }
       showToast('Work item created', 'success');
-      scheduleRealtimeRefresh(message.type);
       break;
 
     case 'rig_added':
       // Rig was added - refresh rigs list and status
       showToast(`Rig added: ${message.data?.name || 'unknown'}`, 'success');
-      scheduleRealtimeRefresh(message.type);
-      break;
-
-    case 'rig_removed':
-      showToast(`Rig removed: ${message.data?.name || 'unknown'}`, 'info');
-      scheduleRealtimeRefresh(message.type);
+      api.getStatus(true); // Force refresh
+      if (state.currentView === 'rigs') {
+        loadRigs();
+      }
       break;
 
     case 'mayor_message':
@@ -479,22 +399,8 @@ function handleWebSocketMessage(message) {
           service: message.data.service
         });
       }
-      scheduleRealtimeRefresh(message.type);
-      break;
-
-    case 'service_stopped':
-    case 'service_restarted':
-    case 'agent_started':
-    case 'agent_stopped':
-    case 'agent_restarted':
-    case 'crew_added':
-    case 'crew_removed':
-    case 'work_done':
-    case 'work_parked':
-    case 'work_released':
-    case 'work_reassigned':
-    case 'escalation':
-      scheduleRealtimeRefresh(message.type);
+      // Refresh status and update state to re-render sidebar
+      api.getStatus().then(status => state.setStatus(status)).catch(console.error);
       break;
 
     default:
@@ -517,36 +423,24 @@ function updateConnectionStatus(status) {
 }
 
 // Data loading
-async function loadInitialData({
-  forceRefresh = false,
-  silent = false,
-  includeMayorHistory = true,
-  preloadBackground = true,
-} = {}) {
-  if (!silent) {
-    elements.statusMessage.textContent = 'Loading...';
-  }
+async function loadInitialData() {
+  elements.statusMessage.textContent = 'Loading...';
 
   try {
     // Load all critical data in parallel using Promise.allSettled
     // This way a slow/failing request doesn't block others
-    const tasks = [
-      api.getStatus(forceRefresh).then(status => {
+    const results = await Promise.allSettled([
+      api.getStatus().then(status => {
         state.setStatus(status);
         return status;
       }),
-      loadConvoys({ forceRefresh }),
-    ];
-    const labels = ['status', 'convoys'];
-
-    if (includeMayorHistory) {
-      tasks.push(loadMayorMessageHistory());
-      labels.push('mayor history');
-    }
-
-    const results = await Promise.allSettled(tasks);
+      loadConvoys(),
+      loadMayorMessageHistory(),
+      loadDashboard(),
+    ]);
 
     // Check results and log any failures
+    const labels = ['status', 'convoys', 'mayor history', 'dashboard'];
     results.forEach((result, i) => {
       if (result.status === 'rejected') {
         console.error(`[App] Failed to load ${labels[i]}:`, result.reason);
@@ -554,32 +448,19 @@ async function loadInitialData({
     });
 
     // If status failed, show warning
-    if (!silent) {
-      if (results[0].status === 'rejected') {
-        elements.statusMessage.textContent = 'Ready (status unavailable)';
-        showToast('Some data failed to load', 'warning');
-      } else {
-        elements.statusMessage.textContent = 'Ready';
-      }
+    if (results[0].status === 'rejected') {
+      elements.statusMessage.textContent = 'Ready (status unavailable)';
+      showToast('Some data failed to load', 'warning');
+    } else {
+      elements.statusMessage.textContent = 'Ready';
     }
-
-    // Reuse status from initial fetch so dashboard refresh doesn't issue
-    // a second status request on every realtime mutation.
-    const dashboardStatus = results[0].status === 'fulfilled'
-      ? results[0].value
-      : state.get('status') || null;
-    await loadDashboard({ forceRefresh, statusOverride: dashboardStatus });
 
     // Background preload of other data (don't await, let it load in background)
-    if (preloadBackground) {
-      preloadBackgroundData();
-    }
+    preloadBackgroundData();
   } catch (err) {
     console.error('[App] Failed to load initial data:', err);
-    if (!silent) {
-      elements.statusMessage.textContent = 'Cannot connect to server';
-      showToast('Cannot connect - is the server running? Check terminal for the correct URL.', 'error', CONNECTION_ERROR_TOAST_DURATION_MS);
-    }
+    elements.statusMessage.textContent = 'Cannot connect to server';
+    showToast('Cannot connect - is the server running? Check terminal for the correct URL.', 'error', CONNECTION_ERROR_TOAST_DURATION_MS);
   }
 }
 
@@ -610,13 +491,10 @@ async function preloadBackgroundData() {
 // Track convoy filter state
 let showAllConvoys = false;
 
-async function loadConvoys({ forceRefresh = false } = {}) {
+async function loadConvoys() {
   showLoadingState(elements.convoyList, 'Loading convoys...');
   try {
     const params = showAllConvoys ? { all: 'true' } : {};
-    if (forceRefresh) {
-      params.refresh = 'true';
-    }
     const convoys = await api.getConvoys(params);
     state.setConvoys(convoys);
   } catch (err) {
@@ -684,20 +562,19 @@ function setupConvoyFilters() {
 }
 
 // Track mail filter state
-let mailFilter = 'mine'; // 'mine' = my inbox, 'all' = all system mail
+let mailFilter = 'all'; // 'mine' = my inbox, 'all' = all system mail
 
-async function loadMail({ forceRefresh = false } = {}) {
+async function loadMail() {
   showLoadingState(elements.mailList, 'Loading mail...');
   try {
     let mail;
     if (mailFilter === 'all') {
       // Get all mail from feed (paginated response)
-      const endpoint = forceRefresh ? '/api/mail/all?refresh=true' : '/api/mail/all';
-      const response = await api.get(endpoint);
+      const response = await api.get('/api/mail/all');
       mail = response.items || response; // Handle both paginated and legacy responses
     } else {
       // Get my inbox only
-      mail = await api.getMail(forceRefresh);
+      mail = await api.getMail();
     }
     state.setMail(mail || []);
   } catch (err) {
@@ -740,7 +617,7 @@ function setupMailFilters() {
   }
 }
 
-async function loadAgents({ forceRefresh = false } = {}) {
+async function loadAgents() {
   // Show loading state only if we don't have cached data
   const hasCache = state.getAgents().length > 0;
   if (!hasCache) {
@@ -748,16 +625,20 @@ async function loadAgents({ forceRefresh = false } = {}) {
   }
 
   try {
-    const response = await api.getAgents(forceRefresh);
-    // Combine agents and polecats into a flat list
-    const allAgents = [
-      ...(response.agents || []),
-      ...(response.polecats || []).map(p => ({
-        ...p,
-        id: p.name,
-        status: p.running ? 'working' : 'idle',
-      })),
-    ];
+    const response = await api.getAgents();
+    const townAgents = (response.agents || []).map(agent => ({
+      ...agent,
+      id: agent.id || agent.address || agent.name,
+      status: agent.state || (agent.running ? (agent.has_work ? 'working' : 'running') : 'idle'),
+      current_task: agent.work_title || agent.current_task || null,
+    }));
+    const rigAgents = (response.rigAgents || []).map(agent => ({
+      ...agent,
+      id: agent.id || agent.address || `${agent.rig}/${agent.name}`,
+      status: agent.state || (agent.running ? (agent.has_work || agent.hook_bead ? 'working' : 'running') : 'idle'),
+      current_task: agent.work_title || agent.current_task || agent.hook_bead || null,
+    }));
+    const allAgents = [...townAgents, ...rigAgents];
     state.setAgents(allAgents);
   } catch (err) {
     console.error('[App] Failed to load agents:', err);
@@ -773,7 +654,7 @@ async function loadAgents({ forceRefresh = false } = {}) {
   }
 }
 
-async function loadRigs({ forceRefresh = false } = {}) {
+async function loadRigs() {
   // Show loading state only if we don't have cached data
   const hasCache = state.getRigs().length > 0;
   if (!hasCache) {
@@ -785,7 +666,7 @@ async function loadRigs({ forceRefresh = false } = {}) {
 
   try {
     // Get rigs from status (has more details than /api/rigs)
-    const status = await api.getStatus(forceRefresh);
+    const status = await api.getStatus();
     const rigs = status.rigs || [];
     state.setStatus(status); // Update state
     renderRigList(elements.rigList, rigs);
@@ -804,14 +685,14 @@ async function loadRigs({ forceRefresh = false } = {}) {
 }
 
 // Track work filter state
-let workFilter = 'closed'; // Default to showing completed work
+let workFilter = 'all';
 
 async function loadWork() {
   showLoadingState(elements.workList, 'Loading work...');
   try {
-    const params = workFilter === 'all' ? {} : { status: workFilter };
-    const beads = await api.get(`/api/beads${workFilter !== 'all' ? `?status=${workFilter}` : ''}`);
-    renderWorkList(elements.workList, beads || []);
+    const query = workFilter !== 'all' ? `?status=${encodeURIComponent(workFilter)}` : '';
+    const beads = await api.get(`/api/beads${query}`);
+    state.setWork(beads || []);
   } catch (err) {
     console.error('[App] Failed to load work:', err);
     elements.workList.innerHTML = `
@@ -885,6 +766,10 @@ function subscribeToState() {
     renderConvoyList(elements.convoyList, convoys);
   });
 
+  subscribe('work', (work) => {
+    renderWorkList(elements.workList, work);
+  });
+
   // Agent updates
   subscribe('agents', (agents) => {
     renderAgentGrid(elements.agentGrid, agents);
@@ -901,13 +786,14 @@ function subscribeToState() {
 
     // Update badge
     const unread = mail.filter(m => !m.read).length;
+    const badgeCount = mailFilter === 'all' ? mail.length : unread;
     if (elements.mailBadge) {
-      elements.mailBadge.textContent = unread;
-      elements.mailBadge.classList.toggle('hidden', unread === 0);
+      elements.mailBadge.textContent = badgeCount;
+      elements.mailBadge.classList.toggle('hidden', badgeCount === 0);
     }
     if (elements.moreBadge) {
-      elements.moreBadge.textContent = unread;
-      elements.moreBadge.classList.toggle('hidden', unread === 0);
+      elements.moreBadge.textContent = badgeCount;
+      elements.moreBadge.classList.toggle('hidden', badgeCount === 0);
     }
   });
 }
@@ -986,7 +872,7 @@ function setupKeyboardShortcuts() {
           break;
         case 'r':
           e.preventDefault();
-          loadInitialData({ forceRefresh: true });
+          loadInitialData();
           showToast('Refreshing...', 'info', REFRESH_TOAST_DURATION_MS);
           break;
         case 's':
@@ -1137,7 +1023,7 @@ function setupThemeToggle() {
 
 // Refresh button
 document.getElementById('refresh-btn').addEventListener('click', () => {
-  loadInitialData({ forceRefresh: true });
+  loadInitialData();
   showToast('Refreshing...', 'info', REFRESH_TOAST_DURATION_MS);
 });
 

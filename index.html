@@ -75,7 +75,7 @@
             <span class="material-icons">groups</span>
             <span class="nav-label">Agents</span>
           </button>
-          <button class="nav-tab" data-view="rigs" data-tooltip="Git projects with their agents and GitHub integration.">
+          <button class="nav-tab" data-view="rigs" data-tooltip="Connected repositories and local workspaces with their agents.">
             <span class="material-icons">folder_special</span>
             <span class="nav-label">Rigs</span>
           </button>
@@ -96,11 +96,11 @@
                 Formulas
               </button>
               <div class="nav-dropdown-divider"></div>
-              <button class="nav-dropdown-item" data-view="prs" data-tooltip="GitHub Pull Requests across all connected repositories.">
+              <button class="nav-dropdown-item" data-view="prs" data-tooltip="Pull requests when a review backend is configured.">
                 <span class="material-icons">merge_type</span>
                 Pull Requests
               </button>
-              <button class="nav-dropdown-item" data-view="issues" data-tooltip="GitHub Issues across connected repositories.">
+              <button class="nav-dropdown-item" data-view="issues" data-tooltip="Issues when an external tracker is configured.">
                 <span class="material-icons">bug_report</span>
                 Issues
               </button>
@@ -205,13 +205,13 @@
           <div class="view-header">
             <h1 id="work-view-title">All Work</h1>
             <div class="view-filters">
-              <button class="btn btn-sm btn-ghost" id="work-filter-all" title="All beads">
+              <button class="btn btn-sm btn-secondary filter-active" id="work-filter-all" title="All beads">
                 <span class="material-icons">list</span> All
               </button>
               <button class="btn btn-sm btn-ghost" id="work-filter-open" title="Open tasks">
                 <span class="material-icons">pending</span> Open
               </button>
-              <button class="btn btn-sm btn-secondary filter-active" id="work-filter-closed" title="Completed tasks">
+              <button class="btn btn-sm btn-ghost" id="work-filter-closed" title="Completed tasks">
                 <span class="material-icons">check_circle</span> Completed
               </button>
             </div>
@@ -320,10 +320,10 @@
           </div>
         </div>
 
-        <!-- GitHub Issues View -->
+        <!-- Issues View -->
         <div class="view" id="view-issues">
           <div class="view-header">
-            <h1>GitHub Issues</h1>
+            <h1>Issues</h1>
             <div class="view-actions">
               <div class="filter-group">
                 <button class="issue-state-tab active" data-state="open">Open</button>
@@ -343,14 +343,14 @@
         <!-- Mail View -->
         <div class="view" id="view-mail">
           <div class="view-header">
-            <h1 id="mail-view-title">My Inbox</h1>
+            <h1 id="mail-view-title">All Mail</h1>
             <div class="view-actions">
               <div class="filter-group">
-                <button class="btn btn-secondary filter-active" id="mail-filter-mine">
+                <button class="btn btn-ghost" id="mail-filter-mine">
                   <span class="material-icons">inbox</span>
                   My Inbox
                 </button>
-                <button class="btn btn-ghost" id="mail-filter-all">
+                <button class="btn btn-secondary filter-active" id="mail-filter-all">
                   <span class="material-icons">forum</span>
                   All Mail
                 </button>

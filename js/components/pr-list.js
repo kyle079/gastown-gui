@@ -6,6 +6,8 @@
 
 import { api } from '../api.js';
 import { showToast } from './toast.js';
+import { state } from '../state.js';
+import { getGitHubBackedRigs } from '../shared/github-repos.js';
 import { formatRelativeTime } from '../utils/formatting.js';
 import { escapeHtml } from '../utils/html.js';
 
@@ -57,6 +59,12 @@ export async function loadPRs() {
   container.innerHTML = '<div class="loading-state"><span class="loading-spinner"></span> Loading PRs...</div>';
 
   try {
+    const gitHubRigs = await getAvailableGitHubRigs();
+    if (gitHubRigs.length === 0) {
+      renderNonGitHubState(container, 'pull requests');
+      return;
+    }
+
     prs = await api.getGitHubPRs(currentState);
 
     if (prs.length === 0) {
@@ -64,6 +72,7 @@ export async function loadPRs() {
         <div class="empty-state">
           <span class="material-icons">merge_type</span>
           <p>No ${currentState} pull requests found</p>
+          <small>No pull request records were returned by the configured review integration.</small>
         </div>
       `;
       return;
@@ -83,6 +92,44 @@ export async function loadPRs() {
       </div>
     `;
   }
+}
+
+async function getAvailableGitHubRigs() {
+  const cachedStatus = state.get('status');
+  if (cachedStatus?.rigs?.length) {
+    return getGitHubBackedRigs(cachedStatus);
+  }
+
+  const status = await api.getStatus();
+  return getGitHubBackedRigs(status);
+}
+
+function renderNonGitHubState(container, resourceLabel) {
+  container.innerHTML = `
+    <div class="empty-state enhanced non-github-state">
+      <div class="empty-state-icon-wrapper">
+        <span class="material-icons">alt_route</span>
+      </div>
+      <h3>No review integration configured</h3>
+      <p>This town currently exposes git remotes and worktrees only, so ${resourceLabel} are not available in this view.</p>
+      <div class="empty-state-actions">
+        <button class="btn btn-primary" data-navigate-view="rigs">
+          <span class="material-icons">folder_special</span>
+          Review Rigs
+        </button>
+        <button class="btn btn-secondary" data-navigate-view="work">
+          <span class="material-icons">task_alt</span>
+          Open Work
+        </button>
+      </div>
+    </div>
+  `;
+
+  container.querySelectorAll('[data-navigate-view]').forEach(button => {
+    button.addEventListener('click', () => {
+      document.querySelector(`[data-view="${button.dataset.navigateView}"]`)?.click();
+    });
+  });
 }
 
 /**
@@ -130,7 +177,7 @@ function createPRCard(pr) {
       </div>
     </div>
     <div class="pr-actions">
-      <a href="${pr.url}" target="_blank" class="btn btn-sm btn-icon" title="Open in GitHub">
+      <a href="${pr.url}" target="_blank" class="btn btn-sm btn-icon" title="Open review page">
         <span class="material-icons">open_in_new</span>
       </a>
     </div>
@@ -179,7 +226,7 @@ function getReviewIcon(reviewDecision) {
  * Show PR detail modal
  */
 async function showPRDetail(pr) {
-  // For now, just open in GitHub
+  // For now, just open the remote PR page
   // Could expand to show a detail modal with diffs, comments, etc.
   window.open(pr.url, '_blank');
 }

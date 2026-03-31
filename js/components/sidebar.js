@@ -190,10 +190,16 @@ function renderHookSection(hook) {
  * Render stats section
  */
 function renderStats(status) {
+  const townAgents = Array.isArray(status.agents) ? status.agents : [];
+  const rigAgents = (status.rigs || []).flatMap(rig => Array.isArray(rig.agents) ? rig.agents : []);
+  const allAgents = [...townAgents, ...rigAgents];
+  const runningAgents = allAgents.filter(agent => agent.running).length;
+  const workingAgents = allAgents.filter(agent => agent.running && (agent.has_work || agent.hook || agent.hook_bead)).length;
+
   const stats = [
-    { label: 'Convoys', value: status.convoy_count || 0, icon: 'local_shipping' },
-    { label: 'Active', value: status.active_agents || 0, icon: 'person' },
-    { label: 'Pending', value: status.pending_tasks || 0, icon: 'pending' },
+    { label: 'Rigs', value: status.rigs?.length || 0, icon: 'folder_special' },
+    { label: 'Running', value: runningAgents, icon: 'person' },
+    { label: 'Working', value: workingAgents, icon: 'pending' },
   ];
 
   return `

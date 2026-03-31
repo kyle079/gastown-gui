@@ -6,6 +6,8 @@
 
 import { api } from '../api.js';
 import { showToast } from './toast.js';
+import { state } from '../state.js';
+import { getGitHubBackedRigs } from '../shared/github-repos.js';
 import { formatRelativeTime } from '../utils/formatting.js';
 import { escapeHtml } from '../utils/html.js';
 import { getStaggerClass } from '../shared/animations.js';
@@ -59,6 +61,12 @@ export async function loadIssues() {
   container.innerHTML = '<div class="loading-state"><span class="loading-spinner"></span> Loading issues...</div>';
 
   try {
+    const gitHubRigs = await getAvailableGitHubRigs();
+    if (gitHubRigs.length === 0) {
+      renderNonGitHubState();
+      return;
+    }
+
     issues = await api.getGitHubIssues(currentState);
     renderIssues();
   } catch (err) {
@@ -73,6 +81,44 @@ export async function loadIssues() {
   }
 }
 
+async function getAvailableGitHubRigs() {
+  const cachedStatus = state.get('status');
+  if (cachedStatus?.rigs?.length) {
+    return getGitHubBackedRigs(cachedStatus);
+  }
+
+  const status = await api.getStatus();
+  return getGitHubBackedRigs(status);
+}
+
+function renderNonGitHubState() {
+  container.innerHTML = `
+    <div class="empty-state enhanced non-github-state">
+      <div class="empty-state-icon-wrapper">
+        <span class="material-icons">alt_route</span>
+      </div>
+      <h3>No issue tracker integration configured</h3>
+      <p>This town currently exposes git remotes and worktrees only, so issue records are not available in this view.</p>
+      <div class="empty-state-actions">
+        <button class="btn btn-primary" data-navigate-view="rigs">
+          <span class="material-icons">folder_special</span>
+          Review Rigs
+        </button>
+        <button class="btn btn-secondary" data-navigate-view="work">
+          <span class="material-icons">task_alt</span>
+          Open Work
+        </button>
+      </div>
+    </div>
+  `;
+
+  container.querySelectorAll('[data-navigate-view]').forEach(button => {
+    button.addEventListener('click', () => {
+      document.querySelector(`[data-view="${button.dataset.navigateView}"]`)?.click();
+    });
+  });
+}
+
 /**
  * Render issue cards
  */
@@ -83,6 +129,7 @@ function renderIssues() {
         <span class="material-icons empty-icon">bug_report</span>
         <h3>No Issues</h3>
         <p>No ${currentState} issues found in connected repositories</p>
+        <small>No issue records were returned by the configured tracker integration.</small>
       </div>
     `;
     return;
@@ -145,7 +192,7 @@ function createIssueCard(issue, index) {
         <button class="btn btn-xs btn-ghost" data-action="sling" title="Sling to worker">
           <span class="material-icons">send</span>
         </button>
-        <a href="${issue.url}" target="_blank" class="btn btn-xs btn-ghost" title="Open on GitHub">
+        <a href="${issue.url}" target="_blank" class="btn btn-xs btn-ghost" title="Open in tracker">
           <span class="material-icons">open_in_new</span>
         </a>
       </div>

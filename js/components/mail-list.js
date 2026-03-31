@@ -68,8 +68,66 @@ function getUniqueRigs(mail) {
 let currentFilters = {
   agentType: 'all',
   rig: 'all',
+  category: 'all',
   search: '',
 };
+
+const SIGNAL_CONFIG = {
+  crash: { label: 'Crash', icon: 'warning', tone: 'critical', rank: 0 },
+  escalation: { label: 'Escalation', icon: 'priority_high', tone: 'critical', rank: 0 },
+  'recovery-needed': { label: 'Recovery Needed', icon: 'build_circle', tone: 'critical', rank: 0 },
+  'recovery-update': { label: 'Recovery Update', icon: 'sync_problem', tone: 'warning', rank: 1 },
+  delivery: { label: 'Delivery', icon: 'forward_to_inbox', tone: 'warning', rank: 1 },
+  system: { label: 'System', icon: 'settings', tone: 'info', rank: 2 },
+  note: { label: 'Note', icon: 'mail', tone: 'info', rank: 2 },
+};
+
+function getMailSignal(mail) {
+  const subject = String(mail?.subject || '').toUpperCase();
+
+  if (subject.includes('CRASHED_POLECAT')) return { key: 'crash', ...SIGNAL_CONFIG.crash };
+  if (subject.includes('ESCALATION')) return { key: 'escalation', ...SIGNAL_CONFIG.escalation };
+  if (subject.includes('RECOVERY_NEEDED')) return { key: 'recovery-needed', ...SIGNAL_CONFIG['recovery-needed'] };
+  if (subject.includes('RECOVERY_UPDATE')) return { key: 'recovery-update', ...SIGNAL_CONFIG['recovery-update'] };
+  if (subject.includes('DELIVERY') || subject.includes('ACK')) return { key: 'delivery', ...SIGNAL_CONFIG.delivery };
+  if (mail?.feedEvent) return { key: 'system', ...SIGNAL_CONFIG.system };
+  return { key: 'note', ...SIGNAL_CONFIG.note };
+}
+
+function matchesSignalCategory(mail, category) {
+  if (category === 'all') return true;
+
+  const signal = getMailSignal(mail);
+  if (category === 'action') {
+    return signal.tone === 'critical' || signal.tone === 'warning';
+  }
+
+  if (category === 'recovery') {
+    return signal.key === 'recovery-needed' || signal.key === 'recovery-update';
+  }
+
+  return signal.key === category;
+}
+
+function summarizeSignals(mail) {
+  const summary = {
+    total: mail.length,
+    action: 0,
+    crash: 0,
+    recovery: 0,
+    escalation: 0,
+  };
+
+  mail.forEach(item => {
+    const signal = getMailSignal(item);
+    if (signal.tone === 'critical' || signal.tone === 'warning') summary.action += 1;
+    if (signal.key === 'crash') summary.crash += 1;
+    if (signal.key === 'escalation') summary.escalation += 1;
+    if (signal.key === 'recovery-needed' || signal.key === 'recovery-update') summary.recovery += 1;
+  });
+
+  return summary;
+}
 
 export function renderMailList(container, mail, options = {}) {
   if (!container) return;
@@ -105,6 +163,9 @@ export function renderMailList(container, mail, options = {}) {
         m.to?.startsWith(currentFilters.rig)
       );
     }
+    if (currentFilters.category !== 'all') {
+      filtered = filtered.filter(m => matchesSignalCategory(m, currentFilters.category));
+    }
     if (currentFilters.search) {
       const searchLower = currentFilters.search.toLowerCase();
       filtered = filtered.filter(m =>
@@ -118,6 +179,12 @@ export function renderMailList(container, mail, options = {}) {
 
   // Sort by date (newest first), then by read status
   const sorted = filtered.sort((a, b) => {
+    if (isAllMail) {
+      const signalDiff = getMailSignal(a).rank - getMailSignal(b).rank;
+      if (signalDiff !== 0) return signalDiff;
+      return new Date(b.timestamp || 0) - new Date(a.timestamp || 0);
+    }
+
     // Unread first
     if (a.read !== b.read) return a.read ? 1 : -1;
     // Then by date
@@ -125,6 +192,7 @@ export function renderMailList(container, mail, options = {}) {
   });
 
   // Render
+  const summaryHtml = isAllMail ? renderMailSummary(filtered) : '';
   const itemsHtml = sorted.length > 0
     ? sorted.map((item, index) => renderMailItem(item, index)).join('')
     : `<div class="empty-state small">
@@ -132,7 +200,7 @@ export function renderMailList(container, mail, options = {}) {
         <p>No mail matches your filters</p>
       </div>`;
 
-  container.innerHTML = filterHtml + itemsHtml;
+  container.innerHTML = filterHtml + summaryHtml + itemsHtml;
 
   // Add filter event handlers
   if (isAllMail) {
@@ -225,6 +293,19 @@ function buildFilterUI(mail) {
           </select>
         </div>
 
+        <div class="filter-group">
+          <label>Signal</label>
+          <select id="mail-category-filter" class="filter-select">
+            <option value="all" ${currentFilters.category === 'all' ? 'selected' : ''}>All Signals</option>
+            <option value="action" ${currentFilters.category === 'action' ? 'selected' : ''}>Action Needed</option>
+            <option value="recovery" ${currentFilters.category === 'recovery' ? 'selected' : ''}>Recovery</option>
+            <option value="crash" ${currentFilters.category === 'crash' ? 'selected' : ''}>Crashes</option>
+            <option value="escalation" ${currentFilters.category === 'escalation' ? 'selected' : ''}>Escalations</option>
+            <option value="delivery" ${currentFilters.category === 'delivery' ? 'selected' : ''}>Delivery</option>
+            <option value="system" ${currentFilters.category === 'system' ? 'selected' : ''}>System</option>
+          </select>
+        </div>
+
         <div class="filter-group search-group">
           <label>Search</label>
           <input type="text" id="mail-search" class="filter-input"
@@ -254,6 +335,7 @@ function buildFilterUI(mail) {
 function setupFilterHandlers(container, mail, options) {
   const agentFilter = container.querySelector('#mail-agent-filter');
   const rigFilter = container.querySelector('#mail-rig-filter');
+  const categoryFilter = container.querySelector('#mail-category-filter');
   const searchInput = container.querySelector('#mail-search');
   const clearBtn = container.querySelector('#mail-clear-filters');
 
@@ -271,6 +353,13 @@ function setupFilterHandlers(container, mail, options) {
     });
   }
 
+  if (categoryFilter) {
+    categoryFilter.addEventListener('change', () => {
+      currentFilters.category = categoryFilter.value;
+      renderMailList(container, mail, options);
+    });
+  }
+
   if (searchInput) {
     const handleSearch = debounce(() => {
       currentFilters.search = searchInput.value;
@@ -281,10 +370,39 @@ function setupFilterHandlers(container, mail, options) {
 
   if (clearBtn) {
     clearBtn.addEventListener('click', () => {
-      currentFilters = { agentType: 'all', rig: 'all', search: '' };
+      currentFilters = { agentType: 'all', rig: 'all', category: 'all', search: '' };
       renderMailList(container, mail, options);
     });
   }
+}
+
+function renderMailSummary(mail) {
+  const summary = summarizeSignals(mail);
+
+  return `
+    <div class="mail-summary">
+      <div class="mail-summary-chip total">
+        <span class="material-icons">forum</span>
+        ${summary.total} visible
+      </div>
+      <div class="mail-summary-chip action">
+        <span class="material-icons">notification_important</span>
+        ${summary.action} action needed
+      </div>
+      <div class="mail-summary-chip critical">
+        <span class="material-icons">warning</span>
+        ${summary.crash} crashes
+      </div>
+      <div class="mail-summary-chip warning">
+        <span class="material-icons">build_circle</span>
+        ${summary.recovery} recovery
+      </div>
+      <div class="mail-summary-chip info">
+        <span class="material-icons">priority_high</span>
+        ${summary.escalation} escalations
+      </div>
+    </div>
+  `;
 }
 
 /**
@@ -295,6 +413,7 @@ function renderMailItem(mail, index) {
   const priorityConfig = PRIORITY_CONFIG[priority] || PRIORITY_CONFIG.normal;
   const isUnread = !mail.read;
   const isFeedMail = mail.feedEvent; // From all-mail view
+  const signal = getMailSignal(mail);
 
   // Get agent types for color coding
   const fromType = getAgentType(mail.from);
@@ -319,11 +438,11 @@ function renderMailItem(mail, index) {
        </span>`;
 
   return `
-    <div class="mail-item ${isUnread ? 'unread' : ''} ${isFeedMail ? 'feed-mail' : ''} animate-spawn ${getStaggerClass(index)}"
+    <div class="mail-item ${isUnread ? 'unread' : ''} ${isFeedMail ? 'feed-mail' : ''} tone-${signal.tone} animate-spawn ${getStaggerClass(index)}"
          data-mail-id="${mail.id}"
          style="--from-color: ${fromConfig.color}">
       <div class="mail-status">
-        <span class="material-icons" style="color: ${fromConfig.color}">${fromConfig.icon}</span>
+        <span class="material-icons" style="color: ${isFeedMail ? 'var(--signal-color, ' + fromConfig.color + ')' : fromConfig.color}">${isFeedMail ? signal.icon : fromConfig.icon}</span>
       </div>
 
       <div class="mail-content">
@@ -331,7 +450,10 @@ function renderMailItem(mail, index) {
           <span class="mail-from">${fromTo}</span>
           <span class="mail-time">${formatTime(mail.timestamp)}</span>
         </div>
-        <div class="mail-subject ${isUnread ? 'unread' : ''}">${escapeHtml(mail.subject || '(No Subject)')}</div>
+        <div class="mail-subject-row">
+          <div class="mail-subject ${isUnread ? 'unread' : ''}">${escapeHtml(mail.subject || '(No Subject)')}</div>
+          ${isFeedMail ? `<span class="mail-signal-chip tone-${signal.tone}"><span class="material-icons">${signal.icon}</span>${signal.label}</span>` : ''}
+        </div>
         <div class="mail-preview">${escapeHtml(truncate(mail.message || mail.body || '', 80))}</div>
 
         ${mail.tags?.length ? `

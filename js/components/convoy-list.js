@@ -219,6 +219,7 @@ function renderConvoyCard(convoy, index) {
   const priorityClass = PRIORITY_CLASSES[convoy.priority] || '';
   const progress = calculateProgress(convoy);
   const isExpanded = expandedConvoys.has(convoy.id);
+  const convoyName = convoy.title || convoy.name || convoy.id;
 
   return `
     <div class="convoy-card animate-spawn ${getStaggerClass(index)} ${isExpanded ? 'expanded' : ''}"
@@ -234,7 +235,7 @@ function renderConvoyCard(convoy, index) {
           <span class="material-icons ${status === 'running' ? 'spin' : ''}">${statusIcon}</span>
         </div>
         <div class="convoy-info">
-          <h3 class="convoy-name">${escapeHtml(convoy.name || convoy.id)}</h3>
+          <h3 class="convoy-name">${escapeHtml(convoyName)}</h3>
           <div class="convoy-meta">
             <span class="convoy-id">#${convoy.id?.slice(0, 8) || 'unknown'}</span>
             ${convoy.priority ? `<span class="convoy-priority ${priorityClass}">${convoy.priority}</span>` : ''}

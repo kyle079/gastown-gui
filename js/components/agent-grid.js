@@ -84,6 +84,14 @@ export function renderAgentGrid(container, agents) {
         showAgentOutput(agentId);
       });
     }
+
+    const viewBtn = card.querySelector('[data-action="view"]');
+    if (viewBtn) {
+      viewBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showAgentDetail(agentId);
+      });
+    }
   });
 }
 
@@ -93,7 +101,7 @@ export function renderAgentGrid(container, agents) {
 function renderAgentCard(agent, index) {
   const role = agent.role?.toLowerCase() || 'polecat';
   const agentConfig = getAgentConfig(agent.address || agent.id, role);
-  const status = agent.running ? 'running' : (agent.status || 'idle');
+  const status = agent.status || (agent.running ? (agent.has_work || agent.current_task ? 'working' : 'running') : 'idle');
   const statusIcon = STATUS_ICONS[status] || STATUS_ICONS.idle;
   const statusColor = STATUS_COLORS[status] || STATUS_COLORS.idle;
 

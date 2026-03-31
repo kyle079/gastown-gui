@@ -9,6 +9,7 @@
 const store = {
   status: null,
   convoys: [],
+  work: [],
   agents: [],
   events: [],
   mail: [],
@@ -63,6 +64,11 @@ export const state = {
   setConvoys(convoys) {
     store.convoys = convoys || [];
     notify('convoys');
+  },
+
+  setWork(work) {
+    store.work = work || [];
+    notify('work');
   },
 
   // Update single convoy

@@ -19,16 +19,9 @@ export class BDGateway {
     this._supportsNoDaemon = null;
   }
 
-  _withBeadsDir(options = {}) {
-    return {
-      ...options,
-      env: { BEADS_DIR: this._beadsDir, ...(options.env ?? {}) },
-    };
-  }
-
   async exec(args, options = {}) {
     const env = { BEADS_DIR: this._beadsDir, ...(options.env ?? {}) };
-    return this._runner.exec('bd', args, { cwd: this._gtRoot, ...options, env });
+    return this._runner.exec(this._executable, args, { cwd: this._gtRoot, ...options, env });
   }
 
   _resultText(result) {
@@ -80,11 +73,13 @@ export class BDGateway {
   }
 
   async create({ title, description, priority, labels } = {}) {
-    const args = ['create', title];
+    const args = ['new', title];
     if (description) args.push('--description', description);
     if (priority) args.push('--priority', priority);
-    if (Array.isArray(labels) && labels.length > 0) {
-      args.push('--labels', labels.join(','));
+    if (Array.isArray(labels)) {
+      labels.forEach((label) => {
+        args.push('--label', label);
+      });
     }
 
     const result = await this._execCompat(args, { timeoutMs: 30000 });
@@ -110,8 +105,8 @@ export class BDGateway {
   }
 
   async park({ beadId, reason } = {}) {
-    const args = ['update', beadId, '--status', 'deferred'];
-    if (reason) args.push('--append-notes', reason);
+    const args = ['defer', beadId];
+    if (reason) args.push('-r', reason);
     const result = await this.exec(args, { timeoutMs: 30000 });
     return { ...result, raw: (result.stdout || '').trim() };
   }

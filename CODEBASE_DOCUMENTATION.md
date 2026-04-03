@@ -32,6 +32,7 @@ server/app/createApp.js - Express app factory with CORS config
 
 ```
 server/domain/session/SessionNames.js - Upstream-compatible tmux session naming + rigs.json prefix registry
+server/domain/agents/normalizeRigAgents.js - Normalizes rig worker payloads across `rig.agents` and legacy `rig.hooks`
 
 server/domain/values/AgentPath.js - Validates rig/agent path pairs
 └─ Enforces SafeSegment on both segments
@@ -168,8 +169,9 @@ test/integration/websocket.test.js - WebSocket lifecycle tests
 test/integration/cache.test.js - Cache invalidation tests
 test/integration/realtime-cache-invalidation.test.js - Real server cache invalidation coverage for rig/service mutation freshness
 
-test/unit/ - 32 unit test files covering:
+test/unit/ - 33 unit test files covering:
 ├─ Domain values: safeSegment, agentPath
+├─ Rig agent normalization: normalizeRigAgents
 ├─ Session naming: sessionNames
 ├─ Gateways: gtGateway, bdGateway, githubGateway, gitGateway, tmuxGateway
 ├─ Infrastructure: cacheRegistry, commandRunner, eventBus

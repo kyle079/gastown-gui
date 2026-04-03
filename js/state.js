@@ -8,6 +8,7 @@
 // State store
 const store = {
   status: null,
+  currentView: 'dashboard',
   convoys: [],
   work: [],
   agents: [],
@@ -47,6 +48,14 @@ export const state = {
   // Get current state
   get(key) {
     return store[key];
+  },
+
+  setCurrentView(viewId) {
+    store.currentView = viewId || 'dashboard';
+  },
+
+  getCurrentView() {
+    return store.currentView || 'dashboard';
   },
 
   // Set status

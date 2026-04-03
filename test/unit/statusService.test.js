@@ -101,6 +101,36 @@ describe('StatusService', () => {
     expect(gtGateway.calls).toBe(3);
   });
 
+  it('derives active hook summary from hook-based rig payloads', async () => {
+    const cache = new CacheRegistry();
+    const gtGateway = {
+      status: async () => ({
+        ok: true,
+        raw: '',
+        data: {
+          rigs: [
+            {
+              name: 'rig-one',
+              hooks: [
+                { agent: 'rig-one/agent-a', role: 'polecat', hook_bead: 'bd-1' },
+                { agent: 'rig-one/agent-b', role: 'polecat' },
+              ],
+            },
+          ],
+        },
+      }),
+    };
+    const tmuxGateway = {
+      listSessions: async () => 'r1-agent-a: 1 windows (created)\nr1-agent-b: 1 windows (created)\n',
+    };
+
+    const service = new StatusService({ gtGateway, tmuxGateway, cache, gtRoot });
+    const status = await service.getStatus({ refresh: true });
+
+    expect(status.summary.active_hooks).toBe(1);
+    expect(status.summary.rig_count).toBe(1);
+  });
+
   it('keeps rig config cached across status refresh', async () => {
     const cache = new CacheRegistry();
 

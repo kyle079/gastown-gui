@@ -11,6 +11,8 @@ async function readRigConfig({ gtRoot, rigName }) {
   return JSON.parse(content);
 }
 
+import { normalizeRigAgents } from '../domain/agents/normalizeRigAgents.js';
+
 export class StatusService {
   constructor({
     gtGateway,
@@ -98,8 +100,8 @@ export class StatusService {
     }
 
     data.runningPolecats = Array.from(runningPolecats);
-    const allRigAgents = rigs.flatMap(rig => Array.isArray(rig.agents) ? rig.agents : []);
-    const activeHooks = allRigAgents.filter(agent => agent.running && (agent.has_work || agent.hook_bead)).length;
+    const allRigAgents = rigs.flatMap(rig => normalizeRigAgents(rig));
+    const activeHooks = allRigAgents.filter(agent => agent.running && (agent.has_work || agent.hook || agent.hook_bead)).length;
     data.summary = {
       ...(data.summary || {}),
       active_hooks: activeHooks,

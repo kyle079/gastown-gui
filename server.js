@@ -20,6 +20,7 @@ import readline from 'readline';
 import { fileURLToPath } from 'url';
 
 import { createApp } from './server/app/createApp.js';
+import { normalizeRigAgents } from './server/domain/agents/normalizeRigAgents.js';
 import {
   buildSessionRegistryFromTown,
   clearSessionRegistryCache,
@@ -953,7 +954,7 @@ app.get('/api/agents', async (req, res) => {
     const rigAgents = [];
     const polecats = [];
     for (const rig of data?.rigs || []) {
-      for (const agent of rig.agents || []) {
+      for (const agent of normalizeRigAgents(rig)) {
         const address = agent.address || `${rig.name}/${agent.name}`;
         const normalizedAddress = String(address).replace(/\/$/, '');
         const legacyPolecatPath = normalizedAddress.replace(/\//, '/polecats/');

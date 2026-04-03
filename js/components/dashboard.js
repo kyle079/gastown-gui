@@ -116,7 +116,7 @@ export function initDashboard() {
 /**
  * Load and render dashboard
  */
-export async function loadDashboard() {
+export async function loadDashboard({ forceRefresh = false } = {}) {
   if (!container) return;
 
   // Show loading skeleton
@@ -124,10 +124,10 @@ export async function loadDashboard() {
 
   try {
     const [statusResult, convoyResult, workResult, mailResult] = await Promise.allSettled([
-      api.getStatus(),
-      api.getConvoys({ all: 'true' }),
+      api.getStatus(forceRefresh),
+      api.getConvoys(forceRefresh ? { all: 'true', refresh: 'true' } : { all: 'true' }),
       api.get('/api/beads'),
-      api.get('/api/mail/all?limit=200'),
+      api.get(`/api/mail/all?limit=200${forceRefresh ? '&refresh=true' : ''}`),
     ]);
 
     const status = statusResult.status === 'fulfilled' ? statusResult.value : (state.get('status') || {});
@@ -189,7 +189,7 @@ function renderDashboard(status, health) {
   const work = state.get('work') || [];
   const agents = [
     ...(status.agents || []),
-    ...rigs.flatMap(rig => rig.agents || []),
+    ...rigs.flatMap(rig => rig.agents || rig.hooks || []),
   ];
   const mail = state.get('mail') || [];
 

@@ -8,7 +8,9 @@
 // State store
 const store = {
   status: null,
+  currentView: 'dashboard',
   convoys: [],
+  work: [],
   agents: [],
   events: [],
   mail: [],
@@ -48,6 +50,14 @@ export const state = {
     return store[key];
   },
 
+  setCurrentView(viewId) {
+    store.currentView = viewId || 'dashboard';
+  },
+
+  getCurrentView() {
+    return store.currentView || 'dashboard';
+  },
+
   // Set status
   setStatus(status) {
     store.status = status;
@@ -63,6 +73,11 @@ export const state = {
   setConvoys(convoys) {
     store.convoys = convoys || [];
     notify('convoys');
+  },
+
+  setWork(work) {
+    store.work = work || [];
+    notify('work');
   },
 
   // Update single convoy

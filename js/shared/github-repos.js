@@ -44,3 +44,17 @@ export function getGitHubRepoForBead(beadId) {
   return null;
 }
 
+export function isGitHubRemote(url) {
+  return /github\.com[:/]/i.test(String(url || ''));
+}
+
+export function getGitHubBackedRigs(statusOrRigs) {
+  const rigs = Array.isArray(statusOrRigs)
+    ? statusOrRigs
+    : Array.isArray(statusOrRigs?.rigs)
+      ? statusOrRigs.rigs
+      : [];
+
+  return rigs.filter(rig => isGitHubRemote(rig?.git_url));
+}
+

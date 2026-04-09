@@ -26,7 +26,7 @@ export function renderRigList(container, rigs) {
           <span class="material-icons">folder_special</span>
         </div>
         <h3>No Rigs Yet</h3>
-        <p>A rig connects your GitHub repository to Gas Town so AI agents can work on your code.</p>
+        <p>A rig connects your repository or local workspace to Gas Town so AI agents can work on your code.</p>
         <div class="empty-state-actions">
           <button class="btn btn-primary" data-modal-open="new-rig">
             <span class="material-icons">add</span>
@@ -115,8 +115,7 @@ function renderRigCard(rig, index) {
   const runningAgents = (rig.agents || []).filter(a => a.running).length;
   const totalAgents = (rig.agents || []).length;
 
-  // Get GitHub URL from config (will be added to API)
-  const githubUrl = rig.git_url || null;
+  const repoUrl = rig.git_url || null;
 
   return `
     <div class="rig-card animate-spawn ${getStaggerClass(index)}" data-rig-name="${rig.name}">
@@ -127,10 +126,10 @@ function renderRigCard(rig, index) {
         <div class="rig-info">
           <h3 class="rig-name">${escapeHtml(rig.name)}</h3>
           <div class="rig-meta">
-            ${githubUrl ? `
-              <a href="${githubUrl}" target="_blank" class="rig-github-link" title="Open on GitHub">
+            ${repoUrl ? `
+              <a href="${repoUrl}" target="_blank" class="rig-github-link" title="Open repository remote">
                 <span class="material-icons">open_in_new</span>
-                ${extractRepoName(githubUrl)}
+                ${extractRepoName(repoUrl)}
               </a>
             ` : '<span class="rig-local">Local only</span>'}
           </div>
@@ -177,10 +176,10 @@ function renderRigCard(rig, index) {
       ` : ''}
 
       <div class="rig-actions">
-        ${githubUrl ? `
-          <button class="btn btn-sm btn-secondary" data-action="github" data-url="${githubUrl}" title="Open on GitHub">
+        ${repoUrl ? `
+          <button class="btn btn-sm btn-secondary" data-action="github" data-url="${repoUrl}" title="Open repository remote">
             <span class="material-icons">open_in_new</span>
-            GitHub
+            Repository
           </button>
         ` : ''}
         <button class="btn btn-sm btn-secondary" data-action="spawn" title="Spawn a new polecat">
@@ -242,7 +241,7 @@ function renderRigAgent(agent, rigName) {
  */
 function extractRepoName(url) {
   if (!url) return '';
-  const match = url.match(/github\.com\/([^\/]+\/[^\/]+)/);
+  const match = url.match(/(?:github\.com[:/]|gerrit\.[^:/]+[:/]|ssh:\/\/[^/]+\/)([^\s]+)/);
   return match ? match[1] : url;
 }
 

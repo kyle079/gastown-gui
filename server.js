@@ -20,6 +20,7 @@ import readline from 'readline';
 import { fileURLToPath } from 'url';
 
 import { createApp } from './server/app/createApp.js';
+import { normalizeRigAgents } from './server/domain/agents/normalizeRigAgents.js';
 import {
   buildSessionRegistryFromTown,
   clearSessionRegistryCache,
@@ -327,18 +328,20 @@ setInterval(() => {
 
 // Middleware
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
-app.use('/css', express.static(path.join(__dirname, 'css')));
-// Add cache-control headers for JS files to improve load times
+app.use('/css', express.static(path.join(__dirname, 'css'), {
+  setHeaders: (res) => {
+    res.setHeader('Cache-Control', 'no-store, must-revalidate');
+  }
+}));
 app.use('/js', express.static(path.join(__dirname, 'js'), {
-  maxAge: '1h',
   setHeaders: (res, filePath) => {
-    // Set cache-control for JS files
     if (filePath.endsWith('.js')) {
-      res.setHeader('Cache-Control', 'public, max-age=3600');
+      res.setHeader('Cache-Control', 'no-store, must-revalidate');
     }
   }
 }));
 app.get('/', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store, must-revalidate');
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 app.get('/favicon.ico', (req, res) => {
@@ -939,31 +942,45 @@ app.get('/api/agents', async (req, res) => {
 
   if (result.success) {
     const data = parseJSON(result.data);
-    const agents = data?.agents || [];
+    const agents = (data?.agents || []).map((agent) => {
+      const normalizedAddress = String(agent.address || '').replace(/\/$/, '');
+      return {
+        ...agent,
+        id: agent.address || agent.name,
+        running: runningAddresses.has(normalizedAddress) || Boolean(agent.running),
+      };
+    });
 
-    // Enhance agents with running state
-    for (const agent of agents) {
-      agent.running = runningAddresses.has(agent.address?.replace(/\/$/, ''));
-    }
-
-    // Also include running polecats from rigs
+    const rigAgents = [];
     const polecats = [];
     for (const rig of data?.rigs || []) {
-      for (const hook of rig.hooks || []) {
-        const isRunning = runningAddresses.has(hook.agent) ||
-          runningAddresses.has(hook.agent?.replace(/\//, '/polecats/'));
-        polecats.push({
-          name: hook.agent,
+      for (const agent of normalizeRigAgents(rig)) {
+        const address = agent.address || `${rig.name}/${agent.name}`;
+        const normalizedAddress = String(address).replace(/\/$/, '');
+        const legacyPolecatPath = normalizedAddress.replace(/\//, '/polecats/');
+        const isRunning = runningAddresses.has(normalizedAddress) ||
+          runningAddresses.has(legacyPolecatPath) ||
+          Boolean(agent.running);
+        const enhanced = {
+          ...agent,
+          id: address,
+          address,
           rig: rig.name,
-          role: hook.role,
           running: isRunning,
-          has_work: hook.has_work,
-          hook_bead: hook.hook_bead
-        });
+        };
+        rigAgents.push(enhanced);
+        if (String(agent.role || '').toLowerCase() === 'polecat') {
+          polecats.push(enhanced);
+        }
       }
     }
 
-    const response = { agents, polecats, runningPolecats: Array.from(runningAddresses) };
+    const response = {
+      agents,
+      rigAgents,
+      polecats,
+      runningPolecats: Array.from(runningAddresses),
+    };
     setCache('agents', response, CACHE_TTL.agents);
     res.json(response);
   } else {
@@ -1216,26 +1233,34 @@ app.get('/api/setup/status', async (req, res) => {
 
   // Get rigs — prefer --json output, fall back to text parsing
   try {
-    let rigs = null;
     const rigResult = await executeGT(['rig', 'list', '--json']);
-
     if (rigResult.success) {
       try {
-        const parsed = JSON.parse(rigResult.data);
-        rigs = parsed.map((rig) => ({ name: rig.name }));
+        const parsed = JSON.parse(rigResult.data || '[]');
+        status.rigs = Array.isArray(parsed)
+          ? parsed
+              .filter(rig => rig && rig.name)
+              .map(rig => ({ name: rig.name, ...rig }))
+          : [];
       } catch {
-        // JSON parse failed — fall through to text parsing
+        const rigs = [];
+        const lines = String(rigResult.data || '').split('\n');
+        for (const line of lines) {
+          const match = line.match(/^\s*([a-zA-Z0-9_-]+)\s*$/);
+          if (match) {
+            rigs.push({ name: match[1] });
+          }
+        }
+        status.rigs = rigs;
       }
-    }
-
-    if (!rigResult.success || rigs === null) {
+    } else {
       const textResult = await executeGT(['rig', 'list']);
       if (textResult.success) {
-        rigs = parseRigNames(textResult.data);
+        status.rigs = parseRigNames(textResult.data);
+      } else {
+        status.rigs = [];
       }
     }
-
-    status.rigs = rigs || [];
   } catch {
     status.rigs = [];
   }

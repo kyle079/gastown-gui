@@ -587,6 +587,10 @@ select {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-lg);
 }
 
 .rig-card {
@@ -777,6 +781,9 @@ select {
 
 /* === Crew Card === */
 .crew-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   padding: var(--space-lg);
 }
 
@@ -1032,6 +1039,18 @@ select {
   text-overflow: ellipsis;
 }
 
+.mail-subject-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  justify-content: space-between;
+  margin-bottom: var(--space-xxs);
+}
+
+.mail-subject-row .mail-subject {
+  margin-bottom: 0;
+}
+
 /* === Mail Filters === */
 .mail-filters {
   padding: var(--space-md);
@@ -1097,6 +1116,54 @@ select {
   border-top: 1px solid var(--border-default);
 }
 
+.mail-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+
+.mail-summary-chip,
+.mail-signal-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xxs);
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+.mail-summary-chip .material-icons,
+.mail-signal-chip .material-icons {
+  font-size: 14px;
+}
+
+.mail-summary-chip.total {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-default);
+  color: var(--text-secondary);
+}
+
+.mail-summary-chip.action,
+.mail-summary-chip.critical,
+.mail-signal-chip.tone-critical {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+}
+
+.mail-summary-chip.warning,
+.mail-signal-chip.tone-warning {
+  background: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
+}
+
+.mail-summary-chip.info,
+.mail-signal-chip.tone-info {
+  background: rgba(59, 130, 246, 0.12);
+  color: #3b82f6;
+}
+
 .legend-item {
   display: inline-flex;
   align-items: center;
@@ -1136,6 +1203,18 @@ select {
 /* === Feed Mail Items === */
 .mail-item.feed-mail {
   border-left: 3px solid var(--from-color, var(--border-default));
+}
+
+.mail-item.feed-mail.tone-critical {
+  border-left-color: #ef4444;
+}
+
+.mail-item.feed-mail.tone-warning {
+  border-left-color: #f59e0b;
+}
+
+.mail-item.feed-mail.tone-info {
+  border-left-color: #3b82f6;
 }
 
 .mail-item .mail-status {
@@ -3848,6 +3927,8 @@ select {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
+  flex: 1;
+  min-height: 0;
   padding: var(--space-lg);
   overflow-y: auto;
 }
@@ -4503,6 +4584,9 @@ select {
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   padding: var(--space-md);
 }
 
@@ -4677,6 +4761,10 @@ select {
   width: 100%;
 }
 
+.non-github-state .empty-state-actions {
+  margin-top: var(--space-md);
+}
+
 .pr-list .loading-state .loading-spinner {
   width: 48px;
   height: 48px;
@@ -4775,6 +4863,10 @@ select {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: var(--space-md);
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  align-content: start;
   padding: var(--space-md);
 }
 
@@ -5032,6 +5124,9 @@ select {
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   padding: var(--space-md);
 }
 
@@ -5424,7 +5519,7 @@ select {
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-y: auto;
   min-height: 0; /* Allow flex shrinking */
 }
 
@@ -5773,7 +5868,7 @@ select {
   padding: var(--space-lg);
   flex: 1;
   min-height: 0;
-  overflow: hidden;
+  overflow-y: auto;
 }
 
 /* Loading Skeleton */

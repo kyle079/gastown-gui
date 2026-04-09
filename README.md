@@ -366,7 +366,7 @@ Thanks to these community members who contributed to the original PR through tes
 - [@olivierlefloch](https://github.com/olivierlefloch)
 - [@zalo](https://github.com/zalo)
 - [@irelandpaul](https://github.com/irelandpaul)
-- [@yougotborked](https://github.com/yougotborked)
+- [@yougotborked](https://github.com/yougotborked) (PR #27 foundation work)
 
 ---
 

@@ -1,61 +1,32 @@
 # Product
 
 ## Register
-
 product
 
 ## Users
-
-Developers and operators running Gas Town, a multi-agent orchestration system for
-Claude Code. They sit in front of this GUI as a mission-control surface: watching
-fleets of agents (mayor, deacon, witnesses, refineries, polecats) work across
-repositories ("rigs"), tracking work items ("beads"), convoys, mail, and PRs in
-near real time. The context is focused and operational, often a second monitor
-left open while real work happens elsewhere. The job to be done: understand system
-state at a glance and intervene (start/stop services, sling work, send mail/nudges)
-without ceremony.
+Single power user — the operator running Gas Town, in this console all day. Expert. Wants speed, keyboard control, and signal over noise.
 
 ## Product Purpose
-
-Gas Town GUI is a standalone web dashboard for observing and steering a Gas Town
-deployment. It exists so an operator does not have to read CLI output to know what
-the swarm is doing. Success is when a user opens the dashboard and within seconds
-knows: is the system healthy, who is working, what is stuck, and what needs me.
+The control console for the Gas Town agent system: monitor and steer rigs, polecats, convoys, and the work / mail / escalation queues and live activity, then act fast (authorize escalations, dispatch work, respond). Includes attaching to agent tmux sessions from the browser (web terminal). Internal tool: design SERVES the work.
 
 ## Brand Personality
-
-Industrial, instrument-panel, legible. Three words: mechanical, calm, dense. It
-should feel like a well-built ops console (a control room readout), not a
-consumer SaaS landing page. Confidence through clarity, not decoration. The
-existing dark, GitHub-derived palette with industrial status colors (running
-green, working amber, stuck red, done purple) is the established identity and is
-preserved.
+Vercel-grade modern high-tech with a RESTRAINED TRON influence: dark, precise, geometric, digital structure (grid lines, sharp edges, technical legibility) — but WITHOUT the glowing neon accents or cyberpunk overload. Quiet, composed, confident. A professional control surface, not a generated dashboard.
 
 ## Anti-references
-
-- Rainbow/Tailwind candy palettes layered on top of the established token system.
-- Marketing-dashboard tropes: hero metric templates, gradient text, glassmorphism,
-  oversized friendly illustrations.
-- Anything that reads as a generic admin-template starter. This is a purpose-built
-  instrument, not a Bootstrap clone.
+- The AI-generated look (banned): generic icon-card grids, gradient text/accents, tiny uppercase eyebrow kickers, emoji-stuffed UI, identical repeated cards, hero-metric templates.
+- The Tron neon-glow cliche / cyberpunk neon overload — we want Tron's structure and precision, NOT the glow.
+- The current gastown UI: too dense, too noisy, surfaces doing too much.
 
 ## Design Principles
-
-1. **Glanceable first.** State must read in under a second. Color and position
-   carry meaning before text does.
-2. **One palette, one identity.** Reuse the established tokens (variables.css);
-   never introduce a parallel color system. Status color is information, not decor.
-3. **Density without noise.** Show a lot, but with rhythm and hierarchy so it never
-   feels cramped.
-4. **The tool disappears.** Familiar, standard affordances. No invented controls
-   for standard tasks. Motion conveys state, never performs.
-5. **Honest empty/error states.** When there is nothing, teach the next action;
-   when something breaks, say what and offer a retry.
+1. Vercel-grade restraint. Refined density, composed not crammed.
+2. One surface, one job. Each view does less, well; cut what doesn't earn its place.
+3. Signal over noise. Surface what needs the operator (escalations, blockers, failures) first.
+4. Keyboard-first power tool. Command palette + shortcuts; the expert drives by keyboard.
+5. Reusable primitives. A real TypeScript + Tailwind component library; consistency from the system.
+6. Kill the AI tells. Pass the AI-slop test on every surface.
 
 ## Accessibility & Inclusion
+Not a priority. Single expert user; optimize for speed, keyboard control, and glanceable legibility.
 
-- Target WCAG AA: body text >= 4.5:1, large/UI text >= 3:1 against its surface.
-- Respect `prefers-reduced-motion` (handled globally in animations.css).
-- Keyboard-operable controls with visible focus; semantic roles on interactive
-  elements.
-- Status is never encoded by color alone; pair with icon, label, or shape.
+## Tech Foundation
+React + TypeScript + Vite + Tailwind + TanStack Router + TanStack Query. Presentational components fed by TanStack Query from the gt backend. New capability (later phase): web terminal (xterm.js) attaching to gt tmux sessions via a PTY-over-websocket bridge in the Express server.

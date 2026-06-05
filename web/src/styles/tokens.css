@@ -1,0 +1,44 @@
+/**
+ * Design tokens — the single source of color truth.
+ *
+ * Values are space-separated RGB channels so Tailwind opacity modifiers
+ * (e.g. `bg-surface/60`, `ring-accent/40`) resolve correctly.
+ *
+ * Palette philosophy (see DESIGN.md):
+ *   - Background is deep ink with a faint cool (blue-cyan) undertone, never pure black.
+ *   - Steps between surfaces are small and deliberate — composed, not crammed.
+ *   - One accent only: a restrained technical cyan, applied FLAT (no glow, no bloom).
+ *   - Status colors are desaturated to sit calmly on the dark base.
+ */
+:root {
+  /* Structural surfaces */
+  --c-ink: 6 8 10; /* #06080a — deepest */
+  --c-base: 10 13 15; /* #0a0d0f — app background */
+  --c-surface: 16 20 23; /* #101417 — panels */
+  --c-raised: 22 27 31; /* #161b1f — hover / lifted */
+  --c-overlay: 20 25 29; /* #14191d — dialogs/popovers */
+
+  /* Lines */
+  --c-line: 33 41 46; /* #21292e — hairline */
+  --c-line-strong: 46 57 64; /* #2e3940 */
+
+  /* Text */
+  --c-fg: 226 231 233; /* #e2e7e9 — primary */
+  --c-muted: 138 150 155; /* #8a969b — secondary */
+  --c-faint: 92 103 108; /* #5c676c — tertiary/disabled */
+
+  /* Accent — restrained technical cyan */
+  --c-accent: 52 192 212; /* #34c0d4 */
+  --c-accent-fg: 6 18 21; /* near-ink, for text on accent fills */
+  --c-accent-dim: 38 110 122; /* #266e7a — borders/idle accent */
+
+  /* Status (desaturated) */
+  --c-ok: 63 185 80; /* #3fb950 */
+  --c-warn: 210 153 34; /* #d29922 */
+  --c-danger: 248 81 73; /* #f85149 */
+  --c-info: 88 166 255; /* #58a6ff */
+
+  /* Layout rhythm */
+  --sidebar-w: 240px;
+  --topbar-h: 48px;
+}

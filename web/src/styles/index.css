@@ -1,0 +1,53 @@
+@import './tokens.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    color-scheme: dark;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-base text-fg font-sans antialiased;
+    font-feature-settings: 'cv05', 'ss01';
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Sharp, technical focus — a flat accent ring, never a glow. */
+  :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+    @apply outline-none ring-1 ring-accent ring-offset-0;
+  }
+
+  /* Restrained scrollbars — present but quiet. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(var(--c-line-strong)) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background-color: rgb(var(--c-line-strong));
+    border: 3px solid transparent;
+    background-clip: content-box;
+    border-radius: 9999px;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: rgb(var(--c-faint));
+  }
+
+  ::selection {
+    background-color: rgb(var(--c-accent) / 0.25);
+  }
+}
+
+@layer components {
+  /* A hairline divider used between technical rows. */
+  .divide-hairline > * + * {
+    border-top: 1px solid rgb(var(--c-line));
+  }
+}

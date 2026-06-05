@@ -39,3 +39,6 @@ state.json
 CLAUDE.md
 CLAUDE.local.md
 GEMINI.md
+
+# Beads runtime routing (Dolt-backed; not source)
+.beads/

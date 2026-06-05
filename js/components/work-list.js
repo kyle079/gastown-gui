@@ -8,7 +8,7 @@ import { api } from '../api.js';
 import { showToast } from './toast.js';
 import { escapeHtml, truncate } from '../utils/html.js';
 import { formatTimeAgoOrDate } from '../utils/formatting.js';
-import { getBeadPriority, isUserVisibleWorkBead } from '../shared/beads.js';
+import { getBeadPriority, isUserVisibleWorkBead, sortWorkBeads } from '../shared/beads.js';
 import { BEAD_DETAIL, WORK_REFRESH } from '../shared/events.js';
 import { TIMING_MS } from '../shared/timing.js';
 import { getStaggerClass } from '../shared/animations.js';
@@ -45,7 +45,7 @@ const STATUS_CONFIG = {
 export function renderWorkList(container, beads) {
   if (!container) return;
 
-  const tasks = (beads || []).filter(isUserVisibleWorkBead);
+  const tasks = sortWorkBeads((beads || []).filter(isUserVisibleWorkBead));
 
   if (!tasks || tasks.length === 0) {
     container.innerHTML = `
@@ -58,7 +58,10 @@ export function renderWorkList(container, beads) {
     return;
   }
 
-  container.innerHTML = tasks.map((bead, index) => renderBeadCard(bead, index)).join('');
+  const openCount = tasks.filter(b => (b.status || 'open') !== 'closed').length;
+  const summary = renderWorkSummary(tasks.length, openCount);
+
+  container.innerHTML = summary + tasks.map((bead, index) => renderBeadCard(bead, index)).join('');
 
   // Add click handlers for cards
   container.querySelectorAll('.bead-card').forEach(card => {
@@ -177,6 +180,25 @@ async function handleWorkAction(action, beadId, btn) {
     btn.innerHTML = originalIcon;
     btn.disabled = false;
   }
+}
+
+/**
+ * Render the count summary shown above the work cards.
+ * @param {number} total - total visible tasks
+ * @param {number} openCount - tasks that are not closed
+ */
+function renderWorkSummary(total, openCount) {
+  const label = total === 1 ? '1 task' : `${total} tasks`;
+  const openLabel = openCount === total ? '' : ` · ${openCount} open`;
+  return `
+    <div class="work-summary">
+      <span class="work-summary-count">${label}${openLabel}</span>
+      <span class="work-summary-sort">
+        <span class="material-icons">sort</span>
+        Status · Priority · Newest
+      </span>
+    </div>
+  `;
 }
 
 /**

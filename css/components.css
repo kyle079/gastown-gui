@@ -3933,6 +3933,31 @@ select {
   overflow-y: auto;
 }
 
+.work-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: 0 var(--space-xs) var(--space-xs);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.work-summary-count {
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.work-summary-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.work-summary-sort .material-icons {
+  font-size: 14px;
+}
+
 .bead-card {
   background: var(--bg-secondary);
   border: 1px solid var(--border-default);
@@ -3955,6 +3980,14 @@ select {
   border-left: 3px solid var(--accent-warning);
 }
 
+.bead-card.status-progress {
+  border-left: 3px solid var(--accent-primary);
+}
+
+.bead-card.status-blocked {
+  border-left: 3px solid var(--accent-danger);
+}
+
 .bead-header {
   display: flex;
   align-items: flex-start;
@@ -3975,6 +4008,14 @@ select {
 
 .status-open .bead-status .material-icons {
   color: var(--accent-warning);
+}
+
+.status-progress .bead-status .material-icons {
+  color: var(--accent-primary);
+}
+
+.status-blocked .bead-status .material-icons {
+  color: var(--accent-danger);
 }
 
 .bead-info {
@@ -4041,6 +4082,14 @@ select {
 .bead-priority.priority-2 {
   background: #3b82f620;
   color: #3b82f6;
+}
+
+/* P3 and lower-urgency priorities: muted, so high-priority badges stand out */
+.bead-priority.priority-3,
+.bead-priority.priority-4,
+.bead-priority.priority-5 {
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
 }
 
 .bead-result {

@@ -202,10 +202,10 @@ function renderDashboard(status, health) {
     ${renderHealthBanner(healthStatus)}
 
     <div class="dashboard-metrics">
-      ${renderMetricCard('local_shipping', 'Active Convoys', metrics.activeConvoys, metrics.totalConvoys, 'convoys', '#3b82f6')}
-      ${renderMetricCard('task_alt', 'Open Work', metrics.openWork, metrics.totalWork, 'work', '#22c55e')}
+      ${renderMetricCard('local_shipping', 'Active Convoys', metrics.activeConvoys, metrics.totalConvoys, 'convoys', 'var(--accent-primary)')}
+      ${renderMetricCard('task_alt', 'Open Work', metrics.openWork, metrics.totalWork, 'work', 'var(--accent-success)')}
       ${renderAgentMetricCard(metrics)}
-      ${renderMetricCard('mail', 'Mail Events', metrics.totalMail, null, 'mail', '#f59e0b')}
+      ${renderMetricCard('mail', 'Mail Events', metrics.totalMail, null, 'mail', 'var(--accent-warning)')}
     </div>
 
     <div class="dashboard-grid">
@@ -325,7 +325,7 @@ function calculateMetrics(rigs, convoys, work, agents, mail) {
  */
 function calculateHealthStatus(health) {
   if (!health || (!health.checks && !health.results)) {
-    return { status: 'unknown', label: 'Unknown', icon: 'help', color: '#6b7280' };
+    return { status: 'unknown', label: 'Unknown', icon: 'help', color: 'var(--text-muted)' };
   }
 
   const checks = health.checks || health.results || [];
@@ -339,12 +339,12 @@ function calculateHealthStatus(health) {
   });
 
   if (hasError) {
-    return { status: 'error', label: 'Issues Detected', icon: 'error', color: '#ef4444' };
+    return { status: 'error', label: 'Issues Detected', icon: 'error', color: 'var(--accent-danger)' };
   }
   if (hasWarning) {
-    return { status: 'warning', label: 'Warnings', icon: 'warning', color: '#f59e0b' };
+    return { status: 'warning', label: 'Warnings', icon: 'warning', color: 'var(--accent-warning)' };
   }
-  return { status: 'healthy', label: 'All Systems Go', icon: 'check_circle', color: '#22c55e' };
+  return { status: 'healthy', label: 'All Systems Go', icon: 'check_circle', color: 'var(--accent-success)' };
 }
 
 /**
@@ -397,7 +397,7 @@ function renderMetricCard(icon, label, value, total, viewId, color) {
 function renderAgentMetricCard(metrics) {
   const { working, available, total, statusText } = metrics;
   const running = working + available;
-  const color = '#8b5cf6'; // Purple for agents
+  const color = 'var(--accent-secondary)'; // Purple for agents
 
   // Calculate bar percentages
   const workingPct = total > 0 ? (working / total * 100) : 0;
@@ -426,12 +426,12 @@ function renderAgentMetricCard(metrics) {
  */
 function renderQuickActions() {
   const actions = [
-    { id: 'new-bead', icon: 'add_circle', label: 'New Bead', color: '#22c55e', modal: 'new-bead' },
-    { id: 'sling-work', icon: 'send', label: 'Sling Work', color: '#3b82f6', modal: 'sling' },
-    { id: 'new-convoy', icon: 'local_shipping', label: 'New Convoy', color: '#a855f7', modal: 'new-convoy' },
-    { id: 'compose-mail', icon: 'edit', label: 'Send Mail', color: '#f59e0b', modal: 'mail-compose' },
-    { id: 'add-rig', icon: 'folder_special', label: 'Add Rig', color: '#06b6d4', modal: 'new-rig' },
-    { id: 'run-doctor', icon: 'health_and_safety', label: 'Health Check', color: '#ec4899', action: 'doctor' },
+    { id: 'new-bead', icon: 'add_circle', label: 'New Bead', color: 'var(--accent-success)', modal: 'new-bead' },
+    { id: 'sling-work', icon: 'send', label: 'Sling Work', color: 'var(--accent-primary)', modal: 'sling' },
+    { id: 'new-convoy', icon: 'local_shipping', label: 'New Convoy', color: 'var(--accent-secondary)', modal: 'new-convoy' },
+    { id: 'compose-mail', icon: 'edit', label: 'Send Mail', color: 'var(--accent-warning)', modal: 'mail-compose' },
+    { id: 'add-rig', icon: 'folder_special', label: 'Add Rig', color: 'var(--role-refinery)', modal: 'new-rig' },
+    { id: 'run-doctor', icon: 'health_and_safety', label: 'Health Check', color: 'var(--accent-danger)', action: 'doctor' },
   ];
 
   return `
@@ -539,8 +539,8 @@ function renderRecentWork(work) {
   return `
     <div class="recent-work-list">
       ${recent.map(item => {
-        const statusColor = item.status === 'closed' || item.status === 'done' ? '#22c55e' :
-                           item.status === 'in_progress' || item.status === 'in-progress' ? '#3b82f6' : '#6b7280';
+        const statusColor = item.status === 'closed' || item.status === 'done' ? 'var(--accent-success)' :
+                           item.status === 'in_progress' || item.status === 'in-progress' ? 'var(--accent-primary)' : 'var(--text-muted)';
         return `
           <div class="recent-work-item" data-bead-id="${item.id}">
             <span class="work-status-dot" style="background: ${statusColor}"></span>

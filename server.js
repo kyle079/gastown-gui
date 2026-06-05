@@ -20,6 +20,7 @@ import readline from 'readline';
 import { fileURLToPath } from 'url';
 
 import { createApp } from './server/app/createApp.js';
+import { buildDefaultOrigins } from './server/app/corsOrigins.js';
 import { normalizeRigAgents } from './server/domain/agents/normalizeRigAgents.js';
 import {
   buildSessionRegistryFromTown,
@@ -101,10 +102,7 @@ const workService = new WorkService({
 const gitHubGateway = new GitHubGateway({ runner: commandRunner });
 const gitHubService = new GitHubService({ gitHubGateway, statusService, cache: backendCache });
 
-const defaultOrigins = [
-  `http://localhost:${PORT}`,
-  `http://127.0.0.1:${PORT}`,
-];
+const defaultOrigins = buildDefaultOrigins({ host: HOST, port: PORT });
 const allowedOrigins = process.env.CORS_ORIGINS
   ? process.env.CORS_ORIGINS.split(',').map(origin => origin.trim()).filter(Boolean)
   : defaultOrigins;

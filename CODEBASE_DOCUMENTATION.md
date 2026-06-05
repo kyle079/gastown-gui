@@ -26,6 +26,7 @@ server.js - Monolith Express server; imports refactored modules + legacy endpoin
 └─ ~1700 lines, partially refactored
 
 server/app/createApp.js - Express app factory with CORS config
+server/app/corsOrigins.js - Derives default allowed CORS origins from bind host/port (incl. LAN IPs when bound to 0.0.0.0)
 ```
 
 ## Backend — Domain Values

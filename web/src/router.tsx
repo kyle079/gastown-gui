@@ -19,6 +19,7 @@ import { ConvoyDetailPage } from '@/features/work/ConvoyDetailPage';
 import { Catalog, validateCatalogSearch } from '@/features/catalog/Catalog';
 import { PullRequestsPage, validatePrsSearch } from '@/features/prs/PullRequestsPage';
 import { TerminalSurface } from '@/features/terminal/TerminalSurface';
+import { BeadGraph } from '@/features/graph/BeadGraph';
 
 /**
  * Code-based route tree (no codegen). The keyboard layer + shell live in the
@@ -123,6 +124,13 @@ const terminalRoute = createRoute({
   component: TerminalSurface,
 });
 
+// Bead dependency graph.
+const graphRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/graph',
+  component: BeadGraph,
+});
+
 // Help / Getting Started.
 const helpRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -143,6 +151,7 @@ const routeTree = rootRoute.addChildren([
   escalationsRoute,
   escalationDetailRoute,
   terminalRoute,
+  graphRoute,
   helpRoute,
 ]);
 

@@ -11,6 +11,16 @@ export function registerBeadRoutes(app, { beadService } = {}) {
     }
   });
 
+  app.get('/api/beads/graph', async (req, res) => {
+    try {
+      const data = await beadService.graph();
+      res.json(data);
+    } catch (err) {
+      console.error('[API] Failed to build bead graph:', err);
+      res.status(500).json({ error: err.message || 'Failed to build bead graph' });
+    }
+  });
+
   app.get('/api/beads/search', async (req, res) => {
     try {
       const query = req.query.q || '';

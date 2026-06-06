@@ -15,22 +15,35 @@ import pty from 'node-pty';
 
 const execFileAsync = promisify(execFile);
 
+// Socket cache — the gt socket name is stable for the process lifetime; recheck every 10s.
+let socketCache = null;
+let socketCacheExpiry = 0;
+
 /**
  * Detect the gt tmux socket name by inspecting running tmux processes.
  * gt launches sessions with `tmux -L gt-<id> ...`; we extract the -L value.
  * Returns e.g. "gt-3d4168" or null if no gt socket found.
  */
 async function detectGtSocket() {
+  const now = Date.now();
+  if (socketCache !== null && now < socketCacheExpiry) return socketCache;
+
   try {
     const { stdout } = await execFileAsync('ps', ['ax', '-o', 'args'], { timeout: 5000 });
     for (const line of stdout.split('\n')) {
       if (!line.includes('tmux')) continue;
       const m = line.match(/-L\s+(gt-[a-zA-Z0-9]+)/);
-      if (m) return m[1];
+      if (m) {
+        socketCache = m[1];
+        socketCacheExpiry = now + 10_000;
+        return socketCache;
+      }
     }
   } catch {
     // ignore
   }
+  socketCache = null;
+  socketCacheExpiry = now + 2_000; // short negative cache
   return null;
 }
 

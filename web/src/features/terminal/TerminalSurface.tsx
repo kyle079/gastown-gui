@@ -74,7 +74,8 @@ function XtermPane({ session, onDetach }: XtermPaneProps) {
   const [connState, setConnState] = useState<ConnState>('connecting');
   const [errorMsg, setErrorMsg] = useState('');
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const closedRef = useRef(false);
+  // Separate unmount flag for the terminal init effect (distinct from the WS effect's local closed var)
+  const termUnmountedRef = useRef(false);
 
   const sendResize = useCallback((cols: number, rows: number) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -84,8 +85,8 @@ function XtermPane({ session, onDetach }: XtermPaneProps) {
 
   // Initialize terminal once on mount
   useEffect(() => {
+    termUnmountedRef.current = false;
     if (!containerRef.current) return;
-    closedRef.current = false;
 
     const term = new Terminal({
       theme: XTERM_THEME,
@@ -112,7 +113,7 @@ function XtermPane({ session, onDetach }: XtermPaneProps) {
     });
 
     return () => {
-      closedRef.current = true;
+      termUnmountedRef.current = true;
       if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
       wsRef.current?.close();
       term.dispose();
@@ -123,11 +124,12 @@ function XtermPane({ session, onDetach }: XtermPaneProps) {
 
   // Connect / reconnect WebSocket whenever session changes
   useEffect(() => {
-    closedRef.current = false;
+    // Local closed flag — avoids sharing state with the terminal init effect
+    let closed = false;
     let ws: WebSocket | null = null;
 
     const connect = () => {
-      if (closedRef.current) return;
+      if (closed || termUnmountedRef.current) return;
       setConnState('connecting');
       setErrorMsg('');
       termRef.current?.clear();
@@ -140,6 +142,9 @@ function XtermPane({ session, onDetach }: XtermPaneProps) {
         setErrorMsg('Failed to open WebSocket');
         return;
       }
+
+      // Track whether an error triggered this close so onclose doesn't reconnect
+      let closedByError = false;
 
       ws.onopen = () => {
         // onopen fires before the server sends 'ready' — just wait
@@ -168,6 +173,7 @@ function XtermPane({ session, onDetach }: XtermPaneProps) {
             setConnState('disconnected');
             termRef.current?.write(`\r\n\x1b[2;33m[session ended]\x1b[0m\r\n`);
           } else if (msg.type === 'error') {
+            closedByError = true;
             setConnState('error');
             setErrorMsg(msg.message ?? 'Unknown error');
             termRef.current?.write(`\r\n\x1b[31m[error: ${msg.message}]\x1b[0m\r\n`);
@@ -179,21 +185,24 @@ function XtermPane({ session, onDetach }: XtermPaneProps) {
 
       ws.onclose = () => {
         wsRef.current = null;
-        if (!closedRef.current && connState !== 'error') {
+        if (!closed && !closedByError) {
           setConnState('disconnected');
           reconnectTimer.current = setTimeout(() => {
-            if (!closedRef.current) connect();
+            if (!closed && !termUnmountedRef.current) connect();
           }, 3000);
         }
       };
 
-      ws.onerror = () => ws?.close();
+      ws.onerror = () => {
+        closedByError = true;
+        ws?.close();
+      };
     };
 
     connect();
 
     return () => {
-      closedRef.current = true;
+      closed = true;
       if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
       ws?.close();
     };

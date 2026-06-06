@@ -85,6 +85,25 @@ export interface TownStatus {
   runningPolecats?: string[];
 }
 
+/**
+ * Shape of `GET /api/setup/status` — the first-run readiness probe.
+ * Booleans + versions for the CLIs, the workspace, and the configured rigs.
+ */
+export interface SetupRig {
+  name: string;
+  [key: string]: unknown;
+}
+
+export interface SetupStatus {
+  gt_installed: boolean;
+  gt_version: string | null;
+  bd_installed: boolean;
+  bd_version: string | null;
+  workspace_initialized: boolean;
+  workspace_path: string;
+  rigs: SetupRig[];
+}
+
 export interface MailMessage {
   id: string;
   from: string;

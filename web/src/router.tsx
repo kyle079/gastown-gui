@@ -8,6 +8,7 @@ import { AppShell } from '@/app/AppShell';
 import { CommandPaletteProvider } from '@/components/command-palette/CommandPaletteProvider';
 import { Dashboard } from '@/features/dashboard/Dashboard';
 import { Fleet } from '@/features/fleet/Fleet';
+import { Help } from '@/features/help/Help';
 import { PlaceholderSurface } from '@/features/placeholder/PlaceholderSurface';
 
 /**
@@ -64,6 +65,13 @@ const terminalRoute = stub(
   'Attach to an agent tmux session in the browser via the PTY-over-websocket bridge (xterm.js).',
 );
 
+// Help / Getting Started — the first surface Phase 1 actually builds out.
+const helpRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/help',
+  component: Help,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   rigsRoute,
@@ -71,6 +79,7 @@ const routeTree = rootRoute.addChildren([
   mailRoute,
   escalationsRoute,
   terminalRoute,
+  helpRoute,
 ]);
 
 export const router = createRouter({

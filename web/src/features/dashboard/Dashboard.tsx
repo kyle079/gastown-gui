@@ -6,6 +6,7 @@ import { RigsPanel } from './RigsPanel';
 import { HqPanel } from './HqPanel';
 import { ServicesPanel } from './ServicesPanel';
 import { AttentionPanel } from './AttentionPanel';
+import { FirstRunBanner } from '@/features/help/FirstRunBanner';
 
 /**
  * The reference surface. Proves the design system end to end:
@@ -52,6 +53,7 @@ export function Dashboard() {
       description={data.location}
     >
       <div className="flex flex-col gap-4">
+        {(data.rigs ?? []).length === 0 && <FirstRunBanner />}
         <AttentionPanel status={data} />
         <MetricStrip summary={data.summary} />
 

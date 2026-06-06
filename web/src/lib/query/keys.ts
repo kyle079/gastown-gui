@@ -5,4 +5,5 @@ export const queryKeys = {
   mail: ['mail'] as const,
   rigs: ['rigs'] as const,
   health: ['health'] as const,
+  setup: ['setup'] as const,
 };

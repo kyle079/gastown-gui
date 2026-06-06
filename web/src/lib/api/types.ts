@@ -142,7 +142,9 @@ export interface MailMessage {
   from: string;
   to?: string;
   subject: string;
+  /** Body. The CLI is inconsistent: prefer `message`, fall back to `body`. */
   message?: string;
+  body?: string;
   timestamp: string;
   read: boolean;
   priority: 'low' | 'normal' | 'high' | string;

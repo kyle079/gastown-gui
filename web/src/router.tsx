@@ -10,6 +10,8 @@ import { Dashboard } from '@/features/dashboard/Dashboard';
 import { Fleet } from '@/features/fleet/Fleet';
 import { Help } from '@/features/help/Help';
 import { ActivityFeed } from '@/features/activity/ActivityFeed';
+import { MailSurface } from '@/features/mail/MailSurface';
+import { EscalationsSurface } from '@/features/mail/EscalationsSurface';
 import { PlaceholderSurface } from '@/features/placeholder/PlaceholderSurface';
 
 /**
@@ -57,16 +59,16 @@ const workRoute = stub(
   'Work',
   'The work queue — open beads, convoys, dispatch and reassignment, sorted by what needs the operator.',
 );
-const mailRoute = stub(
-  '/mail',
-  'Mail',
-  'Agent mail and escalations: inbox, threads, compose and reply.',
-);
-const escalationsRoute = stub(
-  '/escalations',
-  'Escalations',
-  'Pending escalations awaiting authorization, ranked by severity.',
-);
+const mailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/mail',
+  component: MailSurface,
+});
+const escalationsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/escalations',
+  component: EscalationsSurface,
+});
 const terminalRoute = stub(
   '/terminal',
   'Terminal',

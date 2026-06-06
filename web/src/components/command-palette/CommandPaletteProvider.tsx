@@ -12,6 +12,7 @@ import { CommandPalette } from './CommandPalette';
 import { useHotkeys, useKeySequence } from '@/lib/keyboard/useHotkeys';
 import { useToast } from '@/components/primitives';
 import { NAV_ITEMS } from '@/app/navigation';
+import { requestCompose } from '@/features/mail/composeBus';
 import type { Command } from '@/lib/commands/types';
 
 interface PaletteContextValue {
@@ -45,6 +46,17 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
     }));
 
     const actions: Command[] = [
+      {
+        id: 'action:compose',
+        title: 'Compose mail',
+        group: 'Actions',
+        glyph: '✉',
+        keywords: ['mail', 'message', 'send', 'reply', 'new'],
+        run: () => {
+          void navigate({ to: '/mail' });
+          requestCompose();
+        },
+      },
       {
         id: 'action:refresh',
         title: 'Refresh all data',

@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
 import { queryKeys } from './keys';
 import type { ActivityResponse, MailMessage, SetupStatus, TownStatus } from '@/lib/api/types';
@@ -43,5 +43,34 @@ export function useActivity() {
     // The live WebSocket nudges this to refetch the instant an event lands;
     // the interval is the floor so the feed stays fresh even if the socket drops.
     refetchInterval: 10_000,
+  });
+}
+
+/**
+ * Mark a message read (ack) or unread. Invalidates the inbox so the surface
+ * reflects the new state immediately.
+ */
+export function useSetMailRead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, read }: { id: string; read: boolean }) =>
+      apiClient.post(`/api/mail/${id}/${read ? 'read' : 'unread'}`),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: queryKeys.mail }),
+  });
+}
+
+export interface SendMailInput {
+  to: string;
+  subject: string;
+  message: string;
+  priority?: string;
+}
+
+/** Compose or respond. Backs the compose dialog on the mail surface. */
+export function useSendMail() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: SendMailInput) => apiClient.post('/api/mail', input),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: queryKeys.mail }),
   });
 }

@@ -8,6 +8,7 @@ import { AppShell } from '@/app/AppShell';
 import { CommandPaletteProvider } from '@/components/command-palette/CommandPaletteProvider';
 import { Dashboard } from '@/features/dashboard/Dashboard';
 import { Fleet } from '@/features/fleet/Fleet';
+import { Catalog } from '@/features/catalog/Catalog';
 import { Help } from '@/features/help/Help';
 import { PlaceholderSurface } from '@/features/placeholder/PlaceholderSurface';
 
@@ -44,6 +45,11 @@ const rigsRoute = createRoute({
   path: '/rigs',
   component: Fleet,
 });
+const catalogRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/catalog',
+  component: Catalog,
+});
 const workRoute = stub(
   '/work',
   'Work',
@@ -75,6 +81,7 @@ const helpRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   indexRoute,
   rigsRoute,
+  catalogRoute,
   workRoute,
   mailRoute,
   escalationsRoute,

@@ -114,3 +114,54 @@ export interface MailMessage {
   read: boolean;
   priority: 'low' | 'normal' | 'high' | string;
 }
+
+/**
+ * A bead (issue) as returned by `GET /api/beads` → `bd list --json`.
+ * Permissive on optional fields the CLI omits depending on the issue.
+ */
+export interface Bead {
+  id: string;
+  title: string;
+  description?: string;
+  status: string;
+  /** Numeric priority: 0 = P0 (urgent) … 4 = P4 (backlog). */
+  priority: number;
+  issue_type?: string;
+  owner?: string;
+  assignee?: string;
+  created_at: string;
+  created_by?: string;
+  updated_at: string;
+  dependency_count?: number;
+  dependent_count?: number;
+  comment_count?: number;
+}
+
+/**
+ * A GitHub pull request as returned by `GET /api/github/prs` — gh's JSON shape,
+ * decorated server-side with the owning `rig` and `repo`.
+ */
+export interface PullRequest {
+  number: number;
+  title: string;
+  author?: { login: string } | null;
+  createdAt: string;
+  updatedAt: string;
+  url: string;
+  headRefName: string;
+  state: string;
+  isDraft: boolean;
+  reviewDecision?: string | null;
+  rig?: string;
+  repo?: string;
+}
+
+/** A formula (workflow template) as returned by `GET /api/formulas`. */
+export interface Formula {
+  name: string;
+  type?: string;
+  description?: string;
+  source?: string;
+  steps?: number;
+  vars?: number;
+}

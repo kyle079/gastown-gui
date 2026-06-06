@@ -19,7 +19,7 @@ export interface NavItem {
 
 export const NAV_ITEMS: NavItem[] = [
   { path: '/', label: 'Dashboard', glyph: '◇', seq: 'd', ready: true },
-  { path: '/rigs', label: 'Rigs', glyph: '▤', seq: 'r', ready: false },
+  { path: '/rigs', label: 'Rigs', glyph: '▤', seq: 'r', ready: true },
   { path: '/work', label: 'Work', glyph: '◷', seq: 'w', ready: false },
   { path: '/mail', label: 'Mail', glyph: '✉', seq: 'm', ready: false },
   { path: '/escalations', label: 'Escalations', glyph: '!', seq: 'e', ready: false },

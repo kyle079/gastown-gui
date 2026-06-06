@@ -7,6 +7,7 @@ import {
 import { AppShell } from '@/app/AppShell';
 import { CommandPaletteProvider } from '@/components/command-palette/CommandPaletteProvider';
 import { Dashboard } from '@/features/dashboard/Dashboard';
+import { Fleet } from '@/features/fleet/Fleet';
 import { PlaceholderSurface } from '@/features/placeholder/PlaceholderSurface';
 
 /**
@@ -37,11 +38,11 @@ const stub = (path: string, title: string, intent: string) =>
     component: () => <PlaceholderSurface title={title} intent={intent} />,
   });
 
-const rigsRoute = stub(
-  '/rigs',
-  'Rigs',
-  'Per-rig drill-down: polecats, witness/refinery controls, spawn and stop, and live agent state.',
-);
+const rigsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/rigs',
+  component: Fleet,
+});
 const workRoute = stub(
   '/work',
   'Work',

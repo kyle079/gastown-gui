@@ -18,6 +18,7 @@ import { WorkSurface } from '@/features/work/WorkSurface';
 import { ConvoyDetailPage } from '@/features/work/ConvoyDetailPage';
 import { Catalog, validateCatalogSearch } from '@/features/catalog/Catalog';
 import { PullRequestsPage, validatePrsSearch } from '@/features/prs/PullRequestsPage';
+import { PullRequestDetailPage } from '@/features/prs/PullRequestDetailPage';
 import { TerminalSurface } from '@/features/terminal/TerminalSurface';
 import { BeadGraph } from '@/features/graph/BeadGraph';
 
@@ -92,6 +93,13 @@ const prsRoute = createRoute({
   component: PullRequestsPage,
 });
 
+// PR detail — routed full-page view at /prs/$owner/$repo/$prNumber.
+const prDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/prs/$owner/$repo/$prNumber',
+  component: PullRequestDetailPage,
+});
+
 // Mail — inbox at /mail; message detail at /mail/$messageId.
 const mailRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -146,6 +154,7 @@ const routeTree = rootRoute.addChildren([
   workRoute,
   workDetailRoute,
   prsRoute,
+  prDetailRoute,
   mailRoute,
   mailDetailRoute,
   escalationsRoute,

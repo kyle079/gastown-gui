@@ -14,6 +14,7 @@ import type {
   MailMessage,
   MergeRequest,
   PullRequest,
+  PullRequestDetail,
   ReadyResponse,
   RefineryStatus,
   RigSummary,
@@ -167,6 +168,19 @@ export function useBeads(status: string) {
     refetchInterval: 15_000,
     // Show previous status's data while new status loads (no blank flash on filter change).
     placeholderData: keepPreviousData,
+  });
+}
+
+/** Full PR detail from token-based REST API. */
+export function usePullRequestDetail(owner: string, repo: string, number: number) {
+  return useQuery({
+    queryKey: queryKeys.pullRequestDetail(owner, repo, number),
+    queryFn: () =>
+      apiClient.get<PullRequestDetail>(
+        `/api/prs/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/${number}`,
+      ),
+    staleTime: 30_000,
+    enabled: Boolean(owner && repo && number),
   });
 }
 

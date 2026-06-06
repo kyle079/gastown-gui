@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useNavigate } from '@tanstack/react-router';
 import { Badge, Input, Select, Table, type Column } from '@/components/primitives';
 import type { PullRequest } from '@/lib/api/types';
 import { usePullRequests } from '@/lib/query/hooks';
@@ -70,6 +71,7 @@ const columns: Column<PullRequest>[] = [
 ];
 
 export function PullRequestsView() {
+  const navigate = useNavigate();
   const [state, setState] = useState('open');
   const [query, setQuery] = useState('');
 
@@ -81,7 +83,11 @@ export function PullRequestsView() {
   const hint = query ? `${rows.length} of ${total}` : String(total);
 
   const openPr = (pr: PullRequest) => {
-    if (pr.url) window.open(pr.url, '_blank', 'noopener,noreferrer');
+    if (!pr.repo) return;
+    const [owner, repo] = pr.repo.split('/');
+    if (owner && repo) {
+      void navigate({ to: '/prs/$owner/$repo/$prNumber', params: { owner, repo, prNumber: String(pr.number) } });
+    }
   };
 
   return (

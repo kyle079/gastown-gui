@@ -17,16 +17,20 @@ function normalizePR(pr) {
   return {
     number: pr.number,
     title: pr.title,
-    author: pr.user ? { login: pr.user.login } : null,
+    author: pr.user ? { login: pr.user.login, avatar: pr.user.avatar_url } : null,
     createdAt: pr.created_at,
     updatedAt: pr.updated_at,
+    mergedAt: pr.merged_at ?? null,
     url: pr.html_url,
     headRefName: pr.head?.ref,
     baseRefName: pr.base?.ref,
+    headSha: pr.head?.sha ?? null,
     state: pr.state,
     isDraft: pr.draft,
     additions: pr.additions,
     deletions: pr.deletions,
+    changedFiles: pr.changed_files,
+    labels: (pr.labels || []).map(l => ({ name: l.name, color: l.color })),
     body: pr.body,
     commits: pr.commits,
     comments: pr.comments,
@@ -124,7 +128,7 @@ export class GitHubGateway {
         data: {
           ...normalizePR(pr),
           reviewDecision: deriveReviewDecision(reviews, pr.requested_reviewers),
-          reviews: reviews.map(r => ({ author: { login: r.user?.login }, state: r.state, body: r.body })),
+          reviews: reviews.map(r => ({ id: r.id, user: r.user?.login, state: r.state, body: r.body, submittedAt: r.submitted_at })),
           files: files.map(f => ({ filename: f.filename, additions: f.additions, deletions: f.deletions, status: f.status })),
         },
       };
@@ -159,6 +163,32 @@ export class GitHubGateway {
       const { owner, repo: repoName } = parseOwnerRepo(repo);
       const { data } = await this._octokit.issues.get({ owner, repo: repoName, issue_number: Number(number) });
       return { ok: true, data: normalizeIssue(data) };
+    } catch (err) {
+      return { ok: false, data: null, error: err.message };
+    }
+  }
+
+  async listPullRequestComments({ owner, repo, number } = {}) {
+    if (!this._octokit) return NOT_CONFIGURED;
+    try {
+      const { owner: ownerName, repo: repoName } = parseOwnerRepo(`${owner}/${repo}`);
+      const { data } = await this._octokit.issues.listComments({
+        owner: ownerName, repo: repoName, issue_number: Number(number), per_page: 100,
+      });
+      return { ok: true, data };
+    } catch (err) {
+      return { ok: false, data: null, error: err.message };
+    }
+  }
+
+  async listCheckRuns({ owner, repo, ref } = {}) {
+    if (!this._octokit) return NOT_CONFIGURED;
+    try {
+      const { owner: ownerName, repo: repoName } = parseOwnerRepo(`${owner}/${repo}`);
+      const { data } = await this._octokit.checks.listForRef({
+        owner: ownerName, repo: repoName, ref, per_page: 100,
+      });
+      return { ok: true, data: data.check_runs };
     } catch (err) {
       return { ok: false, data: null, error: err.message };
     }

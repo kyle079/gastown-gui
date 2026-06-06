@@ -56,5 +56,22 @@ export function registerGitHubRoutes(app, { gitHubService } = {}) {
       res.status(500).json({ error: err.message });
     }
   });
+
+  // Token-based PR detail: owner and repo are separate path segments.
+  app.get('/api/prs/:owner/:repo/:number', async (req, res) => {
+    try {
+      const { owner, repo, number } = req.params;
+      const detail = await gitHubService.viewPullRequestDetail({
+        owner,
+        repo,
+        number: parseInt(number, 10),
+        refresh: req.query.refresh === 'true',
+      });
+      res.json(detail);
+    } catch (err) {
+      console.error('[API] Failed to fetch PR detail:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
 }
 

@@ -233,6 +233,70 @@ export interface PullRequest {
   rig?: string;
 }
 
+/** Full PR detail from `/api/prs/:owner/:repo/:number` (token-based). */
+export interface PullRequestFile {
+  filename: string;
+  status: 'added' | 'removed' | 'modified' | 'renamed' | string;
+  additions: number;
+  deletions: number;
+  changes: number;
+}
+
+export interface PullRequestReview {
+  id: number;
+  user?: string;
+  state: 'APPROVED' | 'CHANGES_REQUESTED' | 'COMMENTED' | 'DISMISSED' | string;
+  body?: string;
+  submittedAt?: string;
+}
+
+export interface PullRequestComment {
+  id: number;
+  user?: string;
+  body: string;
+  createdAt: string;
+}
+
+export interface CheckRun {
+  id: number;
+  name: string;
+  status: 'queued' | 'in_progress' | 'completed' | string;
+  conclusion: 'success' | 'failure' | 'neutral' | 'cancelled' | 'skipped' | null;
+  url?: string;
+  app?: string;
+}
+
+export interface PullRequestLabel {
+  name: string;
+  color: string;
+}
+
+export interface PullRequestDetail {
+  number: number;
+  title: string;
+  body: string;
+  state: 'open' | 'closed' | string;
+  draft: boolean;
+  merged: boolean;
+  mergedAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  url?: string;
+  author?: { login: string; avatar?: string } | null;
+  headRefName?: string;
+  baseRefName?: string;
+  headSha?: string;
+  additions?: number;
+  deletions?: number;
+  changedFiles?: number;
+  labels?: PullRequestLabel[];
+  reviewDecision?: string | null;
+  files: PullRequestFile[];
+  reviews: PullRequestReview[];
+  comments: PullRequestComment[];
+  checks: CheckRun[];
+}
+
 /** A formula (workflow / convoy template) from `/api/formulas`. */
 export interface Formula {
   name: string;

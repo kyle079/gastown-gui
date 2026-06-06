@@ -139,8 +139,8 @@ const columns: Column<PullRequest>[] = [
 
 /**
  * Pull requests — own top-level page at /prs. Shows Open / Merged / Closed / All
- * states (tab = URL search param). Clicking a PR opens GitHub; rig name links
- * to /rigs/$rig; bead ID (parsed from branch) links to the issue in Catalog.
+ * states (tab = URL search param). Clicking a PR navigates to the in-app detail
+ * view; rig name links to /rigs/$rig; bead ID links to the issue in Catalog.
  */
 export function PullRequestsPage() {
   const navigate = useNavigate();
@@ -159,7 +159,14 @@ export function PullRequestsPage() {
   const hint = query ? `${rows.length} of ${total}` : String(total);
 
   const openPr = (pr: PullRequest) => {
-    if (pr.url) window.open(pr.url, '_blank', 'noopener,noreferrer');
+    if (!pr.repo) return;
+    const [owner, repo] = pr.repo.split('/');
+    if (owner && repo) {
+      void navigate({ to: '/prs/$owner/$repo/$prNumber', params: { owner, repo, prNumber: String(pr.number) } });
+    } else if (pr.url) {
+      // Fallback for repos without owner/repo format: plain anchor navigation
+      window.location.href = pr.url;
+    }
   };
 
   return (

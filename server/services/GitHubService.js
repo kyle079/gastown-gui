@@ -94,6 +94,89 @@ export class GitHubService {
     return result.data || {};
   }
 
+  /**
+   * Fetch full PR detail via token-based REST API (no gh CLI).
+   * Returns metadata, body, files, reviews, comments, and check-runs.
+   * Falls back gracefully if individual sub-requests fail.
+   */
+  async viewPullRequestDetail({ owner, repo, number, refresh = false } = {}) {
+    const key = `github_pr_detail_${owner}_${repo}_${number}`;
+    const ttlMs = this._prsTtlMs;
+
+    if (!refresh && this._cache?.getOrExecute) {
+      return this._cache.getOrExecute(key, () => this._fetchPullRequestDetail({ owner, repo, number }), ttlMs);
+    }
+    if (!refresh && this._cache?.get) {
+      const cached = this._cache.get(key);
+      if (cached !== undefined) return cached;
+    }
+
+    const detail = await this._fetchPullRequestDetail({ owner, repo, number });
+    this._cache?.set?.(key, detail, ttlMs);
+    return detail;
+  }
+
+  async _fetchPullRequestDetail({ owner, repo, number }) {
+    // viewPullRequest already fetches PR metadata, reviews, and files via Octokit.
+    const combinedRepo = `${owner}/${repo}`;
+    const [prRes, commentsRes] = await Promise.all([
+      this._gh.viewPullRequest({ repo: combinedRepo, number }),
+      this._gh.listPullRequestComments({ owner, repo, number }),
+    ]);
+
+    if (!prRes.ok) throw new Error(prRes.error || 'Failed to fetch PR');
+
+    const pr = prRes.data;
+
+    let checks = [];
+    if (pr.headSha) {
+      const checksRes = await this._gh.listCheckRuns({ owner, repo, ref: pr.headSha });
+      if (checksRes.ok && Array.isArray(checksRes.data)) {
+        checks = checksRes.data.map(c => ({
+          id: c.id,
+          name: c.name,
+          status: c.status,
+          conclusion: c.conclusion,
+          url: c.html_url,
+          app: c.app?.name,
+        }));
+      }
+    }
+
+    return {
+      number: pr.number,
+      title: pr.title,
+      body: pr.body || '',
+      state: pr.state,
+      draft: pr.isDraft,
+      merged: pr.state === 'closed' && Boolean(pr.mergedAt),
+      mergedAt: pr.mergedAt ?? null,
+      createdAt: pr.createdAt,
+      updatedAt: pr.updatedAt,
+      url: pr.url,
+      author: pr.author ?? null,
+      headRefName: pr.headRefName,
+      baseRefName: pr.baseRefName,
+      headSha: pr.headSha,
+      additions: pr.additions,
+      deletions: pr.deletions,
+      changedFiles: pr.changedFiles,
+      labels: pr.labels ?? [],
+      reviewDecision: pr.reviewDecision ?? null,
+      files: Array.isArray(pr.files) ? pr.files : [],
+      reviews: Array.isArray(pr.reviews) ? pr.reviews : [],
+      comments: commentsRes.ok && Array.isArray(commentsRes.data)
+        ? commentsRes.data.map(c => ({
+            id: c.id,
+            user: c.user?.login,
+            body: c.body,
+            createdAt: c.created_at,
+          }))
+        : [],
+      checks,
+    };
+  }
+
   async listIssues({ state = 'open', refresh = false } = {}) {
     const key = `github_issues_${state}`;
     const ttlMs = this._issuesTtlMs;

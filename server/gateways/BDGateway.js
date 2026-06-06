@@ -62,6 +62,12 @@ export class BDGateway {
     return { ...result, raw, data: parseJsonOrNull(raw) };
   }
 
+  async listAll() {
+    const result = await this._execCompat(['list', '--limit', '0', '--json'], { timeoutMs: 60000 });
+    const raw = (result.stdout || '').trim();
+    return { ...result, raw, data: parseJsonOrNull(raw) };
+  }
+
   async search(query) {
     const args = [query ? 'search' : 'list'];
     if (query) args.push(query);

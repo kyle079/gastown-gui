@@ -42,6 +42,38 @@ export class BeadService {
     return { ok: true, bead: result.data || { id: beadId } };
   }
 
+  async graph() {
+    const result = await this._bd.listAll();
+    if (!result.ok || !Array.isArray(result.data)) return { nodes: [], edges: [] };
+
+    const beads = result.data;
+    const nodes = beads.map((b) => ({
+      id: b.id,
+      title: b.title,
+      status: b.status,
+      priority: b.priority,
+      issue_type: b.issue_type,
+      rig: b.id.split('-')[0],
+    }));
+
+    const edgeSet = new Set();
+    const edges = [];
+    for (const b of beads) {
+      for (const dep of b.dependencies ?? []) {
+        const src = dep.depends_on_id;
+        const tgt = dep.issue_id;
+        const type = dep.type || 'blocks';
+        if (!src || !tgt) continue;
+        const key = `${src}→${tgt}:${type}`;
+        if (edgeSet.has(key)) continue;
+        edgeSet.add(key);
+        edges.push({ id: key, source: src, target: tgt, type });
+      }
+    }
+
+    return { nodes, edges };
+  }
+
   async create({ title, description, priority, labels } = {}) {
     if (!title) return { ok: false, statusCode: 400, error: 'Title is required' };
 

@@ -4,6 +4,7 @@ import { queryKeys } from './keys';
 import type {
   ActivityResponse,
   Bead,
+  BeadGraphData,
   Convoy,
   Formula,
   MailMessage,
@@ -173,5 +174,14 @@ export function useFormulas() {
     queryKey: queryKeys.formulas,
     queryFn: () => apiClient.get<Formula[]>('/api/formulas'),
     refetchInterval: 60_000,
+  });
+}
+
+/** Bead dependency graph — nodes + typed edges. Changes slowly; poll every 30s. */
+export function useBeadGraph() {
+  return useQuery({
+    queryKey: queryKeys.beadGraph,
+    queryFn: () => apiClient.get<BeadGraphData>('/api/beads/graph'),
+    refetchInterval: 30_000,
   });
 }

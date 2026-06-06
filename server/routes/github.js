@@ -14,7 +14,7 @@ export function registerGitHubRoutes(app, { gitHubService } = {}) {
   app.get('/api/github/pr/:repo/:number', async (req, res) => {
     try {
       const { repo, number } = req.params;
-      const pr = await gitHubService.viewPullRequest({ repo, number });
+      const pr = await gitHubService.viewPullRequest({ repo, number, refresh: req.query.refresh === 'true' });
       res.json(pr);
     } catch (err) {
       res.status(500).json({ error: err.message });

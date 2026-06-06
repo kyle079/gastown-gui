@@ -71,7 +71,24 @@ export class GitHubService {
     return all;
   }
 
-  async viewPullRequest({ repo, number } = {}) {
+  async viewPullRequest({ repo, number, refresh = false } = {}) {
+    const key = `github_pr_${repo}_${number}`;
+    const ttlMs = this._prsTtlMs;
+
+    if (!refresh && this._cache?.getOrExecute) {
+      return this._cache.getOrExecute(key, () => this._fetchPullRequest({ repo, number }), ttlMs);
+    }
+    if (!refresh && this._cache?.get) {
+      const cached = this._cache.get(key);
+      if (cached !== undefined) return cached;
+    }
+
+    const pr = await this._fetchPullRequest({ repo, number });
+    this._cache?.set?.(key, pr, ttlMs);
+    return pr;
+  }
+
+  async _fetchPullRequest({ repo, number }) {
     const result = await this._gh.viewPullRequest({ repo, number });
     if (!result.ok) throw new Error(result.error || 'Failed to fetch pull request');
     return result.data || {};

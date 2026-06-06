@@ -805,6 +805,79 @@
         </div>
       </div>
 
+      <!-- PR Detail Modal -->
+      <div class="modal modal-xl hidden" id="pr-detail-modal">
+        <div class="modal-header pr-detail-header">
+          <div class="pr-detail-header-content">
+            <span class="pr-detail-state-badge" id="pr-detail-state-badge">OPEN</span>
+            <h2 id="pr-detail-title">Pull Request</h2>
+            <span class="pr-detail-number" id="pr-detail-number">#0</span>
+          </div>
+          <button class="modal-close" data-modal-close>
+            <span class="material-icons">close</span>
+          </button>
+        </div>
+        <div class="modal-body pr-detail-modal-body">
+          <div class="pr-detail-meta" id="pr-detail-meta">
+            <span id="pr-detail-author" class="pr-detail-meta-item">
+              <span class="material-icons">person</span>
+              <span id="pr-detail-author-text">—</span>
+            </span>
+            <span id="pr-detail-branch" class="pr-detail-meta-item">
+              <span class="material-icons">account_tree</span>
+              <span id="pr-detail-branch-text">—</span>
+            </span>
+            <span id="pr-detail-repo-item" class="pr-detail-meta-item">
+              <span class="material-icons">folder</span>
+              <span id="pr-detail-repo-text">—</span>
+            </span>
+            <span id="pr-detail-dates" class="pr-detail-meta-item">
+              <span class="material-icons">schedule</span>
+              <span id="pr-detail-dates-text">—</span>
+            </span>
+          </div>
+          <div class="pr-detail-labels" id="pr-detail-labels"></div>
+          <div id="pr-detail-loading" class="pr-detail-loading">
+            <span class="loading-spinner"></span> Loading PR details...
+          </div>
+          <div id="pr-detail-error" class="pr-detail-error hidden"></div>
+          <div id="pr-detail-content" class="pr-detail-content hidden">
+            <section class="pr-detail-section" id="pr-detail-body-section">
+              <h3 class="pr-detail-section-title">Description</h3>
+              <div id="pr-detail-description" class="pr-detail-markdown">
+                <em class="text-muted">No description provided.</em>
+              </div>
+            </section>
+            <section class="pr-detail-section" id="pr-detail-files-section">
+              <h3 class="pr-detail-section-title">
+                Files Changed
+                <span class="pr-detail-stats" id="pr-detail-stats"></span>
+              </h3>
+              <div id="pr-detail-files" class="pr-detail-file-list"></div>
+            </section>
+            <section class="pr-detail-section" id="pr-detail-commits-section">
+              <h3 class="pr-detail-section-title">Commits</h3>
+              <div id="pr-detail-commits" class="pr-detail-commit-list"></div>
+            </section>
+            <section class="pr-detail-section" id="pr-detail-reviews-section">
+              <h3 class="pr-detail-section-title">Reviews</h3>
+              <div id="pr-detail-reviews" class="pr-detail-review-list"></div>
+            </section>
+            <section class="pr-detail-section" id="pr-detail-comments-section">
+              <h3 class="pr-detail-section-title">Comments</h3>
+              <div id="pr-detail-comments" class="pr-detail-comment-list"></div>
+            </section>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-modal-close>Close</button>
+          <a id="pr-detail-github-link" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-primary">
+            <span class="material-icons">open_in_new</span>
+            View on GitHub
+          </a>
+        </div>
+      </div>
+
       <!-- Mail Detail Modal -->
       <div class="modal modal-lg hidden" id="mail-detail-modal">
         <div class="modal-header">

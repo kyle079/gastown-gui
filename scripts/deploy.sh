@@ -33,10 +33,23 @@ else
   echo "Now at: $(git log --oneline -1)"
 fi
 
-# 2. Reinstall deps if lockfile changed
-if [ "$PREV" != "$REMOTE" ] && git diff "$PREV" HEAD -- package-lock.json 2>/dev/null | grep -q .; then
-  echo "Dependencies changed, running npm ci..."
-  npm ci --omit=dev --quiet
+# 2. When there's a new commit, reinstall deps and rebuild frontend
+if [ "$PREV" != "$REMOTE" ]; then
+  # Reinstall root deps if lockfile changed
+  if git diff "$PREV" HEAD -- package-lock.json 2>/dev/null | grep -q .; then
+    echo "Root dependencies changed, running npm ci..."
+    npm ci --omit=dev --quiet
+  fi
+
+  # Rebuild the frontend (always rebuild on new commits — web/dist must match current master)
+  echo "Rebuilding frontend..."
+  WEB_LOCKFILE_CHANGED=$(git diff "$PREV" HEAD -- web/package-lock.json 2>/dev/null | grep -c . || true)
+  cd "$CREW_DIR/web"
+  if [ "$WEB_LOCKFILE_CHANGED" -gt 0 ] || [ ! -d node_modules ]; then
+    npm ci --quiet
+  fi
+  npm run build
+  cd "$CREW_DIR"
 fi
 
 # 3. Restart the service

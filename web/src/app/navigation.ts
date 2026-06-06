@@ -26,6 +26,6 @@ export const NAV_ITEMS: NavItem[] = [
   { path: '/prs', label: 'Pull requests', glyph: '⌥', seq: 'p', ready: true },
   { path: '/mail', label: 'Mail', glyph: '✉', seq: 'm', ready: true },
   { path: '/escalations', label: 'Escalations', glyph: '!', seq: 'e', ready: true },
-  { path: '/terminal', label: 'Terminal', glyph: '⌗', seq: 't', ready: false },
+  { path: '/terminal', label: 'Terminal', glyph: '⌗', seq: 't', ready: true },
   { path: '/help', label: 'Help', glyph: '?', seq: 'h', ready: true },
 ];

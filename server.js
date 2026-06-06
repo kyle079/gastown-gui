@@ -57,6 +57,7 @@ import { registerFormulaRoutes } from './server/routes/formulas.js';
 import { registerGitHubRoutes } from './server/routes/github.js';
 import { registerStatusRoutes } from './server/routes/status.js';
 import { registerTargetRoutes } from './server/routes/targets.js';
+import { registerTerminalRoutes } from './server/routes/terminal.js';
 import { registerWorkRoutes } from './server/routes/work.js';
 
 const execFileAsync = promisify(execFile);
@@ -1827,6 +1828,11 @@ registerFormulaRoutes(app, { formulaService });
 
 // ============= GitHub Integration =============
 registerGitHubRoutes(app, { gitHubService });
+
+// ============= Terminal (PTY-over-WebSocket) =============
+// Registered after wss is created; terminal WS handler is added to the shared wss.
+// SECURITY: app binds to 127.0.0.1 by default. No auth — LAN-only (see gg-2wt).
+registerTerminalRoutes(app, { wss });
 
 // ============= WebSocket for Real-time Events =============
 

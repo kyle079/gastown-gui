@@ -18,7 +18,7 @@ import { WorkSurface } from '@/features/work/WorkSurface';
 import { ConvoyDetailPage } from '@/features/work/ConvoyDetailPage';
 import { Catalog, validateCatalogSearch } from '@/features/catalog/Catalog';
 import { PullRequestsPage, validatePrsSearch } from '@/features/prs/PullRequestsPage';
-import { PlaceholderSurface } from '@/features/placeholder/PlaceholderSurface';
+import { TerminalSurface } from '@/features/terminal/TerminalSurface';
 
 /**
  * Code-based route tree (no codegen). The keyboard layer + shell live in the
@@ -120,12 +120,7 @@ const escalationDetailRoute = createRoute({
 const terminalRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/terminal',
-  component: () => (
-    <PlaceholderSurface
-      title="Terminal"
-      intent="Attach to an agent tmux session in the browser via the PTY-over-websocket bridge (xterm.js)."
-    />
-  ),
+  component: TerminalSurface,
 });
 
 // Help / Getting Started.

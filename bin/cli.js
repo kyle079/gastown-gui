@@ -114,13 +114,10 @@ function showVersion() {
     console.log('gt: not found in PATH');
   }
 
-  // Check gh version
-  try {
-    const ghVersion = execSync('gh --version 2>/dev/null | head -1 || echo "not installed"', { encoding: 'utf8' }).trim();
-    console.log(`gh: ${ghVersion}`);
-  } catch {
-    console.log('gh: not found in PATH');
-  }
+  // Check GitHub token
+  const githubToken = process.env.GITHUB_TOKEN;
+  console.log(`GITHUB_TOKEN: ${githubToken ? 'set' : 'not set'}`);
+
 }
 
 function runDoctor() {
@@ -160,20 +157,12 @@ function runDoctor() {
     console.log('⚠️  bd (beads) not found - some features may not work');
   }
 
-  // Check gh
-  try {
-    const ghVersion = execSync('gh --version 2>/dev/null | head -1', { encoding: 'utf8' }).trim();
-    console.log(`✅ GitHub CLI: ${ghVersion}`);
-
-    // Check auth
-    try {
-      execSync('gh auth status 2>&1', { encoding: 'utf8' });
-      console.log('   ✅ Authenticated');
-    } catch {
-      console.log('   ⚠️  Not authenticated - run: gh auth login');
-    }
-  } catch {
-    console.log('⚠️  GitHub CLI (gh) not found - PR/issue tracking disabled');
+  // Check GitHub token
+  if (process.env.GITHUB_TOKEN) {
+    console.log('✅ GITHUB_TOKEN set — GitHub API enabled');
+  } else {
+    console.log('⚠️  GITHUB_TOKEN not set — PR/issue/repo features disabled');
+    console.log('   Set GITHUB_TOKEN to a fine-grained PAT with repo read access');
   }
 
   // Check GT_ROOT

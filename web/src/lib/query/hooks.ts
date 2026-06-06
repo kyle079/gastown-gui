@@ -170,7 +170,7 @@ export function useBeads(status: string) {
   });
 }
 
-/** Open pull requests aggregated across rigs. External `gh` calls — poll slowly. */
+/** Open pull requests aggregated across rigs. Polls slowly — GitHub API has rate limits. */
 export function usePullRequests(state: string) {
   return useQuery({
     queryKey: queryKeys.pullRequests(state),

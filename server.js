@@ -101,7 +101,7 @@ const workService = new WorkService({
   bdGateway,
   emit: (type, data) => emitMutationEvent(type, data),
 });
-const gitHubGateway = new GitHubGateway({ runner: commandRunner });
+const gitHubGateway = new GitHubGateway({ token: process.env.GITHUB_TOKEN });
 const gitHubService = new GitHubService({ gitHubGateway, statusService, cache: backendCache });
 
 const defaultOrigins = buildDefaultOrigins({ host: HOST, port: PORT });
@@ -460,15 +460,13 @@ async function getDefaultBranch(url) {
   }
 
   try {
-    // Use gh api to get repo info including default branch
-    const { stdout } = await execFileAsync('gh', [
-      'api', `repos/${parsed.owner}/${parsed.repo}`, '--jq', '.default_branch'
-    ], { timeout: 10000 });
-
-    const branch = String(stdout || '').trim();
-    if (branch) {
-      console.log(`[GitHub] Detected default branch for ${parsed.owner}/${parsed.repo}: ${branch}`);
-      return branch;
+    const result = await gitHubGateway.getDefaultBranch({ owner: parsed.owner, repo: parsed.repo });
+    if (result.branch) {
+      console.log(`[GitHub] Detected default branch for ${parsed.owner}/${parsed.repo}: ${result.branch}`);
+      return result.branch;
+    }
+    if (result.notConfigured) {
+      console.log('[GitHub] Token not configured — skipping default branch detection');
     }
   } catch (err) {
     console.warn(`[GitHub] Could not detect default branch for ${url}:`, err.message);
@@ -960,43 +958,41 @@ app.get('/api/bead/:beadId/links', async (req, res) => {
 
         // Search for PRs (title, body, branch containing bead ID, or polecat PRs near close time)
         try {
-          const { stdout: prOutput } = await execFileAsync(
-            'gh',
-            ['pr', 'list', '--repo', repo, '--state', 'all', '--limit', '20', '--json', 'number,title,url,state,headRefName,body,createdAt,updatedAt'],
-            { timeout: 10000 }
-          );
-          const prs = JSON.parse(String(prOutput || '') || '[]');
+          const prResult = await gitHubGateway.listPullRequests({ repo, state: 'all', limit: 20 });
+          if (prResult.notConfigured) {
+            console.log('[Links] GitHub token not configured — skipping PR search');
+          } else if (prResult.ok && Array.isArray(prResult.data)) {
+            for (const pr of prResult.data) {
+              // Check if PR is related to this bead
+              let isRelated =
+                (pr.title && pr.title.includes(beadId)) ||
+                (pr.headRefName && pr.headRefName.includes(beadId)) ||
+                (pr.body && pr.body.includes(beadId));
 
-          for (const pr of prs) {
-            // Check if PR is related to this bead
-            let isRelated =
-              (pr.title && pr.title.includes(beadId)) ||
-              (pr.headRefName && pr.headRefName.includes(beadId)) ||
-              (pr.body && pr.body.includes(beadId));
+              // Also match polecat PRs created/updated within 1 hour of bead close time
+              if (!isRelated && beadClosedAt && pr.headRefName && pr.headRefName.startsWith('polecat/')) {
+                const prUpdated = new Date(pr.updatedAt || pr.createdAt);
+                const timeDiff = Math.abs(beadClosedAt - prUpdated);
+                const oneHour = 60 * 60 * 1000;
+                if (timeDiff < oneHour) {
+                  isRelated = true;
+                }
+              }
 
-            // Also match polecat PRs created/updated within 1 hour of bead close time
-            if (!isRelated && beadClosedAt && pr.headRefName && pr.headRefName.startsWith('polecat/')) {
-              const prUpdated = new Date(pr.updatedAt || pr.createdAt);
-              const timeDiff = Math.abs(beadClosedAt - prUpdated);
-              const oneHour = 60 * 60 * 1000;
-              if (timeDiff < oneHour) {
-                isRelated = true;
+              if (isRelated) {
+                links.prs.push({
+                  repo,
+                  number: pr.number,
+                  title: pr.title,
+                  url: pr.url,
+                  state: pr.state,
+                  branch: pr.headRefName,
+                });
               }
             }
-
-            if (isRelated) {
-              links.prs.push({
-                repo,
-                number: pr.number,
-                title: pr.title,
-                url: pr.url,
-                state: pr.state,
-                branch: pr.headRefName,
-              });
-            }
           }
-        } catch (ghErr) {
-          console.log(`[Links] Could not search ${repo}: ${ghErr.message}`);
+        } catch (prErr) {
+          console.log(`[Links] Could not search ${repo}: ${prErr.message}`);
         }
       } catch (gitErr) {
         // Skip rigs without git repos

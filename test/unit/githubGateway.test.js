@@ -2,57 +2,64 @@ import { describe, it, expect } from 'vitest';
 
 import { GitHubGateway } from '../../server/gateways/GitHubGateway.js';
 
-class FakeRunner {
-  constructor() {
-    this.calls = [];
-    this._queue = [];
-  }
-
-  queue(result) {
-    this._queue.push(result);
-  }
-
-  async exec(command, args, options) {
-    this.calls.push({ command, args, options });
-    return this._queue.shift() ?? { ok: true, exitCode: 0, stdout: '', stderr: '', error: null, signal: null };
-  }
-}
-
 describe('GitHubGateway', () => {
-  it('getDefaultBranch() calls gh api and returns branch', async () => {
-    const runner = new FakeRunner();
-    runner.queue({ ok: true, exitCode: 0, stdout: 'main\n', stderr: '', error: null, signal: null });
-    const gateway = new GitHubGateway({ runner });
+  describe('not configured (no token)', () => {
+    const gateway = new GitHubGateway({});
 
-    const result = await gateway.getDefaultBranch({ owner: 'o', repo: 'r' });
+    it('configured is false', () => {
+      expect(gateway.configured).toBe(false);
+    });
 
-    expect(runner.calls[0].command).toBe('gh');
-    expect(runner.calls[0].args).toEqual(['api', 'repos/o/r', '--jq', '.default_branch']);
-    expect(result.branch).toBe('main');
+    it('getDefaultBranch() returns notConfigured result', async () => {
+      const result = await gateway.getDefaultBranch({ owner: 'o', repo: 'r' });
+      expect(result.ok).toBe(false);
+      expect(result.notConfigured).toBe(true);
+      expect(result.branch).toBeNull();
+    });
+
+    it('listPullRequests() returns notConfigured result', async () => {
+      const result = await gateway.listPullRequests({ repo: 'o/r' });
+      expect(result.ok).toBe(false);
+      expect(result.notConfigured).toBe(true);
+      expect(result.data).toBeNull();
+    });
+
+    it('viewPullRequest() returns notConfigured result', async () => {
+      const result = await gateway.viewPullRequest({ repo: 'o/r', number: 1 });
+      expect(result.ok).toBe(false);
+      expect(result.notConfigured).toBe(true);
+    });
+
+    it('listIssues() returns notConfigured result', async () => {
+      const result = await gateway.listIssues({ repo: 'o/r' });
+      expect(result.ok).toBe(false);
+      expect(result.notConfigured).toBe(true);
+    });
+
+    it('viewIssue() returns notConfigured result', async () => {
+      const result = await gateway.viewIssue({ repo: 'o/r', number: 1 });
+      expect(result.ok).toBe(false);
+      expect(result.notConfigured).toBe(true);
+    });
+
+    it('listRepos() returns notConfigured result', async () => {
+      const result = await gateway.listRepos({});
+      expect(result.ok).toBe(false);
+      expect(result.notConfigured).toBe(true);
+    });
   });
 
-  it('listPullRequests() builds args and parses JSON', async () => {
-    const runner = new FakeRunner();
-    runner.queue({ ok: true, exitCode: 0, stdout: '[]', stderr: '', error: null, signal: null });
-    const gateway = new GitHubGateway({ runner });
+  describe('configured (with token)', () => {
+    it('configured is true when token provided', () => {
+      const gateway = new GitHubGateway({ token: 'ghp_fake' });
+      expect(gateway.configured).toBe(true);
+    });
 
-    const result = await gateway.listPullRequests({ repo: 'o/r', state: 'open', limit: 2 });
-
-    expect(runner.calls[0].args).toContain('--repo');
-    expect(runner.calls[0].args).toContain('o/r');
-    expect(result.data).toEqual([]);
-  });
-
-  it('viewIssue() builds args and parses JSON', async () => {
-    const runner = new FakeRunner();
-    runner.queue({ ok: true, exitCode: 0, stdout: '{"number":1}', stderr: '', error: null, signal: null });
-    const gateway = new GitHubGateway({ runner });
-
-    const result = await gateway.viewIssue({ repo: 'o/r', number: 1 });
-
-    expect(runner.calls[0].args[0]).toBe('issue');
-    expect(runner.calls[0].args[1]).toBe('view');
-    expect(result.data).toEqual({ number: 1 });
+    it('listPullRequests() returns error on API failure', async () => {
+      const gateway = new GitHubGateway({ token: 'ghp_invalid_test_token' });
+      const result = await gateway.listPullRequests({ repo: 'o/r', state: 'open', limit: 1 });
+      expect(result.ok).toBe(false);
+      expect(typeof result.error).toBe('string');
+    });
   });
 });
-

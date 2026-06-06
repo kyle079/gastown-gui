@@ -206,7 +206,7 @@ export interface Bead {
   comment_count?: number;
 }
 
-/** GitHub author object from the `gh` CLI (`author.login`). */
+/** GitHub author object (`author.login`). */
 export interface GitHubUser {
   login?: string;
   name?: string;

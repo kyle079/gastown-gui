@@ -21,6 +21,10 @@ describe('GitHub routes (real Express app)', () => {
         calls.push(['viewPullRequest', opts]);
         return { n: 123 };
       },
+      viewPullRequestDetail: async (opts) => {
+        calls.push(['viewPullRequestDetail', opts]);
+        return { number: opts.number, title: 'Detail PR', body: '', files: [], reviews: [], comments: [], checks: [] };
+      },
       listIssues: async (opts) => {
         calls.push(['listIssues', opts]);
         return [{ n: 2 }];
@@ -61,7 +65,19 @@ describe('GitHub routes (real Express app)', () => {
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual({ n: 123 });
 
-    expect(calls[1]).toEqual(['viewPullRequest', { repo: 'acme/one', number: '123' }]);
+    expect(calls[1]).toEqual(['viewPullRequest', { repo: 'acme/one', number: '123', refresh: false }]);
+  });
+
+  it('GET /api/prs/:owner/:repo/:number returns PR detail', async () => {
+    const res = await fetch(`${baseUrl}/api/prs/acme/one/42`);
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.number).toBe(42);
+    expect(body.title).toBe('Detail PR');
+
+    const detailCall = calls.find(([method]) => method === 'viewPullRequestDetail');
+    expect(detailCall).toBeDefined();
+    expect(detailCall[1]).toMatchObject({ owner: 'acme', repo: 'one', number: 42, refresh: false });
   });
 
   it('GET /api/github/repos forwards limit/visibility', async () => {
@@ -69,7 +85,9 @@ describe('GitHub routes (real Express app)', () => {
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual([{ name: 'repo' }]);
 
-    expect(calls[2]).toEqual(['listRepos', { limit: 25, visibility: 'private', refresh: false }]);
+    const reposCall = calls.find(([method]) => method === 'listRepos');
+    expect(reposCall).toBeDefined();
+    expect(reposCall[1]).toEqual({ limit: 25, visibility: 'private', refresh: false });
   });
 });
 

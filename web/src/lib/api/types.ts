@@ -104,6 +104,37 @@ export interface SetupStatus {
   rigs: SetupRig[];
 }
 
+/**
+ * Convoys — the work queue. A convoy tracks one or more beads through to
+ * completion; `gt convoy list --json` is the contract. Shapes are permissive:
+ * the CLI omits empty arrays and leaves assignees null while work is unhooked.
+ */
+export interface TrackedBead {
+  id: string;
+  title: string;
+  /** Bead lifecycle: open · hooked · in_progress · closed · blocked · … */
+  status: string;
+  dependency_type?: string;
+  issue_type?: string;
+  /** Has unmet dependencies (CLI flag). */
+  blocked?: boolean;
+  /** Routing address of the agent on it, e.g. "gastown_gui/polecats/rust". */
+  assignee?: string | null;
+}
+
+export interface Convoy {
+  id: string;
+  title: string;
+  /** Convoy lifecycle: open · closed. */
+  status: string;
+  created_at?: string;
+  tracked: TrackedBead[] | null;
+  completed: number;
+  total: number;
+  owned?: boolean;
+  lifecycle?: string;
+}
+
 export interface MailMessage {
   id: string;
   from: string;

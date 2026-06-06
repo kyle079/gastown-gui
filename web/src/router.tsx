@@ -8,6 +8,7 @@ import { AppShell } from '@/app/AppShell';
 import { CommandPaletteProvider } from '@/components/command-palette/CommandPaletteProvider';
 import { Dashboard } from '@/features/dashboard/Dashboard';
 import { Fleet } from '@/features/fleet/Fleet';
+import { Work } from '@/features/work/Work';
 import { Help } from '@/features/help/Help';
 import { PlaceholderSurface } from '@/features/placeholder/PlaceholderSurface';
 

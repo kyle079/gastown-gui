@@ -3,6 +3,7 @@ export const queryKeys = {
   status: ['status'] as const,
   agents: ['agents'] as const,
   mail: ['mail'] as const,
+  convoys: ['convoys'] as const,
   rigs: ['rigs'] as const,
   health: ['health'] as const,
   setup: ['setup'] as const,

@@ -180,6 +180,23 @@ gastown-gui help
 | `GT_BIN` | Override `gt` executable path | auto-detect (`PATH`, `/opt/homebrew/bin/gt`, `/usr/local/bin/gt`) |
 | `BD_BIN` | Override `bd` executable path | auto-detect (`PATH`, `/opt/homebrew/bin/bd`, `/usr/local/bin/bd`) |
 
+### GitHub OAuth (for PR/issue data enrichment)
+
+Register a **GitHub OAuth App** at https://github.com/settings/applications/new.
+
+- **Homepage URL:** your deployed app URL (e.g., `https://your-host:7667`)
+- **Authorization callback URL:** `https://your-host:7667/auth/github/callback`
+  - ⚠️ This URL must be set in the OAuth App settings AND match `GITHUB_OAUTH_CALLBACK_URL` exactly.
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `GITHUB_OAUTH_CLIENT_ID` | OAuth App client ID | *(required for GitHub connect)* |
+| `GITHUB_OAUTH_CLIENT_SECRET` | OAuth App client secret | *(required — never commit)* |
+| `GITHUB_OAUTH_CALLBACK_URL` | Full callback URL | inferred from request host |
+| `GITHUB_ALLOWLIST` | Comma-separated GitHub logins allowed to connect | `kyle079` |
+| `SESSION_SECRET` | Secret for signing session cookies | `gastown-dev-secret-change-in-prod` *(change in production!)* |
+| `GITHUB_TOKEN` | Fallback server-side token for background operations | *(optional)* |
+
 ---
 
 ## How It Works

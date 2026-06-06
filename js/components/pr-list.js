@@ -10,6 +10,7 @@ import { state } from '../state.js';
 import { getGitHubBackedRigs } from '../shared/github-repos.js';
 import { formatRelativeTime } from '../utils/formatting.js';
 import { escapeHtml } from '../utils/html.js';
+import { getAuthStatus } from './github-auth.js';
 
 // State
 let currentState = 'open';
@@ -68,6 +69,26 @@ export async function loadPRs() {
     prs = await api.getGitHubPRs(currentState);
 
     if (prs.length === 0) {
+      const authStatus = getAuthStatus();
+      const notConnected = authStatus?.configured && !authStatus?.connected;
+      if (notConnected) {
+        container.innerHTML = `
+          <div class="empty-state enhanced">
+            <div class="empty-state-icon-wrapper">
+              <span class="material-icons">login</span>
+            </div>
+            <h3>Sign in with GitHub to view pull requests</h3>
+            <p>Connect your GitHub account to see pull requests and rich PR data across your rigs.</p>
+            <div class="empty-state-actions">
+              <a class="btn btn-primary" href="/auth/github">
+                <span class="material-icons" style="vertical-align:middle;font-size:16px">login</span>
+                Sign in with GitHub
+              </a>
+            </div>
+          </div>
+        `;
+        return;
+      }
       container.innerHTML = `
         <div class="empty-state">
           <span class="material-icons">merge_type</span>

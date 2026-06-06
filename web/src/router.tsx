@@ -14,7 +14,7 @@ import { MailSurface } from '@/features/mail/MailSurface';
 import { EscalationsSurface } from '@/features/mail/EscalationsSurface';
 import { WorkSurface } from '@/features/work/WorkSurface';
 import { Catalog, isCatalogTab, type CatalogTab } from '@/features/catalog/Catalog';
-import { PlaceholderSurface } from '@/features/placeholder/PlaceholderSurface';
+import { TerminalSurface } from '@/features/terminal/TerminalSurface';
 
 /**
  * Code-based route tree (no codegen). The keyboard layer + shell live in the
@@ -54,14 +54,6 @@ const catalogRoute = createRoute({
   component: Catalog,
 });
 
-// Phase 1 surfaces — route stubs so navigation is fully wired today.
-const stub = (path: string, title: string, intent: string) =>
-  createRoute({
-    getParentRoute: () => rootRoute,
-    path,
-    component: () => <PlaceholderSurface title={title} intent={intent} />,
-  });
-
 const rigsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/rigs',
@@ -82,11 +74,11 @@ const escalationsRoute = createRoute({
   path: '/escalations',
   component: EscalationsSurface,
 });
-const terminalRoute = stub(
-  '/terminal',
-  'Terminal',
-  'Attach to an agent tmux session in the browser via the PTY-over-websocket bridge (xterm.js).',
-);
+const terminalRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/terminal',
+  component: TerminalSurface,
+});
 
 // Help / Getting Started — the first surface Phase 1 actually builds out.
 const helpRoute = createRoute({

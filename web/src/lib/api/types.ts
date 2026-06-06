@@ -405,3 +405,48 @@ export interface RigSummary {
   polecats?: number;
   crew?: number;
 }
+
+/** A trail bead item from `gt trail beads --json` via `/api/trail?type=beads`. */
+export interface TrailBeadItem {
+  id: string;
+  title: string;
+  status?: string;
+  priority?: number;
+  assignee?: string;
+  updated_at?: string;
+  labels?: string[];
+}
+
+/** A trail hook item from `gt trail hooks --json` via `/api/trail?type=hooks`. */
+export interface TrailHookItem {
+  type: string;
+  actor: string;
+  bead?: string;
+  timestamp: string;
+  time_relative?: string;
+}
+
+/** Ready-work response from `gt ready --json` via `/api/ready`. */
+export interface ReadySource {
+  name: string;
+  issues: ReadyIssue[];
+}
+
+export interface ReadyIssue {
+  id: string;
+  title: string;
+  description?: string;
+  status: string;
+  priority: number;
+  issue_type?: string;
+  created_at?: string;
+  updated_at?: string;
+  assignee?: string;
+  labels?: string[];
+}
+
+export interface ReadyResponse {
+  sources: ReadySource[];
+  summary?: Record<string, unknown>;
+  town_root?: string;
+}

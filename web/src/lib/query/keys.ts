@@ -23,4 +23,7 @@ export const queryKeys = {
   changelog: (opts: { since?: string; week?: boolean; today?: boolean; rig?: string }) =>
     ['changelog', opts.since ?? '', opts.week ?? false, opts.today ?? false, opts.rig ?? ''] as const,
   rigList: ['rig-list'] as const,
+  trail: (opts: { type?: string; since?: string; limit?: number }) =>
+    ['trail', opts.type ?? 'beads', opts.since ?? '', opts.limit ?? ''] as const,
+  ready: (opts: { rig?: string }) => ['ready', opts.rig ?? ''] as const,
 };

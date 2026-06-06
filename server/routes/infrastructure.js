@@ -16,6 +16,8 @@ const TTL = {
   doltHealth: 30_000,
   changelog: 60_000,
   rigList: 30_000,
+  trail: 15_000,
+  ready: 20_000,
 };
 
 function cacheKey(name, ...parts) {
@@ -284,6 +286,58 @@ export function registerInfrastructureRoutes(app, { gtGateway, cache } = {}) {
         fetch: async () => {
           const result = await gtGateway.rigList();
           return result.data ?? [];
+        },
+      });
+
+      res.json(data);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // --- Trail (activity: beads/commits/hooks from gt trail --json) ---
+
+  app.get('/api/trail', async (req, res) => {
+    try {
+      const sub = req.query.type || 'beads';
+      const since = req.query.since;
+      const limit = req.query.limit ? Number(req.query.limit) : undefined;
+      const key = cacheKey('trail', sub, since ?? '', limit ?? '');
+      const refresh = req.query.refresh === 'true';
+      if (refresh) cache.delete(key);
+
+      const data = await cachedGet({
+        cache,
+        key,
+        ttl: TTL.trail,
+        fetch: async () => {
+          const result = await gtGateway.trail({ subcommand: sub, since, limit });
+          return result.data ?? null;
+        },
+      });
+
+      res.json(data);
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // --- Ready work (gt ready --json — all town-wide ready issues) ---
+
+  app.get('/api/ready', async (req, res) => {
+    try {
+      const rig = req.query.rig;
+      const key = cacheKey('ready', rig ?? '');
+      const refresh = req.query.refresh === 'true';
+      if (refresh) cache.delete(key);
+
+      const data = await cachedGet({
+        cache,
+        key,
+        ttl: TTL.ready,
+        fetch: async () => {
+          const result = await gtGateway.ready({ rig });
+          return result.data ?? null;
         },
       });
 

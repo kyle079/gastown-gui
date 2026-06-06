@@ -18,6 +18,8 @@ function makeGateway(overrides = {}) {
     doltHealth: async () => ({ ok: true, data: { timestamp: '2026-01-01T00:00:00Z', server: { running: true }, databases: [] } }),
     changelog: async () => ({ ok: true, data: [{ id: 'gg-abc', title: 'Test work', type: 'task', rig: 'gastown_gui' }] }),
     rigList: async () => ({ ok: true, data: [{ name: 'gastown_gui', status: 'operational' }] }),
+    trail: async () => ({ ok: true, data: [{ id: 'gg-xyz', title: 'Recent bead', status: 'open', priority: 1 }] }),
+    ready: async () => ({ ok: true, data: { sources: [{ name: 'town', issues: [{ id: 'hq-abc', title: 'Ready work', status: 'open', priority: 1 }] }], summary: {}, town_root: 'hq' } }),
     ...overrides,
   };
 }
@@ -164,6 +166,58 @@ describe('Infrastructure routes', () => {
     expect(calls).toHaveLength(2);
 
     await new Promise((resolve) => s2.close(resolve));
+  });
+
+  it('GET /api/trail returns trail array (beads by default)', async () => {
+    const res = await fetch(`${baseUrl}/api/trail`);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(Array.isArray(data)).toBe(true);
+    expect(data[0]).toMatchObject({ id: 'gg-xyz', title: 'Recent bead' });
+  });
+
+  it('GET /api/trail?type=hooks passes subcommand to gateway', async () => {
+    let capturedSub;
+    const app4 = createApp({ allowedOrigins: ['*'] });
+    const c4 = new CacheRegistry();
+    const gw4 = makeGateway({
+      trail: async ({ subcommand }) => { capturedSub = subcommand; return { ok: true, data: [] }; },
+    });
+    registerInfrastructureRoutes(app4, { gtGateway: gw4, cache: c4 });
+    const s4 = createServer(app4);
+    await new Promise((resolve) => s4.listen(0, resolve));
+    const base4 = `http://127.0.0.1:${s4.address().port}`;
+
+    await fetch(`${base4}/api/trail?type=hooks`);
+    expect(capturedSub).toBe('hooks');
+
+    await new Promise((resolve) => s4.close(resolve));
+  });
+
+  it('GET /api/ready returns ready response with sources', async () => {
+    const res = await fetch(`${baseUrl}/api/ready`);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data).toMatchObject({ sources: expect.any(Array) });
+    expect(data.sources[0].issues[0]).toMatchObject({ id: 'hq-abc' });
+  });
+
+  it('GET /api/ready?rig=foo passes rig filter to gateway', async () => {
+    let capturedRig;
+    const app5 = createApp({ allowedOrigins: ['*'] });
+    const c5 = new CacheRegistry();
+    const gw5 = makeGateway({
+      ready: async ({ rig }) => { capturedRig = rig; return { ok: true, data: { sources: [], summary: {} } }; },
+    });
+    registerInfrastructureRoutes(app5, { gtGateway: gw5, cache: c5 });
+    const s5 = createServer(app5);
+    await new Promise((resolve) => s5.listen(0, resolve));
+    const base5 = `http://127.0.0.1:${s5.address().port}`;
+
+    await fetch(`${base5}/api/ready?rig=gastown_gui`);
+    expect(capturedRig).toBe('gastown_gui');
+
+    await new Promise((resolve) => s5.close(resolve));
   });
 
   it('returns 500 on gateway error', async () => {

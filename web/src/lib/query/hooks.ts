@@ -14,12 +14,15 @@ import type {
   MailMessage,
   MergeRequest,
   PullRequest,
+  ReadyResponse,
   RefineryStatus,
   RigSummary,
   SchedulerStatus,
   SetupStatus,
   Target,
   TownStatus,
+  TrailBeadItem,
+  TrailHookItem,
   WitnessStatus,
 } from '@/lib/api/types';
 
@@ -307,5 +310,44 @@ export function useRigList() {
     queryKey: queryKeys.rigList,
     queryFn: () => apiClient.get<RigSummary[]>('/api/rig-list'),
     refetchInterval: 30_000,
+  });
+}
+
+export interface TrailOptions {
+  type?: 'beads' | 'commits' | 'hooks';
+  since?: string;
+  limit?: number;
+}
+
+/** Recent activity trail from `gt trail --json` via `/api/trail`. */
+export function useTrail(opts: TrailOptions = {}) {
+  const params = new URLSearchParams();
+  if (opts.type) params.set('type', opts.type);
+  if (opts.since) params.set('since', opts.since);
+  if (opts.limit != null) params.set('limit', String(opts.limit));
+  const qs = params.toString() ? `?${params.toString()}` : '';
+
+  return useQuery({
+    queryKey: queryKeys.trail(opts),
+    queryFn: () =>
+      apiClient.get<TrailBeadItem[] | TrailHookItem[] | null>(`/api/trail${qs}`),
+    refetchInterval: 15_000,
+  });
+}
+
+export interface ReadyOptions {
+  rig?: string;
+}
+
+/** All ready (unblocked) work from `gt ready --json` via `/api/ready`. */
+export function useReady(opts: ReadyOptions = {}) {
+  const params = new URLSearchParams();
+  if (opts.rig) params.set('rig', opts.rig);
+  const qs = params.toString() ? `?${params.toString()}` : '';
+
+  return useQuery({
+    queryKey: queryKeys.ready(opts),
+    queryFn: () => apiClient.get<ReadyResponse | null>(`/api/ready${qs}`),
+    refetchInterval: 20_000,
   });
 }

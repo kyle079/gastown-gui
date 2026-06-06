@@ -161,4 +161,21 @@ export class GTGateway {
     const raw = (result.stdout || '').trim();
     return { ...result, raw, data: parseJsonOrNull(raw) };
   }
+
+  async trail({ subcommand = 'beads', since, limit } = {}) {
+    const args = ['trail', subcommand, '--json'];
+    if (since) args.push('--since', since);
+    if (limit != null) args.push('--limit', String(limit));
+    const result = await this.exec(args, { timeoutMs: 20000 });
+    const raw = (result.stdout || '').trim();
+    return { ...result, raw, data: parseJsonOrNull(raw) };
+  }
+
+  async ready({ rig } = {}) {
+    const args = ['ready', '--json'];
+    if (rig) args.push('--rig', rig);
+    const result = await this.exec(args, { timeoutMs: 20000 });
+    const raw = (result.stdout || '').trim();
+    return { ...result, raw, data: parseJsonOrNull(raw) };
+  }
 }

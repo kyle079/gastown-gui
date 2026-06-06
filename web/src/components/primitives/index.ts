@@ -1,7 +1,7 @@
 /** Barrel for the primitive component library. */
-export { Button, type ButtonProps, type ButtonVariant, type ButtonSize } from './Button';
-export { Input, type InputProps } from './Input';
-export { Select, type SelectProps } from './Select';
+// Simple primitives now come from tronvercel-ui
+export { Button, type ButtonProps, type ButtonVariant, type ButtonSize } from 'tronvercel-ui';
+export { Input, type InputProps } from 'tronvercel-ui';
 export {
   Badge,
   StatusDot,
@@ -10,11 +10,13 @@ export {
   type StatusDotProps,
   type StatusPillProps,
   type Tone,
-} from './Badge';
-export { Panel, PanelHeader, PanelBody, type PanelProps, type PanelHeaderProps } from './Panel';
+} from 'tronvercel-ui';
+export { Panel, PanelHeader, PanelBody, type PanelProps, type PanelHeaderProps } from 'tronvercel-ui';
+export { Kbd } from 'tronvercel-ui';
+export { Spinner } from 'tronvercel-ui';
+// Local adapters (keep these until per-surface follow-up beads)
+export { ListRow, ListGroup, type ListRowProps } from './ListRow';
 export { Table, type Column, type TableProps } from './Table';
-export { ListRow, type ListRowProps } from './ListRow';
-export { Kbd } from './Kbd';
-export { Spinner } from './Spinner';
+export { Select, type SelectProps } from './Select';
 export { Dialog, type DialogProps } from './Dialog';
 export { ToastProvider, useToast, type Toast } from './Toast';

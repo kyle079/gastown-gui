@@ -13,7 +13,7 @@ import type { Config } from 'tailwindcss';
 const channel = (name: string) => `rgb(var(${name}) / <alpha-value>)`;
 
 export default {
-  content: ['./index.html', './src/**/*.{ts,tsx}'],
+  content: ['./index.html', './src/**/*.{ts,tsx}', './node_modules/tronvercel-ui/src/**/*.{ts,tsx}'],
   theme: {
     // Replace the default palette: semantic tokens only. No stray indigo-500s.
     colors: {

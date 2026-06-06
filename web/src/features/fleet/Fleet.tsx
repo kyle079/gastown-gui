@@ -1,33 +1,33 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
+import { Outlet, useNavigate, useParams } from '@tanstack/react-router';
 import { Surface } from '@/components/Surface';
 import { Panel, Spinner, Button } from '@/components/primitives';
 import { useStatus } from '@/lib/query/hooks';
 import { pluralize } from '@/lib/utils/format';
 import { compareRigs } from './rigHealth';
 import { RigList } from './RigList';
-import { RigDetail } from './RigDetail';
 
 /**
- * Fleet — the rig surface. One job: see the health of every rig at a glance and
- * drill into one to inspect its crew. A master list (severity-sorted) on the
- * left, the selected rig's detail on the right; on a phone they stack, list
- * first.
+ * Fleet layout — master/detail. Left column: severity-sorted rig list. Right
+ * column: the selected rig's detail (rendered by the nested /rigs/$rig route via
+ * Outlet). On mount, auto-navigates to the most critical rig if none is selected.
  */
 export function Fleet() {
-  const { data, isLoading, isError, error, refetch } = useStatus();
-  const [selected, setSelected] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const params = useParams({ strict: false }) as { rig?: string };
+  const activeName = params.rig ?? null;
 
+  const { data, isLoading, isError, error, refetch } = useStatus();
   const rigs = useMemo(() => data?.rigs ?? [], [data]);
 
-  // Default the selection to whichever rig most wants the operator. Resolved
-  // here (not in state) so it tracks live data until the operator picks a rig.
-  const activeName = useMemo(() => {
-    if (selected && rigs.some((r) => r.name === selected)) return selected;
+  // Auto-select the most critical rig when landing on /rigs with no selection.
+  useEffect(() => {
+    if (activeName || isLoading || rigs.length === 0) return;
     const top = [...rigs].sort(compareRigs)[0];
-    return top?.name ?? null;
-  }, [selected, rigs]);
-
-  const activeRig = rigs.find((r) => r.name === activeName) ?? null;
+    if (top) {
+      void navigate({ to: '/rigs/$rig', params: { rig: top.name }, replace: true });
+    }
+  }, [activeName, isLoading, rigs, navigate]);
 
   if (isLoading) {
     return (
@@ -62,11 +62,15 @@ export function Fleet() {
     <Surface title="Fleet" description={pluralize(rigs.length, 'rig')}>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="lg:col-span-1">
-          <RigList rigs={rigs} selected={activeName} onSelect={setSelected} />
+          <RigList
+            rigs={rigs}
+            selected={activeName}
+            onSelect={(name) => void navigate({ to: '/rigs/$rig', params: { rig: name } })}
+          />
         </div>
         <div className="lg:col-span-2">
-          {activeRig ? (
-            <RigDetail rig={activeRig} />
+          {activeName ? (
+            <Outlet />
           ) : (
             <Panel className="py-16 text-center text-sm text-faint">
               No rig selected.

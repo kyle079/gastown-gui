@@ -11,6 +11,25 @@ export function isCatalogTab(value: unknown): value is CatalogTab {
   return value === 'issues' || value === 'prs' || value === 'formulas';
 }
 
+export interface CatalogSearch {
+  tab: CatalogTab;
+  /** Selected issue ID (issues tab only). Lives in URL so it deep-links. */
+  id?: string;
+  /** Issues status filter. */
+  status?: string;
+  /** Issues search query. */
+  q?: string;
+}
+
+export function validateCatalogSearch(search: Record<string, unknown>): CatalogSearch {
+  return {
+    tab: isCatalogTab(search.tab) ? search.tab : 'issues',
+    id: typeof search.id === 'string' ? search.id : undefined,
+    status: typeof search.status === 'string' ? search.status : undefined,
+    q: typeof search.q === 'string' ? search.q : undefined,
+  };
+}
+
 const TABS: { id: CatalogTab; label: string; description: string }[] = [
   {
     id: 'issues',
@@ -33,15 +52,17 @@ const TABS: { id: CatalogTab; label: string; description: string }[] = [
  * One surface, one job: browse the town's work artifacts. A segmented control
  * switches between three focused lists — issues, pull requests, formulas — each
  * doing exactly one thing well. The active tab lives in the URL (`?tab=`) so it
- * deep-links and the command palette can jump straight to a view.
+ * deep-links and the command palette can jump straight to a view. Issue detail
+ * is tracked in `?id=` so it too is deep-linkable.
  */
 export function Catalog() {
-  const search = useSearch({ strict: false }) as { tab?: string };
+  const search = useSearch({ strict: false }) as CatalogSearch;
   const navigate = useNavigate();
   const tab: CatalogTab = isCatalogTab(search.tab) ? search.tab : 'issues';
   const active = TABS.find((t) => t.id === tab) ?? TABS[0];
 
-  const setTab = (id: CatalogTab) => void navigate({ to: '/catalog', search: { tab: id } });
+  const setTab = (id: CatalogTab) =>
+    void navigate({ to: '/catalog', search: { tab: id } });
 
   return (
     <Surface title="Catalog" description={active.description}>

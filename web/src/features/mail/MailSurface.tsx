@@ -1,27 +1,37 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from '@tanstack/react-router';
 import { Surface } from '@/components/Surface';
 import { Button } from '@/components/primitives';
 import { useMail } from '@/lib/query/hooks';
+import type { MailMessage } from '@/lib/api/types';
 import { EscalationsPanel } from './EscalationsPanel';
 import { InboxPanel } from './InboxPanel';
-import { useMailDialogs } from './useMailDialogs';
 import { MailLoading, MailError } from './MailStates';
+import { ComposeDialog, type ComposePrefill } from './ComposeDialog';
 import { consumePendingCompose, subscribeCompose } from './composeBus';
 
 /**
  * Mail surface — one job: triage the inbox. Escalations lead (signal over noise),
- * then the full inbox. Both feed the same read/respond/compose dialogs.
+ * then the full inbox. Clicking a message navigates to /mail/$messageId.
  */
 export function MailSurface() {
+  const navigate = useNavigate();
   const { data, isLoading, isError, error, refetch } = useMail();
-  const { openMessage, openCompose, dialogs } = useMailDialogs();
+  const [compose, setCompose] = useState<{ open: boolean; prefill?: ComposePrefill }>({
+    open: false,
+  });
 
-  // Let the command palette's "Compose" open the dialog here — on mount if it
-  // requested before we existed, and live while we're shown.
+  const openCompose = (prefill?: ComposePrefill) => setCompose({ open: true, prefill });
+  const closeCompose = () => setCompose({ open: false });
+
+  const openMessage = (m: MailMessage) =>
+    void navigate({ to: '/mail/$messageId', params: { messageId: m.id } });
+
+  // Let the command palette's "Compose" open the dialog here.
   useEffect(() => {
     if (consumePendingCompose()) openCompose();
     return subscribeCompose(() => openCompose());
-  }, [openCompose]);
+  }, []);
 
   const actions = (
     <Button variant="primary" size="sm" onClick={() => openCompose()}>
@@ -46,17 +56,19 @@ export function MailSurface() {
   }
 
   return (
-    <Surface
-      title="Mail"
-      description="Agent mail and escalations — what needs you, first."
-      actions={actions}
-    >
-      <div className="flex flex-col gap-4">
-        {/* Signal first: only present when something is escalating. */}
-        <EscalationsPanel mail={data} onOpen={openMessage} hideWhenEmpty />
-        <InboxPanel mail={data} onOpen={openMessage} />
-      </div>
-      {dialogs}
-    </Surface>
+    <>
+      <Surface
+        title="Mail"
+        description="Agent mail and escalations — what needs you, first."
+        actions={actions}
+      >
+        <div className="flex flex-col gap-4">
+          <EscalationsPanel mail={data} onOpen={openMessage} hideWhenEmpty />
+          <InboxPanel mail={data} onOpen={openMessage} />
+        </div>
+      </Surface>
+
+      <ComposeDialog open={compose.open} onClose={closeCompose} prefill={compose.prefill} />
+    </>
   );
 }

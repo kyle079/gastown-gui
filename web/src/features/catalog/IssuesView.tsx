@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
+import { useNavigate, useSearch } from '@tanstack/react-router';
 import {
   Badge,
   Dialog,
@@ -73,10 +74,25 @@ const columns: Column<Bead>[] = [
   },
 ];
 
+/**
+ * Issues tab of the Catalog. Filters (status, search query) and the selected
+ * issue ID all live in URL search params so the view deep-links and filters
+ * survive navigation and sharing.
+ */
 export function IssuesView() {
-  const [status, setStatus] = useState('open');
-  const [query, setQuery] = useState('');
-  const [selected, setSelected] = useState<Bead | null>(null);
+  const navigate = useNavigate();
+  const search = useSearch({ strict: false }) as { status?: string; q?: string; id?: string };
+
+  const status = search.status ?? 'open';
+  const query = search.q ?? '';
+  const selectedId = search.id;
+
+  const setStatus = (val: string) =>
+    void navigate({ to: '/catalog', search: (prev) => ({ ...prev, status: val, id: undefined }) });
+  const setQuery = (val: string) =>
+    void navigate({ to: '/catalog', search: (prev) => ({ ...prev, q: val || undefined }) });
+  const setSelectedId = (id: string | undefined) =>
+    void navigate({ to: '/catalog', search: (prev) => ({ ...prev, id }) });
 
   const { data, isLoading, isError, error, refetch } = useBeads(status);
 
@@ -84,6 +100,8 @@ export function IssuesView() {
     const beads = data ?? [];
     return beads.filter((b) => matches(b, query)).sort(byUrgency);
   }, [data, query]);
+
+  const selected = selectedId ? (data ?? []).find((b) => b.id === selectedId) ?? null : null;
 
   const total = data?.length ?? 0;
   const hint = query ? `${rows.length} of ${total}` : String(total);
@@ -125,14 +143,14 @@ export function IssuesView() {
           columns={columns}
           rows={rows}
           rowKey={(b) => b.id}
-          onRowClick={setSelected}
+          onRowClick={(b) => setSelectedId(b.id)}
           empty={query ? 'No issues match your filter.' : 'No issues in this status.'}
         />
       </CatalogPanel>
 
       <Dialog
         open={selected != null}
-        onClose={() => setSelected(null)}
+        onClose={() => setSelectedId(undefined)}
         title={selected ? <span className="font-mono text-xs text-muted">{selected.id}</span> : undefined}
         description={selected?.title}
       >

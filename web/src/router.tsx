@@ -8,12 +8,15 @@ import { AppShell } from '@/app/AppShell';
 import { CommandPaletteProvider } from '@/components/command-palette/CommandPaletteProvider';
 import { Dashboard } from '@/features/dashboard/Dashboard';
 import { Fleet } from '@/features/fleet/Fleet';
+import { RigDetailPage } from '@/features/fleet/RigDetailPage';
 import { Help } from '@/features/help/Help';
 import { ActivityFeed } from '@/features/activity/ActivityFeed';
 import { MailSurface } from '@/features/mail/MailSurface';
+import { MailMessagePage } from '@/features/mail/MailMessagePage';
 import { EscalationsSurface } from '@/features/mail/EscalationsSurface';
 import { WorkSurface } from '@/features/work/WorkSurface';
-import { Catalog, isCatalogTab, type CatalogTab } from '@/features/catalog/Catalog';
+import { ConvoyDetailPage } from '@/features/work/ConvoyDetailPage';
+import { Catalog, validateCatalogSearch } from '@/features/catalog/Catalog';
 import { PlaceholderSurface } from '@/features/placeholder/PlaceholderSurface';
 
 /**
@@ -36,59 +39,87 @@ const indexRoute = createRoute({
   component: Dashboard,
 });
 
-// Activity — first Phase 1 surface (live event stream).
+// Activity — live event stream.
 const activityRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/activity',
   component: ActivityFeed,
 });
 
-// Catalog — Phase 1 surface: issues, PRs, and formulas. The active view is a
-// validated search param so it deep-links and survives reload.
+// Catalog — issues, PRs, and formulas. Tab, issue selection, and issue filters
+// are all URL search params so every view deep-links and survives reload.
 const catalogRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/catalog',
-  validateSearch: (search: Record<string, unknown>): { tab: CatalogTab } => ({
-    tab: isCatalogTab(search.tab) ? search.tab : 'issues',
-  }),
+  validateSearch: validateCatalogSearch,
   component: Catalog,
 });
 
-// Phase 1 surfaces — route stubs so navigation is fully wired today.
-const stub = (path: string, title: string, intent: string) =>
-  createRoute({
-    getParentRoute: () => rootRoute,
-    path,
-    component: () => <PlaceholderSurface title={title} intent={intent} />,
-  });
-
+// Fleet — master/detail. /rigs renders the layout (list + outlet); /rigs/$rig
+// renders the selected rig's detail in the outlet.
 const rigsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/rigs',
   component: Fleet,
 });
+
+const rigDetailRoute = createRoute({
+  getParentRoute: () => rigsRoute,
+  path: '$rig',
+  component: RigDetailPage,
+});
+
+// Work — convoy list at /work; detail is a full-page view at /work/$convoyId.
 const workRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/work',
   component: WorkSurface,
 });
+
+const workDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/work/$convoyId',
+  component: ConvoyDetailPage,
+});
+
+// Mail — inbox at /mail; message detail at /mail/$messageId.
 const mailRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/mail',
   component: MailSurface,
 });
+
+const mailDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/mail/$messageId',
+  component: MailMessagePage,
+});
+
+// Escalations — triage view at /escalations; detail at /escalations/$messageId.
 const escalationsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/escalations',
   component: EscalationsSurface,
 });
-const terminalRoute = stub(
-  '/terminal',
-  'Terminal',
-  'Attach to an agent tmux session in the browser via the PTY-over-websocket bridge (xterm.js).',
-);
 
-// Help / Getting Started — the first surface Phase 1 actually builds out.
+const escalationDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/escalations/$messageId',
+  component: MailMessagePage,
+});
+
+const terminalRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/terminal',
+  component: () => (
+    <PlaceholderSurface
+      title="Terminal"
+      intent="Attach to an agent tmux session in the browser via the PTY-over-websocket bridge (xterm.js)."
+    />
+  ),
+});
+
+// Help / Getting Started.
 const helpRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/help',
@@ -99,10 +130,13 @@ const routeTree = rootRoute.addChildren([
   indexRoute,
   activityRoute,
   catalogRoute,
-  rigsRoute,
+  rigsRoute.addChildren([rigDetailRoute]),
   workRoute,
+  workDetailRoute,
   mailRoute,
+  mailDetailRoute,
   escalationsRoute,
+  escalationDetailRoute,
   terminalRoute,
   helpRoute,
 ]);

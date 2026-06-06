@@ -1,17 +1,20 @@
+import { useNavigate } from '@tanstack/react-router';
 import { Surface } from '@/components/Surface';
 import { useMail } from '@/lib/query/hooks';
+import type { MailMessage } from '@/lib/api/types';
 import { EscalationsPanel } from './EscalationsPanel';
-import { useMailDialogs } from './useMailDialogs';
 import { MailLoading, MailError } from './MailStates';
 
 /**
- * Escalations surface — the focused triage view. Same escalation lens as the
- * mail surface, alone and given the whole page: ranked by severity, acted on
- * through the shared detail dialog (ack / respond).
+ * Escalations surface — focused triage view. Clicking an escalation navigates to
+ * /escalations/$messageId for the full routed detail view.
  */
 export function EscalationsSurface() {
+  const navigate = useNavigate();
   const { data, isLoading, isError, error, refetch } = useMail();
-  const { openMessage, dialogs } = useMailDialogs();
+
+  const openMessage = (m: MailMessage) =>
+    void navigate({ to: '/escalations/$messageId', params: { messageId: m.id } });
 
   if (isLoading) {
     return (
@@ -35,7 +38,6 @@ export function EscalationsSurface() {
       description="Pending escalations awaiting authorization, ranked by severity."
     >
       <EscalationsPanel mail={data} onOpen={openMessage} />
-      {dialogs}
     </Surface>
   );
 }

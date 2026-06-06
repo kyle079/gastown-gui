@@ -13,6 +13,7 @@ import { ActivityFeed } from '@/features/activity/ActivityFeed';
 import { MailSurface } from '@/features/mail/MailSurface';
 import { EscalationsSurface } from '@/features/mail/EscalationsSurface';
 import { WorkSurface } from '@/features/work/WorkSurface';
+import { Catalog, isCatalogTab, type CatalogTab } from '@/features/catalog/Catalog';
 import { PlaceholderSurface } from '@/features/placeholder/PlaceholderSurface';
 
 /**
@@ -40,6 +41,17 @@ const activityRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/activity',
   component: ActivityFeed,
+});
+
+// Catalog — Phase 1 surface: issues, PRs, and formulas. The active view is a
+// validated search param so it deep-links and survives reload.
+const catalogRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/catalog',
+  validateSearch: (search: Record<string, unknown>): { tab: CatalogTab } => ({
+    tab: isCatalogTab(search.tab) ? search.tab : 'issues',
+  }),
+  component: Catalog,
 });
 
 // Phase 1 surfaces — route stubs so navigation is fully wired today.
@@ -86,6 +98,7 @@ const helpRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   indexRoute,
   activityRoute,
+  catalogRoute,
   rigsRoute,
   workRoute,
   mailRoute,

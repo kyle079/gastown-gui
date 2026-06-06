@@ -9,4 +9,7 @@ export const queryKeys = {
   activity: ['activity'] as const,
   convoys: ['convoys'] as const,
   targets: ['targets'] as const,
+  beads: (status: string) => ['beads', status] as const,
+  pullRequests: (state: string) => ['pull-requests', state] as const,
+  formulas: ['formulas'] as const,
 };

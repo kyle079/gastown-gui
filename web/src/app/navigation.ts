@@ -22,6 +22,7 @@ export const NAV_ITEMS: NavItem[] = [
   { path: '/activity', label: 'Activity', glyph: '≋', seq: 'a', ready: true },
   { path: '/rigs', label: 'Rigs', glyph: '▤', seq: 'r', ready: true },
   { path: '/work', label: 'Work', glyph: '◷', seq: 'w', ready: true },
+  { path: '/catalog', label: 'Catalog', glyph: '⊟', seq: 'c', ready: true },
   { path: '/mail', label: 'Mail', glyph: '✉', seq: 'm', ready: true },
   { path: '/escalations', label: 'Escalations', glyph: '!', seq: 'e', ready: true },
   { path: '/terminal', label: 'Terminal', glyph: '⌗', seq: 't', ready: false },

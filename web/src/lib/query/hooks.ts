@@ -3,8 +3,11 @@ import { apiClient } from '@/lib/api/client';
 import { queryKeys } from './keys';
 import type {
   ActivityResponse,
+  Bead,
   Convoy,
+  Formula,
   MailMessage,
+  PullRequest,
   SetupStatus,
   Target,
   TownStatus,
@@ -134,5 +137,38 @@ export function useReassign() {
       void qc.invalidateQueries({ queryKey: queryKeys.convoys });
       void qc.invalidateQueries({ queryKey: queryKeys.status });
     },
+  });
+}
+
+/**
+ * Beads issues. `status` filters server-side (`open`, `in_progress`, …);
+ * the sentinel `'all'` omits the filter to list everything.
+ */
+export function useBeads(status: string) {
+  return useQuery({
+    queryKey: queryKeys.beads(status),
+    queryFn: () => {
+      const qs = status && status !== 'all' ? `?status=${encodeURIComponent(status)}` : '';
+      return apiClient.get<Bead[]>(`/api/beads${qs}`);
+    },
+    refetchInterval: 15_000,
+  });
+}
+
+/** Open pull requests aggregated across rigs. External `gh` calls — poll slowly. */
+export function usePullRequests(state: string) {
+  return useQuery({
+    queryKey: queryKeys.pullRequests(state),
+    queryFn: () => apiClient.get<PullRequest[]>(`/api/github/prs?state=${encodeURIComponent(state)}`),
+    refetchInterval: 60_000,
+  });
+}
+
+/** The formula catalog. Rarely changes; the server caches it too. */
+export function useFormulas() {
+  return useQuery({
+    queryKey: queryKeys.formulas,
+    queryFn: () => apiClient.get<Formula[]>('/api/formulas'),
+    refetchInterval: 60_000,
   });
 }

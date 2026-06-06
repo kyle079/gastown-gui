@@ -1,7 +1,12 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
 import { queryKeys } from './keys';
-import type { MailMessage, SetupStatus, TownStatus } from '@/lib/api/types';
+import type {
+  MailMessage,
+  SendMailInput,
+  SetupStatus,
+  TownStatus,
+} from '@/lib/api/types';
 
 /**
  * Data hooks. Presentational components consume these — they never touch fetch
@@ -21,6 +26,33 @@ export function useMail() {
     queryKey: queryKeys.mail,
     queryFn: () => apiClient.get<MailMessage[]>('/api/mail'),
     refetchInterval: 15_000,
+  });
+}
+
+/**
+ * Acknowledge a message by toggling its read state. Marking an escalation read
+ * IS the ack — it clears it from the "needs the operator" surface. Invalidates
+ * the inbox so the change is reflected immediately.
+ */
+export function useMarkMailRead() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, read }: { id: string; read: boolean }) =>
+      apiClient.post(`/api/mail/${id}/${read ? 'read' : 'unread'}`),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.mail });
+    },
+  });
+}
+
+/** Compose / respond. Refetches the inbox on success so a reply lands in the feed. */
+export function useSendMail() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: SendMailInput) => apiClient.post('/api/mail', input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.mail });
+    },
   });
 }
 

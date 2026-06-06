@@ -6,8 +6,11 @@ import {
 } from '@tanstack/react-router';
 import { AppShell } from '@/app/AppShell';
 import { CommandPaletteProvider } from '@/components/command-palette/CommandPaletteProvider';
+import { ComposeProvider } from '@/features/mail/ComposeProvider';
 import { Dashboard } from '@/features/dashboard/Dashboard';
 import { Fleet } from '@/features/fleet/Fleet';
+import { Mail } from '@/features/mail/Mail';
+import { Escalations } from '@/features/mail/Escalations';
 import { Help } from '@/features/help/Help';
 import { PlaceholderSurface } from '@/features/placeholder/PlaceholderSurface';
 
@@ -17,11 +20,13 @@ import { PlaceholderSurface } from '@/features/placeholder/PlaceholderSurface';
  */
 const rootRoute = createRootRoute({
   component: () => (
-    <CommandPaletteProvider>
-      <AppShell>
-        <Outlet />
-      </AppShell>
-    </CommandPaletteProvider>
+    <ComposeProvider>
+      <CommandPaletteProvider>
+        <AppShell>
+          <Outlet />
+        </AppShell>
+      </CommandPaletteProvider>
+    </ComposeProvider>
   ),
 });
 

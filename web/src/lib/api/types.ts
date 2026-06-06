@@ -104,13 +104,25 @@ export interface SetupStatus {
   rigs: SetupRig[];
 }
 
+export type MailPriority = 'low' | 'normal' | 'high';
+
 export interface MailMessage {
   id: string;
   from: string;
   to?: string;
   subject: string;
+  /** Primary body field; some endpoints use `body` instead. */
   message?: string;
+  body?: string;
   timestamp: string;
   read: boolean;
-  priority: 'low' | 'normal' | 'high' | string;
+  priority: MailPriority | string;
+}
+
+/** Payload for composing/sending mail (POST /api/mail). */
+export interface SendMailInput {
+  to: string;
+  subject: string;
+  message: string;
+  priority?: MailPriority;
 }

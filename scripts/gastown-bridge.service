@@ -1,0 +1,35 @@
+# systemd unit for the gastown-gui bridge server on LXC 400.
+#
+# Install on LXC 400 (gastown):
+#   cp gastown-bridge.service /etc/systemd/system/
+#   systemctl daemon-reload
+#   systemctl enable --now gastown-bridge
+#
+# The bridge shells out to gt/bd/tmux — it MUST run on LXC 400 where those tools live.
+# HOST=0.0.0.0 lets the app host (LXC 402) reach the API over the LAN.
+
+[Unit]
+Description=Gastown GUI Bridge Server
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=kyle079
+WorkingDirectory=/home/kyle079/gt/gastown_gui/crew/kyle
+ExecStart=/usr/bin/node server.js
+Restart=on-failure
+RestartSec=5
+
+Environment=HOST=0.0.0.0
+Environment=GASTOWN_PORT=7667
+Environment=GT_ROOT=/home/kyle079/gt
+Environment=NODE_ENV=production
+
+# Forward journal logs
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=gastown-bridge
+
+[Install]
+WantedBy=multi-user.target

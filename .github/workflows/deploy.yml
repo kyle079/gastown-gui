@@ -1,0 +1,65 @@
+name: Deploy
+
+on:
+  push:
+    branches: [master, main]
+
+# Only one deploy runs at a time; newer push cancels older in-progress deploy.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, proxmox]
+    # Falls back gracefully if self-hosted runner is offline:
+    # remove the self-hosted line and use ubuntu-latest to test the workflow shape.
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: web
+
+      - name: Build frontend (Vite)
+        run: npm run build
+        working-directory: web
+        # Produces: web/dist/
+
+      - name: Install SSH key
+        run: |
+          install -m 600 -D /dev/null ~/.ssh/deploy_key
+          echo "${{ secrets.DEPLOY_KEY }}" > ~/.ssh/deploy_key
+          echo "StrictHostKeyChecking no" >> ~/.ssh/config
+
+      - name: Deploy static assets to app host
+        run: |
+          rsync -az --delete \
+            -e "ssh -i ~/.ssh/deploy_key" \
+            web/dist/ \
+            deploy@${{ secrets.APP_HOST }}:/opt/gastown-gui/dist/
+
+      - name: Reload nginx on app host
+        run: |
+          ssh -i ~/.ssh/deploy_key deploy@${{ secrets.APP_HOST }} \
+            "sudo nginx -s reload"
+
+      - name: Health check
+        run: |
+          sleep 3
+          curl -f --retry 5 --retry-delay 2 \
+            http://${{ secrets.APP_HOST }}/api/health
+        # /api/health is proxied by nginx → bridge on mayor (192.168.2.40:7667)
+
+      - name: Cleanup SSH key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key

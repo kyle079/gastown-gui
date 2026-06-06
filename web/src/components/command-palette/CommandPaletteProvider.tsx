@@ -44,6 +44,27 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
       run: () => void navigate({ to: item.path }),
     }));
 
+    // The catalog's sub-views deep-link via `?tab=`; surface them in the
+    // palette so the operator can jump straight past the default Issues tab.
+    const catalogViews: Command[] = [
+      {
+        id: 'nav:catalog:prs',
+        title: 'Go to Pull requests',
+        group: 'Navigation',
+        glyph: '⊟',
+        keywords: ['pr', 'pull request', 'review', 'github', 'catalog'],
+        run: () => void navigate({ to: '/catalog', search: { tab: 'prs' } }),
+      },
+      {
+        id: 'nav:catalog:formulas',
+        title: 'Go to Formulas',
+        group: 'Navigation',
+        glyph: '⊟',
+        keywords: ['formula', 'workflow', 'convoy', 'template', 'catalog'],
+        run: () => void navigate({ to: '/catalog', search: { tab: 'formulas' } }),
+      },
+    ];
+
     const actions: Command[] = [
       {
         id: 'action:refresh',
@@ -58,7 +79,7 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
       },
     ];
 
-    return [...nav, ...actions];
+    return [...nav, ...catalogViews, ...actions];
   }, [navigate, queryClient, notify]);
 
   // Global open: Cmd/Ctrl+K.

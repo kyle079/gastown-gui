@@ -147,3 +147,60 @@ export interface MailMessage {
   read: boolean;
   priority: 'low' | 'normal' | 'high' | string;
 }
+
+/**
+ * A beads issue, as returned by `bd list --json` / `/api/beads`. Numeric
+ * `priority` is the beads convention (0 = P0/urgent … 4 = P4/backlog).
+ */
+export interface Bead {
+  id: string;
+  title: string;
+  description?: string;
+  status: string;
+  priority?: number;
+  issue_type?: string;
+  owner?: string;
+  created_at?: string;
+  created_by?: string;
+  updated_at?: string;
+  dependency_count?: number;
+  dependent_count?: number;
+  comment_count?: number;
+}
+
+/** GitHub author object from the `gh` CLI (`author.login`). */
+export interface GitHubUser {
+  login?: string;
+  name?: string;
+  is_bot?: boolean;
+}
+
+/**
+ * A pull request, aggregated across rigs by `/api/github/prs` (each row is
+ * tagged with its `repo` and originating `rig`).
+ */
+export interface PullRequest {
+  number: number;
+  title: string;
+  author?: GitHubUser;
+  createdAt?: string;
+  updatedAt?: string;
+  url?: string;
+  headRefName?: string;
+  state?: string;
+  isDraft?: boolean;
+  /** '', 'APPROVED', 'CHANGES_REQUESTED', 'REVIEW_REQUIRED'. */
+  reviewDecision?: string;
+  repo?: string;
+  rig?: string;
+}
+
+/** A formula (workflow / convoy template) from `/api/formulas`. */
+export interface Formula {
+  name: string;
+  type?: string;
+  description?: string;
+  source?: string;
+  steps?: number;
+  vars?: number;
+}

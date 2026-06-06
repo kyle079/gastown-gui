@@ -3,7 +3,7 @@ import { Handle, Position } from '@xyflow/react';
 import type { NodeProps } from '@xyflow/react';
 import { cn } from '@/lib/utils/cn';
 import type { BeadGraphNode } from '@/lib/api/types';
-import { priorityBorder, shortTitle, statusColor } from './graphMeta';
+import { priorityBorder, rigColor, shortTitle, statusColor } from './graphMeta';
 
 export type BeadNodeData = BeadGraphNode & { selected?: boolean };
 
@@ -16,6 +16,7 @@ export const BeadNode = memo(function BeadNode({ data, selected }: NodeProps) {
   const node = data as unknown as BeadNodeData;
   const border = priorityBorder(node.priority);
   const dot = statusColor(node.status);
+  const rig = rigColor(node.rig);
 
   return (
     <div
@@ -24,7 +25,11 @@ export const BeadNode = memo(function BeadNode({ data, selected }: NodeProps) {
         'border transition-colors',
         selected ? 'ring-1 ring-accent' : '',
       )}
-      style={{ borderColor: selected ? 'rgb(var(--c-accent))' : border }}
+      style={{
+        borderColor: selected ? 'rgb(var(--c-accent))' : border,
+        borderLeftColor: selected ? 'rgb(var(--c-accent))' : rig,
+        borderLeftWidth: 3,
+      }}
     >
       <Handle type="target" position={Position.Top} className="!bg-line-strong !border-line" />
 

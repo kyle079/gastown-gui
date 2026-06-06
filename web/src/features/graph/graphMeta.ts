@@ -1,5 +1,26 @@
 import type { BeadGraphNode } from '@/lib/api/types';
 
+/** Deterministic rig-based color palette (Tronvercel hues). */
+const RIG_PALETTE = [
+  '52 192 212',   // cyan  — c-accent
+  '63 185 80',    // green — c-ok
+  '88 166 255',   // blue  — c-info
+  '210 153 34',   // amber — c-warn
+  '248 81 73',    // red   — c-danger
+  '150 100 220',  // violet
+  '255 140 100',  // orange
+];
+
+function hashRig(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+
+export function rigColor(rig: string): string {
+  return `rgb(${RIG_PALETTE[hashRig(rig) % RIG_PALETTE.length]} / 0.75)`;
+}
+
 /** Node colors by status — flat, no glow. */
 export const STATUS_COLOR: Record<string, string> = {
   open: 'rgb(var(--c-info))',

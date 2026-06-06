@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import {
   ReactFlow,
   Background,
@@ -13,7 +13,7 @@ import '@xyflow/react/dist/style.css';
 import type { BeadGraphData, BeadGraphNode } from '@/lib/api/types';
 import { BeadNode } from './BeadNode';
 import { applyLayout } from './layout';
-import { edgeColor, statusColor } from './graphMeta';
+import { edgeColor, rigColor } from './graphMeta';
 
 const NODE_TYPES = { bead: BeadNode };
 
@@ -61,8 +61,11 @@ export function GraphCanvas({ data, onNodeClick, focused }: GraphCanvasProps) {
     });
   }, [laidEdges, focused]);
 
-  const [nodes, , onNodesChange] = useNodesState(styled);
-  const [edges, , onEdgesChange] = useEdgesState(styledEdges);
+  const [nodes, setNodes, onNodesChange] = useNodesState(styled);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(styledEdges);
+
+  useEffect(() => { setNodes(styled); }, [styled, setNodes]);
+  useEffect(() => { setEdges(styledEdges); }, [styledEdges, setEdges]);
 
   const handleNodeClick = useCallback(
     (_: React.MouseEvent, node: Node) => {
@@ -106,7 +109,7 @@ export function GraphCanvas({ data, onNodeClick, focused }: GraphCanvasProps) {
             border: '1px solid rgb(var(--c-line))',
             borderRadius: 4,
           }}
-          nodeColor={(n) => statusColor((n.data as unknown as BeadGraphNode).status)}
+          nodeColor={(n) => rigColor((n.data as unknown as BeadGraphNode).rig)}
           maskColor="rgb(var(--c-ink) / 0.7)"
         />
       </ReactFlow>

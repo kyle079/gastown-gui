@@ -338,23 +338,12 @@ setInterval(() => {
   }
 }, CACHE_CLEANUP_INTERVAL);
 
-// Middleware
+// Middleware — React app (web/dist) takes priority for /assets JS/CSS bundles
+app.use(express.static(path.join(__dirname, 'web/dist')));
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
-app.use('/css', express.static(path.join(__dirname, 'css'), {
-  setHeaders: (res) => {
-    res.setHeader('Cache-Control', 'no-store, must-revalidate');
-  }
-}));
-app.use('/js', express.static(path.join(__dirname, 'js'), {
-  setHeaders: (res, filePath) => {
-    if (filePath.endsWith('.js')) {
-      res.setHeader('Cache-Control', 'no-store, must-revalidate');
-    }
-  }
-}));
 app.get('/', (req, res) => {
   res.setHeader('Cache-Control', 'no-store, must-revalidate');
-  res.sendFile(path.join(__dirname, 'index.html'));
+  res.sendFile(path.join(__dirname, 'web/dist/index.html'));
 });
 app.get('/favicon.ico', (req, res) => {
   res.sendFile(path.join(__dirname, 'assets', 'favicon.ico'));
@@ -1840,6 +1829,13 @@ registerGitHubRoutes(app, { gitHubService, gitHubGatewayFactory, statusService }
 // Registered after wss is created; terminal WS handler is added to the shared wss.
 // SECURITY: app binds to 127.0.0.1 by default. No auth — LAN-only (see gg-2wt).
 registerTerminalRoutes(app, { wss });
+
+// SPA catch-all: serve React app for any non-API path not matched above
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api/') || req.path.startsWith('/ws')) return next();
+  res.setHeader('Cache-Control', 'no-store, must-revalidate');
+  res.sendFile(path.join(__dirname, 'web/dist/index.html'));
+});
 
 // ============= WebSocket for Real-time Events =============
 

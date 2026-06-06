@@ -76,4 +76,89 @@ export class GTGateway {
     const raw = `${result.stdout || ''}${result.stderr || ''}`.trim();
     return { ...result, raw };
   }
+
+  async schedulerStatus() {
+    const result = await this.exec(['scheduler', 'status', '--json'], { timeoutMs: 15000 });
+    const raw = (result.stdout || '').trim();
+    return { ...result, raw, data: parseJsonOrNull(raw) };
+  }
+
+  async dogList() {
+    const result = await this.exec(['dog', 'list', '--json'], { timeoutMs: 15000 });
+    const raw = (result.stdout || '').trim();
+    return { ...result, raw, data: parseJsonOrNull(raw) };
+  }
+
+  async dogStatus() {
+    const result = await this.exec(['dog', 'status', '--json'], { timeoutMs: 15000 });
+    const raw = (result.stdout || '').trim();
+    return { ...result, raw, data: parseJsonOrNull(raw) };
+  }
+
+  async escalationList() {
+    const result = await this.exec(['escalate', 'list', '--json'], { timeoutMs: 15000 });
+    const raw = (result.stdout || '').trim();
+    return { ...result, raw, data: parseJsonOrNull(raw) };
+  }
+
+  async escalationAck(id) {
+    if (!id) throw new Error('GTGateway.escalationAck requires id');
+    const result = await this.exec(['escalate', 'ack', id], { timeoutMs: 15000 });
+    const raw = `${result.stdout || ''}${result.stderr || ''}`.trim();
+    return { ...result, raw };
+  }
+
+  async escalationClose(id, reason) {
+    if (!id) throw new Error('GTGateway.escalationClose requires id');
+    const args = ['escalate', 'close', id];
+    if (reason) args.push('--reason', reason);
+    const result = await this.exec(args, { timeoutMs: 15000 });
+    const raw = `${result.stdout || ''}${result.stderr || ''}`.trim();
+    return { ...result, raw };
+  }
+
+  async mqList(rig) {
+    if (!rig) throw new Error('GTGateway.mqList requires rig');
+    const result = await this.exec(['mq', 'list', rig, '--json'], { timeoutMs: 15000 });
+    const raw = (result.stdout || '').trim();
+    return { ...result, raw, data: parseJsonOrNull(raw) };
+  }
+
+  async refineryStatus(rig) {
+    const args = ['refinery', 'status', '--json'];
+    if (rig) args.splice(2, 0, rig);
+    const result = await this.exec(args, { timeoutMs: 15000 });
+    const raw = (result.stdout || '').trim();
+    return { ...result, raw, data: parseJsonOrNull(raw) };
+  }
+
+  async witnessStatus(rig) {
+    if (!rig) throw new Error('GTGateway.witnessStatus requires rig');
+    const result = await this.exec(['witness', 'status', rig, '--json'], { timeoutMs: 15000 });
+    const raw = (result.stdout || '').trim();
+    return { ...result, raw, data: parseJsonOrNull(raw) };
+  }
+
+  async doltHealth() {
+    const result = await this.exec(['health', '--json'], { timeoutMs: 15000 });
+    const raw = (result.stdout || '').trim();
+    return { ...result, raw, data: parseJsonOrNull(raw) };
+  }
+
+  async changelog({ since, week, today, rig } = {}) {
+    const args = ['changelog', '--json'];
+    if (rig) args.push('--rig', rig);
+    if (today) args.push('--today');
+    else if (week) args.push('--week');
+    else if (since) args.push('--since', since);
+    const result = await this.exec(args, { timeoutMs: 30000 });
+    const raw = (result.stdout || '').trim();
+    return { ...result, raw, data: parseJsonOrNull(raw) };
+  }
+
+  async rigList() {
+    const result = await this.exec(['rig', 'list', '--json'], { timeoutMs: 15000 });
+    const raw = (result.stdout || '').trim();
+    return { ...result, raw, data: parseJsonOrNull(raw) };
+  }
 }

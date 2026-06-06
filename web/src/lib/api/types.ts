@@ -242,3 +242,143 @@ export interface Formula {
   steps?: number;
   vars?: number;
 }
+
+/** Scheduler capacity from `gt scheduler status --json` via `/api/scheduler/status`. */
+export interface SchedulerCapacity {
+  max: number;
+  working: number;
+  recovery_blocked: number;
+  reusable_idle: number;
+  pending_mr: number;
+  reservations: number;
+  free: number;
+  active_sessions: number;
+}
+
+export interface SchedulerStatus {
+  paused: boolean;
+  queued_total: number;
+  queued_ready: number;
+  active_polecats: number;
+  capacity: SchedulerCapacity;
+  /** Scheduled beads waiting for capacity (null when queue is empty). */
+  beads: Bead[] | null;
+}
+
+/** A single dog from `gt dog list --json` via `/api/dogs`. */
+export interface Dog {
+  name: string;
+  state: 'idle' | 'working' | 'recycled' | string;
+  last_active?: string;
+  worktrees?: Record<string, string>;
+}
+
+/** Summary from `gt dog status --json`. */
+export interface DogSummary {
+  total: number;
+  idle: number;
+  working: number;
+  kennel_dir: string;
+}
+
+export interface DogsResponse {
+  dogs: Dog[];
+  summary: DogSummary | null;
+}
+
+/** An open escalation from `gt escalate list --json` via `/api/escalations`. */
+export interface Escalation {
+  id: string;
+  title: string;
+  description?: string;
+  status: 'open' | 'closed' | string;
+  priority?: number;
+  issue_type?: string;
+  created_at?: string;
+  created_by?: string;
+  updated_at?: string;
+  labels?: string[];
+  ephemeral?: boolean;
+}
+
+/** A merge request from `gt mq list <rig> --json` via `/api/mq/:rig`. */
+export interface MergeRequest {
+  id: string;
+  title: string;
+  description?: string;
+  status: 'open' | 'in_progress' | 'closed' | string;
+  priority?: number;
+  issue_type?: string;
+  created_at?: string;
+  created_by?: string;
+  updated_at?: string;
+  labels?: string[];
+  ephemeral?: boolean;
+}
+
+/** Refinery status from `gt refinery status <rig> --json` via `/api/refinery/:rig/status`. */
+export interface RefineryStatus {
+  running: boolean;
+  rig_name: string;
+  session: string;
+  queue_length: number;
+}
+
+/** Witness status from `gt witness status <rig> --json` via `/api/witness/:rig/status`. */
+export interface WitnessStatus {
+  running: boolean;
+  rig_name: string;
+  session: string;
+  monitored_polecats?: string[];
+}
+
+/** Dolt database stats from `gt health --json` via `/api/dolt/health`. */
+export interface DoltDatabase {
+  name: string;
+  issues: number;
+  open_issues: number;
+  wisps: number;
+  open_wisps: number;
+  commits: number;
+}
+
+export interface DoltServerHealth {
+  running: boolean;
+  pid?: number;
+  port?: number;
+  connections?: number;
+  max_connections?: number;
+  disk_usage_bytes?: number;
+  disk_usage_human?: string;
+  last_commit_age_seconds?: number;
+  last_commit_db?: string;
+}
+
+export interface DoltHealth {
+  timestamp: string;
+  server: DoltServerHealth;
+  databases: DoltDatabase[];
+  backups?: { dolt_stale: boolean; jsonl_stale: boolean };
+  processes?: { zombie_count: number };
+}
+
+/** A changelog entry from `gt changelog --json` via `/api/changelog`. */
+export interface ChangelogEntry {
+  id: string;
+  title: string;
+  type?: string;
+  rig?: string;
+  closed_at?: string;
+  close_reason?: string;
+}
+
+/** Rig summary from `gt rig list --json` via `/api/rig-list`. */
+export interface RigSummary {
+  name: string;
+  beads_prefix?: string;
+  status?: string;
+  witness?: string;
+  refinery?: string;
+  polecats?: number;
+  crew?: number;
+}

@@ -12,4 +12,14 @@ export const queryKeys = {
   beads: (status: string) => ['beads', status] as const,
   pullRequests: (state: string) => ['pull-requests', state] as const,
   formulas: ['formulas'] as const,
+  schedulerStatus: ['scheduler-status'] as const,
+  dogs: ['dogs'] as const,
+  escalations: ['escalations'] as const,
+  mergeQueue: (rig: string) => ['merge-queue', rig] as const,
+  refineryStatus: (rig: string) => ['refinery-status', rig] as const,
+  witnessStatus: (rig: string) => ['witness-status', rig] as const,
+  doltHealth: ['dolt-health'] as const,
+  changelog: (opts: { since?: string; week?: boolean; today?: boolean; rig?: string }) =>
+    ['changelog', opts.since ?? '', opts.week ?? false, opts.today ?? false, opts.rig ?? ''] as const,
+  rigList: ['rig-list'] as const,
 };

@@ -12,6 +12,7 @@ import { Help } from '@/features/help/Help';
 import { ActivityFeed } from '@/features/activity/ActivityFeed';
 import { MailSurface } from '@/features/mail/MailSurface';
 import { EscalationsSurface } from '@/features/mail/EscalationsSurface';
+import { WorkSurface } from '@/features/work/WorkSurface';
 import { PlaceholderSurface } from '@/features/placeholder/PlaceholderSurface';
 
 /**
@@ -54,11 +55,11 @@ const rigsRoute = createRoute({
   path: '/rigs',
   component: Fleet,
 });
-const workRoute = stub(
-  '/work',
-  'Work',
-  'The work queue — open beads, convoys, dispatch and reassignment, sorted by what needs the operator.',
-);
+const workRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/work',
+  component: WorkSurface,
+});
 const mailRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/mail',

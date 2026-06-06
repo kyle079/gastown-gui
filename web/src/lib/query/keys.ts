@@ -7,4 +7,6 @@ export const queryKeys = {
   health: ['health'] as const,
   setup: ['setup'] as const,
   activity: ['activity'] as const,
+  convoys: ['convoys'] as const,
+  targets: ['targets'] as const,
 };

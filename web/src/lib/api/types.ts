@@ -149,3 +149,39 @@ export interface MailMessage {
   read: boolean;
   priority: 'low' | 'normal' | 'high' | string;
 }
+
+/** A bead tracked by a convoy (`gt convoy list/status --json`). */
+export interface TrackedBead {
+  id: string;
+  title: string;
+  status: AgentState | 'open' | 'hooked' | 'in_progress' | 'blocked' | 'closed' | string;
+  dependency_type?: string;
+  issue_type?: string;
+  blocked?: boolean;
+  assignee?: string | null;
+}
+
+/** A convoy: a tracked unit of dispatched work. */
+export interface Convoy {
+  id: string;
+  title: string;
+  status: 'open' | 'closed' | string;
+  created_at?: string;
+  /** Present on the detail endpoint. */
+  lifecycle?: string;
+  owned?: boolean;
+  tracked: TrackedBead[] | null;
+  completed: number;
+  total: number;
+}
+
+/** A dispatch target (`gt` agent/rig the operator can sling work to). */
+export interface Target {
+  id: string;
+  name: string;
+  type: 'global' | 'rig' | 'agent' | string;
+  role?: AgentRole;
+  description?: string;
+  running?: boolean;
+  has_work?: boolean;
+}

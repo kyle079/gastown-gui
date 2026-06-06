@@ -98,7 +98,49 @@ The expert drives by keyboard.
 2. **Signal over noise.** What needs the operator (escalations, stalled agents,
    missing services) sorts to the top — see `AttentionPanel` on the Dashboard.
 3. **Refined density.** Dense enough to be glanceable, composed enough to read.
-4. Max content width ~1200px; consistent 6-unit page padding via `Surface`.
+4. Max content width ~1200px (widening to ~1440px at `2xl`); page padding via `Surface`
+   (tightened on phones: `px-4 py-4`, `sm:px-6 sm:py-6`).
+
+## Responsiveness & Breakpoints
+The console is **one codebase for every screen**. The operator lives in it on desktop
+(optimize for density) but also reaches for it on a phone (optimize for legibility and
+touch). The rule: **dense on desktop, legible and touch-friendly on mobile** — never two
+codebases, never a surface that dead-ends on a small screen, never sideways page scroll.
+
+### The breakpoint system
+We use Tailwind's default breakpoints, mapped to four device tiers. Design **mobile-first**:
+unprefixed classes are the phone layout; each breakpoint prefix layers on more room.
+
+| Tier | Tailwind | Min width | Verify at | Behavior |
+|------|----------|-----------|-----------|----------|
+| **Mobile** | (base) | 0 | **375** | Single column. Nav is an off-canvas **drawer** (hamburger in the top bar). Tables → stacked **cards**. Dialogs + command palette go **full-screen**. Roomier tap targets. |
+| **Tablet** | `md` | 768 | **768** | Content uses full width; the dense `<table>` returns; metric strip goes 3-up. Nav is still the drawer (the rail would crowd the content). |
+| **Desktop** | `lg` | 1024 | **1440** | Persistent **sidebar rail** (no hamburger). Dashboard goes multi-column (`lg:grid-cols-3`); metric strip is a single 6-up row. Peak density. |
+| **4k** | `2xl` | 1536 | **3840** | Content **centers** at a ~1440px max — deliberately not stretched to the panel edge (a wall of full-bleed UI reads as noise). Generous margins are on-brand restraint. |
+
+`sm` (640) is the mobile→small-tablet hinge: it's where dialogs/palette stop being
+full-screen sheets and the metric grid steps from 2-up to 3-up.
+
+### Per-area behavior
+- **App shell** (`AppShell`): persistent `Sidebar` at `lg+` (`hidden lg:flex`); below `lg`
+  the same `Sidebar` renders inside a slide-in drawer with a scrim, toggled by the top-bar
+  hamburger. The drawer closes on navigation, on scrim click, and on `Escape`; body scroll
+  locks while open. Height is `100dvh` so mobile browser chrome doesn't clip the layout.
+- **Primitives:**
+  - `Table` — renders a real `<table>` at `md+` and a stacked label/value **card** per row
+    below `md` (labels come from the column headers). One schema, two layouts; no sideways scroll.
+  - `Dialog` / `CommandPalette` — full-screen sheet below `sm`, centered modal at `sm+`.
+  - `Surface` — tighter gutters on phones, wider max at `2xl`.
+  - Tap targets — interactive nav rows and palette items grow their vertical padding below
+    `lg`/`sm`; touch inputs (palette field) are ≥44px tall.
+- **Dashboard:** `MetricStrip` is a hairline grid (`grid-cols-2 sm:grid-cols-3 lg:grid-cols-6`,
+  uniform 1px separators via `gap-px` over a `line`-colored track) so it wraps cleanly instead
+  of showing broken vertical-only dividers. Panels stack to one column below `lg`.
+
+### The aesthetic holds at every size
+Restrained-Tron / Vercel restraint is **not** relaxed on mobile: same tokens, same hairlines,
+same sharp corners, same flat accent. Mobile changes *layout and target size*, never the
+visual language. Verify every new surface at **375 / 768 / 1440 / 3840** before shipping.
 
 ## Reference Surface
 The **Dashboard** (`web/src/features/dashboard/`) proves the system end to end:

@@ -5,7 +5,7 @@ import { useStatus } from '@/lib/query/hooks';
 import { NAV_ITEMS } from './navigation';
 
 /** Top bar: current surface title, live status, command-palette launcher. */
-export function TopBar() {
+export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
   const { open } = useCommandPalette();
   const { location } = useRouterState();
   const { data, isFetching } = useStatus();
@@ -20,12 +20,21 @@ export function TopBar() {
       className="flex shrink-0 items-center justify-between gap-4 border-b border-line bg-base px-4"
       style={{ height: 'var(--topbar-h)' }}
     >
-      <div className="flex items-center gap-3">
-        <h1 className="text-sm font-medium text-fg">{current}</h1>
-        {isFetching && <Spinner className="h-3 w-3" />}
+      <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+        {/* Drawer toggle — only when the rail is collapsed (below lg). */}
+        <button
+          type="button"
+          onClick={onMenuClick}
+          aria-label="Open navigation"
+          className="-ml-1 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded font-mono text-base text-muted transition-colors hover:bg-raised hover:text-fg focus-visible:ring-1 focus-visible:ring-accent lg:hidden"
+        >
+          ☰
+        </button>
+        <h1 className="truncate text-sm font-medium text-fg">{current}</h1>
+        {isFetching && <Spinner className="h-3 w-3 shrink-0" />}
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex shrink-0 items-center gap-3">
         {data?.overseer?.name && (
           <span className="hidden font-mono text-2xs text-faint sm:inline">
             {data.overseer.name}
@@ -38,8 +47,9 @@ export function TopBar() {
           className="gap-2 text-muted"
           aria-label="Open command palette"
         >
-          <span className="text-xs">Command</span>
-          <Kbd>⌘K</Kbd>
+          <span className="font-mono text-xs sm:hidden">⌘K</span>
+          <span className="hidden text-xs sm:inline">Command</span>
+          <Kbd className="hidden sm:inline-flex">⌘K</Kbd>
         </Button>
       </div>
     </header>

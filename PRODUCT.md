@@ -4,7 +4,7 @@
 product
 
 ## Users
-Single power user — the operator running Gas Town, in this console all day. Expert. Wants speed, keyboard control, and signal over noise.
+Single power user — the operator running Gas Town, in this console all day. Expert. Wants speed, keyboard control, and signal over noise. Primarily a desktop tool, but the operator also reaches for it from a **phone** (check status, authorize an escalation, glance at attention items on the move), so every surface must work on a small touch screen too.
 
 ## Product Purpose
 The control console for the Gas Town agent system: monitor and steer rigs, polecats, convoys, and the work / mail / escalation queues and live activity, then act fast (authorize escalations, dispatch work, respond). Includes attaching to agent tmux sessions from the browser (web terminal). Internal tool: design SERVES the work.
@@ -24,9 +24,10 @@ Vercel-grade modern high-tech with a RESTRAINED TRON influence: dark, precise, g
 4. Keyboard-first power tool. Command palette + shortcuts; the expert drives by keyboard.
 5. Reusable primitives. A real TypeScript + Tailwind component library; consistency from the system.
 6. Kill the AI tells. Pass the AI-slop test on every surface.
+7. Responsive by default. One codebase, every screen: **dense** on desktop (the operator's home), **legible and touch-friendly** on a phone. The shell collapses to a drawer, tables reflow to cards, dialogs go full-screen, tap targets grow. No surface dead-ends on mobile and nothing scrolls sideways. See DESIGN.md → *Responsiveness & Breakpoints*.
 
 ## Accessibility & Inclusion
-Not a priority. Single expert user; optimize for speed, keyboard control, and glanceable legibility.
+Not a priority in the assistive-tech sense — single expert user; optimize for speed, keyboard control, and glanceable legibility. **Responsiveness IS in scope**, though: the console must be fully usable on phone / tablet / desktop / 4k (see DESIGN.md → *Responsiveness & Breakpoints*).
 
 ## Tech Foundation
 React + TypeScript + Vite + Tailwind + TanStack Router + TanStack Query. Presentational components fed by TanStack Query from the gt backend. New capability (later phase): web terminal (xterm.js) attaching to gt tmux sessions via a PTY-over-websocket bridge in the Express server.

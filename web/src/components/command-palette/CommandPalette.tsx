@@ -95,10 +95,10 @@ export function CommandPalette({ open, onClose, commands }: CommandPaletteProps)
   });
 
   return createPortal(
-    <div className="fixed inset-0 z-[70] flex items-start justify-center p-4 pt-[14vh]">
+    <div className="fixed inset-0 z-[70] flex items-stretch justify-center sm:items-start sm:p-4 sm:pt-[14vh]">
       <div className="fixed inset-0 animate-fade-in bg-ink/70 backdrop-blur-[1px]" onClick={onClose} aria-hidden />
       <div
-        className="relative w-full max-w-xl animate-scale-in overflow-hidden rounded-md border border-line-strong bg-overlay shadow-overlay"
+        className="relative flex w-full animate-scale-in flex-col overflow-hidden border-line-strong bg-overlay sm:max-w-xl sm:rounded-md sm:border sm:shadow-overlay"
         role="dialog"
         aria-modal="true"
         aria-label="Command palette"
@@ -118,7 +118,7 @@ export function CommandPalette({ open, onClose, commands }: CommandPaletteProps)
           <Kbd>Esc</Kbd>
         </div>
 
-        <div ref={listRef} className="max-h-[50vh] overflow-y-auto py-1.5">
+        <div ref={listRef} className="flex-1 overflow-y-auto py-1.5 sm:max-h-[50vh] sm:flex-none">
           {filtered.length === 0 ? (
             <div className="px-4 py-8 text-center text-sm text-faint">No matching commands</div>
           ) : (
@@ -135,7 +135,8 @@ export function CommandPalette({ open, onClose, commands }: CommandPaletteProps)
                     onMouseMove={() => setActive(index)}
                     onClick={() => run(cmd)}
                     className={cn(
-                      'flex w-full items-center gap-2.5 rounded px-2.5 py-2 text-left text-sm',
+                      // Roomier tap target on touch; dense on desktop.
+                      'flex w-full items-center gap-2.5 rounded px-2.5 py-2.5 text-left text-sm sm:py-2',
                       index === active ? 'bg-raised text-fg' : 'text-muted',
                     )}
                   >

@@ -49,7 +49,7 @@ export function Dialog({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 pt-[12vh]"
+      className="fixed inset-0 z-50 flex items-stretch justify-center overflow-y-auto sm:items-start sm:p-4 sm:pt-[12vh]"
       role="dialog"
       aria-modal="true"
     >
@@ -62,8 +62,10 @@ export function Dialog({
         ref={panelRef}
         tabIndex={-1}
         className={cn(
-          'relative w-full max-w-md animate-scale-in rounded-md border border-line-strong ' +
-            'bg-overlay shadow-overlay outline-none',
+          // Full-screen sheet on mobile; centered modal at sm+.
+          'relative flex min-h-full w-full animate-scale-in flex-col border-line-strong ' +
+            'bg-overlay outline-none ' +
+            'sm:min-h-0 sm:max-w-md sm:rounded-md sm:border sm:shadow-overlay',
           className,
         )}
       >
@@ -73,7 +75,7 @@ export function Dialog({
             {description != null && <p className="mt-1 text-xs text-muted">{description}</p>}
           </div>
         )}
-        {children != null && <div className="px-4 py-4">{children}</div>}
+        {children != null && <div className="flex-1 px-4 py-4">{children}</div>}
         {footer != null && (
           <div className="flex items-center justify-end gap-2 border-t border-line px-4 py-3">
             {footer}

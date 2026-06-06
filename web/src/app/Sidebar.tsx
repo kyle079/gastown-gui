@@ -7,8 +7,18 @@ import { StatusDot } from '@/components/primitives';
 /**
  * Primary navigation rail. Quiet, structural, keyboard-discoverable
  * (each item shows its `g _` sequence). One job: move between surfaces.
+ *
+ * Renders as a persistent rail on desktop (`lg+`) and as the contents of the
+ * off-canvas drawer below `lg` — `onNavigate` lets the shell close the drawer
+ * when a destination is chosen.
  */
-export function Sidebar() {
+export function Sidebar({
+  className,
+  onNavigate,
+}: {
+  className?: string;
+  onNavigate?: () => void;
+}) {
   const { location } = useRouterState();
   const { data } = useStatus();
 
@@ -17,7 +27,7 @@ export function Sidebar() {
 
   return (
     <aside
-      className="flex h-full flex-col border-r border-line bg-base"
+      className={cn('flex h-full flex-col border-r border-line bg-base', className)}
       style={{ width: 'var(--sidebar-w)' }}
     >
       {/* Wordmark */}
@@ -38,8 +48,10 @@ export function Sidebar() {
             <Link
               key={item.path}
               to={item.path}
+              onClick={onNavigate}
               className={cn(
-                'group flex items-center gap-2.5 rounded px-2.5 py-1.5 text-sm transition-colors',
+                // Roomier tap target in the mobile drawer; dense on desktop.
+                'group flex items-center gap-2.5 rounded px-2.5 py-2.5 text-sm transition-colors lg:py-1.5',
                 active ? 'bg-raised text-fg' : 'text-muted hover:bg-raised/60 hover:text-fg',
               )}
             >

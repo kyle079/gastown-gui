@@ -6,6 +6,7 @@ import { RigsPanel } from './RigsPanel';
 import { HqPanel } from './HqPanel';
 import { ServicesPanel } from './ServicesPanel';
 import { AttentionPanel } from './AttentionPanel';
+import { SchedulerPanel } from './SchedulerPanel';
 import { FirstRunBanner } from '@/features/help/FirstRunBanner';
 
 /**
@@ -64,6 +65,7 @@ export function Dashboard() {
           <div className="flex flex-col gap-4">
             <HqPanel agents={data.agents ?? []} />
             <ServicesPanel daemon={data.daemon} dolt={data.dolt} tmux={data.tmux} />
+            <SchedulerPanel />
           </div>
         </div>
       </div>

@@ -4,6 +4,7 @@ import type { Agent, Rig } from '@/lib/api/types';
 import { pluralize } from '@/lib/utils/format';
 import { rigHealth, groupRigAgents } from './rigHealth';
 import { AgentRow } from './AgentRow';
+import { RigInfraPanel } from './RigInfraPanel';
 
 function AgentGroup({ title, agents }: { title: string; agents: Agent[] }) {
   if (agents.length === 0) return null;
@@ -64,6 +65,8 @@ export function RigDetail({ rig }: { rig: Rig }) {
           </div>
         )}
       </Panel>
+
+      <RigInfraPanel rig={rig.name} />
 
       <AgentGroup title="Services" agents={groups.services} />
       <AgentGroup title="Polecats" agents={groups.polecats} />

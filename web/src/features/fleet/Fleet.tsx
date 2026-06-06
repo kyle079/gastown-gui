@@ -6,6 +6,7 @@ import { useStatus } from '@/lib/query/hooks';
 import { pluralize } from '@/lib/utils/format';
 import { compareRigs } from './rigHealth';
 import { RigList } from './RigList';
+import { DogsPanel } from './DogsPanel';
 
 /**
  * Fleet layout — master/detail. Left column: severity-sorted rig list. Right
@@ -61,12 +62,13 @@ export function Fleet() {
   return (
     <Surface title="Fleet" description={pluralize(rigs.length, 'rig')}>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="lg:col-span-1">
+        <div className="flex flex-col gap-4 lg:col-span-1">
           <RigList
             rigs={rigs}
             selected={activeName}
             onSelect={(name) => void navigate({ to: '/rigs/$rig', params: { rig: name } })}
           />
+          <DogsPanel />
         </div>
         <div className="lg:col-span-2">
           {activeName ? (

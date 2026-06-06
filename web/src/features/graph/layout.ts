@@ -1,7 +1,6 @@
 import dagre from '@dagrejs/dagre';
 import type { Node, Edge } from '@xyflow/react';
 import type { BeadGraphData, BeadGraphNode } from '@/lib/api/types';
-import type { BeadNodeData } from './BeadNode';
 
 const NODE_W = 220;
 const NODE_H = 72;
@@ -36,7 +35,7 @@ export function applyLayout(data: BeadGraphData): { nodes: Node[]; edges: Edge[]
       id: n.id,
       type: 'bead',
       position: { x: (pos?.x ?? 0) - NODE_W / 2, y: (pos?.y ?? 0) - NODE_H / 2 },
-      data: n as BeadNodeData,
+      data: n as unknown as Record<string, unknown>,
     };
   });
 

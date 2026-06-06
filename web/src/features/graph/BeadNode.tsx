@@ -13,7 +13,7 @@ export type BeadNodeData = BeadGraphNode & { selected?: boolean };
  * priority reflected in the border, no glow.
  */
 export const BeadNode = memo(function BeadNode({ data, selected }: NodeProps) {
-  const node = data as BeadNodeData;
+  const node = data as unknown as BeadNodeData;
   const border = priorityBorder(node.priority);
   const dot = statusColor(node.status);
 

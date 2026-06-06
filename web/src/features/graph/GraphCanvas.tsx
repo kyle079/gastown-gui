@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import {
   ReactFlow,
   Background,
@@ -6,9 +6,6 @@ import {
   MiniMap,
   useNodesState,
   useEdgesState,
-  addEdge,
-  type Connection,
-  type Edge,
   type Node,
   BackgroundVariant,
 } from '@xyflow/react';
@@ -22,20 +19,13 @@ const NODE_TYPES = { bead: BeadNode };
 
 interface GraphCanvasProps {
   data: BeadGraphData;
-  /** When a node is clicked, surface its detail. */
   onNodeClick?: (node: BeadGraphNode) => void;
-  /** IDs to highlight (focus subgraph). */
   focused?: Set<string>;
 }
 
-/**
- * React Flow canvas. Computes dagre layout once on mount / data change.
- * Parents pass in raw BeadGraphData; this component handles positioning.
- */
 export function GraphCanvas({ data, onNodeClick, focused }: GraphCanvasProps) {
   const { nodes: laid, edges: laidEdges } = useMemo(() => applyLayout(data), [data]);
 
-  // Apply focus dimming: unfocused nodes get reduced opacity.
   const styled = useMemo(() => {
     if (!focused?.size) return laid;
     return laid.map((n) => ({
@@ -76,7 +66,7 @@ export function GraphCanvas({ data, onNodeClick, focused }: GraphCanvasProps) {
 
   const handleNodeClick = useCallback(
     (_: React.MouseEvent, node: Node) => {
-      onNodeClick?.(node.data as BeadGraphNode);
+      onNodeClick?.(node.data as unknown as BeadGraphNode);
     },
     [onNodeClick],
   );
@@ -116,7 +106,7 @@ export function GraphCanvas({ data, onNodeClick, focused }: GraphCanvasProps) {
             border: '1px solid rgb(var(--c-line))',
             borderRadius: 4,
           }}
-          nodeColor={(n) => statusColor((n.data as BeadGraphNode).status)}
+          nodeColor={(n) => statusColor((n.data as unknown as BeadGraphNode).status)}
           maskColor="rgb(var(--c-ink) / 0.7)"
         />
       </ReactFlow>

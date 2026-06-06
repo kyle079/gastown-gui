@@ -1,0 +1,23 @@
+# systemd service for the auto-deploy poller.
+# Triggered by gastown-gui-autodeploy.timer every 5 minutes.
+# Fetches origin/master; deploys only if HEAD advanced.
+#
+# One-time install (run as root):
+#   cp scripts/gastown-gui-autodeploy.service /etc/systemd/system/
+#   cp scripts/gastown-gui-autodeploy.timer  /etc/systemd/system/
+#   systemctl daemon-reload
+#   systemctl enable --now gastown-gui-autodeploy.timer
+
+[Unit]
+Description=Gastown GUI auto-deploy (poll origin/master)
+After=network.target gastown-gui.service
+Requires=gastown-gui.service
+
+[Service]
+Type=oneshot
+User=kyle
+ExecStart=/bin/bash /home/kyle/gt/gastown_gui/crew/kyle/scripts/autodeploy-poll.sh
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=gastown-gui-autodeploy

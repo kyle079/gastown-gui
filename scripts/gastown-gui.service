@@ -1,0 +1,38 @@
+# systemd unit for the gastown-gui service on the mayor box (192.168.2.40).
+#
+# Serves the hand-rolled UI + API bridge on port 8080 for LAN access.
+#
+# One-time install (run as root):
+#   cp scripts/gastown-gui.service /etc/systemd/system/
+#   systemctl daemon-reload
+#   systemctl enable --now gastown-gui
+#
+# To deploy the latest master:
+#   bash scripts/deploy.sh
+
+[Unit]
+Description=Gastown GUI (bridge + static frontend)
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=kyle
+WorkingDirectory=/home/kyle/gt/gastown_gui/crew/kyle
+ExecStart=/usr/bin/node server.js
+Restart=on-failure
+RestartSec=5
+
+# Bind on all interfaces so LAN clients can reach it on :8080.
+# Internal LAN only — no external exposure.
+Environment=HOST=0.0.0.0
+Environment=GASTOWN_PORT=8080
+Environment=GT_ROOT=/home/kyle/gt
+Environment=NODE_ENV=production
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=gastown-gui
+
+[Install]
+WantedBy=multi-user.target

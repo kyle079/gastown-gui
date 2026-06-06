@@ -1,0 +1,17 @@
+# Timer: poll origin/master every 5 minutes and auto-deploy if HEAD advanced.
+#
+# One-time install (run as root):
+#   cp scripts/gastown-gui-autodeploy.timer /etc/systemd/system/
+#   systemctl daemon-reload
+#   systemctl enable --now gastown-gui-autodeploy.timer
+
+[Unit]
+Description=Gastown GUI auto-deploy timer
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

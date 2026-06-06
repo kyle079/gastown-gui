@@ -1,7 +1,14 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
 import { queryKeys } from './keys';
-import type { ActivityResponse, MailMessage, SetupStatus, TownStatus } from '@/lib/api/types';
+import type {
+  ActivityResponse,
+  Convoy,
+  MailMessage,
+  SetupStatus,
+  Target,
+  TownStatus,
+} from '@/lib/api/types';
 
 /**
  * Data hooks. Presentational components consume these — they never touch fetch
@@ -43,5 +50,60 @@ export function useActivity() {
     // The live WebSocket nudges this to refetch the instant an event lands;
     // the interval is the floor so the feed stays fresh even if the socket drops.
     refetchInterval: 10_000,
+  });
+}
+
+export function useConvoys() {
+  return useQuery({
+    // Mirrors the server's 10s convoy cache — no point polling faster.
+    queryKey: queryKeys.convoys,
+    queryFn: () => apiClient.get<Convoy[]>('/api/convoys'),
+    refetchInterval: 10_000,
+  });
+}
+
+/** Dispatch targets change with the fleet — refetch lazily. */
+export function useTargets() {
+  return useQuery({
+    queryKey: queryKeys.targets,
+    queryFn: () => apiClient.get<Target[]>('/api/targets'),
+    staleTime: 30_000,
+  });
+}
+
+interface SlingArgs {
+  bead: string;
+  target?: string;
+}
+
+/** Sling a bead onto a target's hook — the primary dispatch action. */
+export function useSling() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ bead, target }: SlingArgs) =>
+      apiClient.post<{ success: boolean }>('/api/sling', { bead, target }),
+    onSuccess: () => {
+      // Dispatch changes both the convoy queue and who's-on-what.
+      void qc.invalidateQueries({ queryKey: queryKeys.convoys });
+      void qc.invalidateQueries({ queryKey: queryKeys.status });
+    },
+  });
+}
+
+interface ReassignArgs {
+  beadId: string;
+  target: string;
+}
+
+/** Reassign a tracked bead to a different agent. */
+export function useReassign() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ beadId, target }: ReassignArgs) =>
+      apiClient.post<{ success: boolean }>(`/api/work/${beadId}/reassign`, { target }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: queryKeys.convoys });
+      void qc.invalidateQueries({ queryKey: queryKeys.status });
+    },
   });
 }

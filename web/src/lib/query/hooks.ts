@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
 import { queryKeys } from './keys';
-import type { MailMessage, SetupStatus, TownStatus } from '@/lib/api/types';
+import type { ActivityResponse, MailMessage, SetupStatus, TownStatus } from '@/lib/api/types';
 
 /**
  * Data hooks. Presentational components consume these — they never touch fetch
@@ -33,5 +33,15 @@ export function useSetupStatus() {
     queryKey: queryKeys.setup,
     queryFn: () => apiClient.get<SetupStatus>('/api/setup/status'),
     refetchInterval: 30_000,
+  });
+}
+
+export function useActivity() {
+  return useQuery({
+    queryKey: queryKeys.activity,
+    queryFn: () => apiClient.get<ActivityResponse>('/api/activity?limit=300'),
+    // The live WebSocket nudges this to refetch the instant an event lands;
+    // the interval is the floor so the feed stays fresh even if the socket drops.
+    refetchInterval: 10_000,
   });
 }

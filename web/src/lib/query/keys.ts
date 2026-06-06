@@ -6,4 +6,5 @@ export const queryKeys = {
   rigs: ['rigs'] as const,
   health: ['health'] as const,
   setup: ['setup'] as const,
+  activity: ['activity'] as const,
 };

@@ -104,6 +104,39 @@ export interface SetupStatus {
   rigs: SetupRig[];
 }
 
+/**
+ * A structured town event from the activity feed (`.events.jsonl` via
+ * `/api/activity`). The `payload` shape varies by `type`; the Activity surface
+ * adapts it for display rather than over-typing every variant here.
+ */
+export type ActivityEventType =
+  | 'session_start'
+  | 'session_death'
+  | 'mail'
+  | 'nudge'
+  | 'done'
+  | 'sling'
+  | 'spawn'
+  | 'handoff'
+  | 'escalation_sent'
+  | 'escalation_acked'
+  | 'escalation_closed'
+  | string;
+
+export interface ActivityEvent {
+  id: string;
+  ts: string | null;
+  type: ActivityEventType;
+  actor: string | null;
+  source: string | null;
+  payload: Record<string, unknown>;
+}
+
+export interface ActivityResponse {
+  items: ActivityEvent[];
+  total: number;
+}
+
 export interface MailMessage {
   id: string;
   from: string;

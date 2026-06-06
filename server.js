@@ -132,6 +132,14 @@ const mailFeedCache = {
   events: null,
 };
 
+// Activity feed cache — keyed off the events file mtime/size so we re-read only
+// when the file actually changes (the file is the single source of truth).
+const activityFeedCache = {
+  mtimeMs: 0,
+  size: 0,
+  events: null,
+};
+
 function getCached(key) {
   const entry = cache.get(key);
   if (entry && Date.now() < entry.expires) {
@@ -610,6 +618,56 @@ async function loadMailFeedEvents(feedPath) {
   return mailEvents;
 }
 
+// Load the structured activity feed (.events.jsonl) newest-first. Unlike the
+// mail loader this keeps ALL event types — the Activity surface categorises them
+// client-side. Cached by mtime/size so repeated polls don't re-parse the file.
+async function loadActivityEvents(feedPath) {
+  const stats = await fsPromises.stat(feedPath);
+  if (activityFeedCache.events &&
+      activityFeedCache.mtimeMs === stats.mtimeMs &&
+      activityFeedCache.size === stats.size) {
+    return activityFeedCache.events;
+  }
+
+  const fileStream = fs.createReadStream(feedPath);
+  const rl = readline.createInterface({
+    input: fileStream,
+    crlfDelay: Infinity
+  });
+
+  const events = [];
+  let index = 0;
+  for await (const line of rl) {
+    if (!line.trim()) continue;
+    try {
+      const event = JSON.parse(line);
+      if (!event || !event.type) continue;
+      events.push({
+        // The file is append-ordered, so index is a stable per-line key even
+        // when several events share a timestamp.
+        id: `${event.ts || 'na'}-${index}`,
+        ts: event.ts || null,
+        type: event.type,
+        actor: event.actor || null,
+        source: event.source || null,
+        payload: event.payload || {},
+      });
+      index++;
+    } catch {
+      // Skip malformed lines
+    }
+  }
+
+  // Newest first (file is chronological).
+  events.reverse();
+
+  activityFeedCache.events = events;
+  activityFeedCache.mtimeMs = stats.mtimeMs;
+  activityFeedCache.size = stats.size;
+
+  return events;
+}
+
 // ============= REST API Endpoints =============
 
 // Town status overview
@@ -692,6 +750,29 @@ app.get('/api/mail/all', async (req, res) => {
   } catch (err) {
     console.error('[API] Failed to read feed for mail:', err);
     res.status(500).json({ error: 'Failed to read mail feed' });
+  }
+});
+
+// Activity feed — the live town event stream (beads, work, mail, escalations,
+// sessions). Returns structured events newest-first; the Activity surface polls
+// this and the /ws stream nudges it to refetch in real time.
+app.get('/api/activity', async (req, res) => {
+  try {
+    const limit = Math.min(1000, Math.max(1, parseInt(req.query.limit, 10) || 200));
+
+    const feedPath = path.join(GT_ROOT, '.events.jsonl');
+    try {
+      await fsPromises.access(feedPath);
+    } catch {
+      activityFeedCache.events = null;
+      return res.json({ items: [], total: 0 });
+    }
+
+    const events = await loadActivityEvents(feedPath);
+    res.json({ items: events.slice(0, limit), total: events.length });
+  } catch (err) {
+    console.error('[API] Failed to read activity feed:', err);
+    res.status(500).json({ error: 'Failed to read activity feed' });
   }
 });
 

@@ -9,6 +9,7 @@ import { CommandPaletteProvider } from '@/components/command-palette/CommandPale
 import { Dashboard } from '@/features/dashboard/Dashboard';
 import { Fleet } from '@/features/fleet/Fleet';
 import { Help } from '@/features/help/Help';
+import { ActivityFeed } from '@/features/activity/ActivityFeed';
 import { PlaceholderSurface } from '@/features/placeholder/PlaceholderSurface';
 
 /**
@@ -29,6 +30,13 @@ const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
   component: Dashboard,
+});
+
+// Activity — first Phase 1 surface (live event stream).
+const activityRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/activity',
+  component: ActivityFeed,
 });
 
 // Phase 1 surfaces — route stubs so navigation is fully wired today.
@@ -74,6 +82,7 @@ const helpRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   indexRoute,
+  activityRoute,
   rigsRoute,
   workRoute,
   mailRoute,

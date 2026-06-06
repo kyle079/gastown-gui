@@ -1,25 +1,25 @@
-import { useNavigate } from '@tanstack/react-router';
 import { Surface } from '@/components/Surface';
-import { useMail } from '@/lib/query/hooks';
-import type { MailMessage } from '@/lib/api/types';
+import { Spinner } from '@/components/primitives';
+import { useEscalations, useAckEscalation, useCloseEscalation } from '@/lib/query/hooks';
 import { EscalationsPanel } from './EscalationsPanel';
-import { MailLoading, MailError } from './MailStates';
 
 /**
- * Escalations surface — focused triage view. Clicking an escalation navigates to
- * /escalations/$messageId for the full routed detail view.
+ * Escalations surface — structured triage view driven by /api/escalations
+ * (gt escalate list --json) instead of sniffing mail subjects.
+ * Supports inline ack and close actions.
  */
 export function EscalationsSurface() {
-  const navigate = useNavigate();
-  const { data, isLoading, isError, error, refetch } = useMail();
-
-  const openMessage = (m: MailMessage) =>
-    void navigate({ to: '/escalations/$messageId', params: { messageId: m.id } });
+  const { data, isLoading, isError, error, refetch } = useEscalations();
+  const ackMutation = useAckEscalation();
+  const closeMutation = useCloseEscalation();
 
   if (isLoading) {
     return (
       <Surface title="Escalations">
-        <MailLoading label="Loading escalations…" />
+        <div className="flex items-center gap-3 px-4 py-20 text-sm text-muted">
+          <Spinner />
+          Loading escalations…
+        </div>
       </Surface>
     );
   }
@@ -27,7 +27,19 @@ export function EscalationsSurface() {
   if (isError || !data) {
     return (
       <Surface title="Escalations">
-        <MailError error={error} onRetry={() => void refetch()} />
+        <div className="flex flex-col gap-4 px-4 py-16 text-center">
+          <p className="text-sm text-fg">Could not load escalations.</p>
+          <p className="font-mono text-xs text-faint">
+            {error instanceof Error ? error.message : 'Unknown error'}
+          </p>
+          <button
+            type="button"
+            className="mx-auto rounded border border-line px-3 py-1.5 text-sm text-muted hover:text-fg"
+            onClick={() => void refetch()}
+          >
+            Retry
+          </button>
+        </div>
       </Surface>
     );
   }
@@ -35,9 +47,13 @@ export function EscalationsSurface() {
   return (
     <Surface
       title="Escalations"
-      description="Pending escalations awaiting authorization, ranked by severity."
+      description="Pending escalations from gt escalate list, ranked by severity."
     >
-      <EscalationsPanel mail={data} onOpen={openMessage} />
+      <EscalationsPanel
+        escalations={data}
+        onAck={(id) => void ackMutation.mutate(id)}
+        onClose={(id) => void closeMutation.mutate({ id })}
+      />
     </Surface>
   );
 }

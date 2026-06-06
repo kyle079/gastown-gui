@@ -9,8 +9,10 @@ import {
   StatusPill,
   Spinner,
   Button,
+  Badge,
 } from '@/components/primitives';
-import { useActivity } from '@/lib/query/hooks';
+import { useActivity, useChangelog } from '@/lib/query/hooks';
+import type { ChangelogEntry } from '@/lib/api/types';
 import { useActivityStream } from '@/lib/realtime/useActivityStream';
 import { relativeTime } from '@/lib/utils/format';
 import { cn } from '@/lib/utils/cn';
@@ -21,6 +23,8 @@ import {
   type ActivityCategory,
   type ActivityView,
 } from './activityModel';
+
+type ActivityTab = 'feed' | 'changelog';
 
 type Filter = ActivityCategory | 'all';
 
@@ -139,6 +143,7 @@ export function ActivityFeed() {
   const { live } = useActivityStream();
   const [filter, setFilter] = useState<Filter>('all');
   const [query, setQuery] = useState('');
+  const [tab, setTab] = useState<ActivityTab>('feed');
 
   const views = useMemo<ActivityView[]>(
     () => (data?.items ?? []).map(toActivityView),
@@ -199,10 +204,37 @@ export function ActivityFeed() {
   return (
     <Surface
       title="Activity"
-      description="The live town event stream — work, mail, escalations, sessions."
+      description={tab === 'feed' ? 'The live town event stream — work, mail, escalations, sessions.' : 'Completed work from gt changelog.'}
       actions={liveIndicator}
     >
       <div className="flex flex-col gap-3">
+        {/* Tab switcher */}
+        <div
+          role="tablist"
+          aria-label="Activity views"
+          className="inline-flex w-full gap-0.5 rounded-md border border-line bg-surface p-0.5 sm:w-auto"
+        >
+          {(['feed', 'changelog'] as ActivityTab[]).map((t) => (
+            <button
+              key={t}
+              type="button"
+              role="tab"
+              aria-selected={tab === t}
+              onClick={() => setTab(t)}
+              className={cn(
+                'flex-1 rounded px-3 py-2 text-sm font-medium transition-colors sm:flex-none sm:py-1.5',
+                'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent',
+                tab === t ? 'bg-raised text-fg' : 'text-muted hover:text-fg',
+              )}
+            >
+              {t === 'feed' ? 'Live Feed' : 'Changelog'}
+            </button>
+          ))}
+        </div>
+
+        {tab === 'changelog' && <ChangelogView />}
+
+        {tab === 'feed' && <>
         {/* Filter row — category chips + search. Stacks on phones. */}
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-1.5">
@@ -256,8 +288,84 @@ export function ActivityFeed() {
             </div>
           )}
         </Panel>
+        </>}
       </div>
     </Surface>
+  );
+}
+
+/** Completed work changelog from /api/changelog (gt changelog --json). */
+function ChangelogView() {
+  const { data, isLoading, isError, error, refetch } = useChangelog({ week: true });
+
+  if (isLoading) {
+    return (
+      <Panel className="flex items-center gap-3 px-4 py-20 text-sm text-muted">
+        <Spinner />
+        Loading changelog…
+      </Panel>
+    );
+  }
+
+  if (isError || !data) {
+    return (
+      <Panel className="flex flex-col items-center gap-4 px-4 py-16 text-center">
+        <p className="text-sm text-fg">Could not load changelog.</p>
+        <p className="font-mono text-xs text-faint">
+          {error instanceof Error ? error.message : 'Unknown error'}
+        </p>
+        <Button size="sm" variant="primary" onClick={() => void refetch()}>
+          Retry
+        </Button>
+      </Panel>
+    );
+  }
+
+  return (
+    <Panel flush>
+      <PanelHeader title="Completed Work" hint={String(data.length)} />
+      {data.length === 0 ? (
+        <div className="flex items-center gap-2.5 px-4 py-10 text-sm text-muted">
+          <StatusDot tone="neutral" />
+          No completed work this week.
+        </div>
+      ) : (
+        <div className="divide-y divide-line/60">
+          {data.map((entry) => (
+            <ChangelogRow key={entry.id} entry={entry} />
+          ))}
+        </div>
+      )}
+    </Panel>
+  );
+}
+
+function ChangelogRow({ entry }: { entry: ChangelogEntry }) {
+  return (
+    <div className="flex items-start gap-3 px-4 py-2.5">
+      <div className="mt-0.5 shrink-0">
+        <StatusDot tone="ok" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-baseline gap-2">
+          <span className="truncate text-sm text-fg">{entry.title}</span>
+        </div>
+        <div className="mt-0.5 flex items-center gap-2 text-xs text-muted">
+          {entry.rig && (
+            <span className="font-mono">{entry.rig}</span>
+          )}
+          {entry.type && (
+            <Badge tone="neutral">{entry.type}</Badge>
+          )}
+          {entry.close_reason && entry.close_reason !== 'Closed' && (
+            <span className="truncate text-faint">{entry.close_reason}</span>
+          )}
+        </div>
+      </div>
+      <div className="shrink-0 font-mono text-2xs text-faint">
+        {relativeTime(entry.closed_at)}
+      </div>
+    </div>
   );
 }
 

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { Surface } from '@/components/Surface';
 import { Button } from '@/components/primitives';
-import { useMail } from '@/lib/query/hooks';
+import { useMail, useEscalations, useAckEscalation, useCloseEscalation } from '@/lib/query/hooks';
 import type { MailMessage } from '@/lib/api/types';
 import { EscalationsPanel } from './EscalationsPanel';
 import { InboxPanel } from './InboxPanel';
@@ -17,6 +17,9 @@ import { consumePendingCompose, subscribeCompose } from './composeBus';
 export function MailSurface() {
   const navigate = useNavigate();
   const { data, isLoading, isError, error, refetch } = useMail();
+  const { data: escalations } = useEscalations();
+  const ackMutation = useAckEscalation();
+  const closeMutation = useCloseEscalation();
   const [compose, setCompose] = useState<{ open: boolean; prefill?: ComposePrefill }>({
     open: false,
   });
@@ -63,7 +66,12 @@ export function MailSurface() {
         actions={actions}
       >
         <div className="flex flex-col gap-4">
-          <EscalationsPanel mail={data} onOpen={openMessage} hideWhenEmpty />
+          <EscalationsPanel
+            escalations={escalations ?? []}
+            onAck={(id) => void ackMutation.mutate(id)}
+            onClose={(id) => void closeMutation.mutate({ id })}
+            hideWhenEmpty
+          />
           <InboxPanel mail={data} onOpen={openMessage} />
         </div>
       </Surface>

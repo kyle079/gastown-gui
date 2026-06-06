@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import {
   ReactFlow,
   Background,
@@ -6,7 +6,6 @@ import {
   MiniMap,
   useNodesState,
   useEdgesState,
-  type Node,
   BackgroundVariant,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -19,34 +18,27 @@ const NODE_TYPES = { bead: BeadNode };
 
 interface GraphCanvasProps {
   data: BeadGraphData;
-  onNodeClick?: (node: BeadGraphNode) => void;
-  focused?: Set<string>;
 }
 
-export function GraphCanvas({ data, onNodeClick, focused }: GraphCanvasProps) {
+export function GraphCanvas({ data }: GraphCanvasProps) {
   const { nodes: laid, edges: laidEdges } = useMemo(() => applyLayout(data), [data]);
 
   const styled = useMemo(() => {
-    if (!focused?.size) return laid;
     return laid.map((n) => ({
       ...n,
-      style: {
-        ...n.style,
-        opacity: focused.has(n.id) ? 1 : 0.2,
-        transition: 'opacity 120ms',
-      },
+      draggable: false,
+      selectable: false,
     }));
-  }, [laid, focused]);
+  }, [laid]);
 
   const styledEdges = useMemo(() => {
     return laidEdges.map((e) => {
-      const active = !focused?.size || (focused.has(e.source) && focused.has(e.target));
       return {
         ...e,
+        selectable: false,
         style: {
           stroke: edgeColor((e.data as { depType?: string })?.depType ?? ''),
           strokeWidth: 1.5,
-          opacity: active ? 1 : 0.1,
         },
         labelStyle: {
           fill: 'rgb(var(--c-faint))',
@@ -59,20 +51,13 @@ export function GraphCanvas({ data, onNodeClick, focused }: GraphCanvasProps) {
         },
       };
     });
-  }, [laidEdges, focused]);
+  }, [laidEdges]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(styled);
   const [edges, setEdges, onEdgesChange] = useEdgesState(styledEdges);
 
   useEffect(() => { setNodes(styled); }, [styled, setNodes]);
   useEffect(() => { setEdges(styledEdges); }, [styledEdges, setEdges]);
-
-  const handleNodeClick = useCallback(
-    (_: React.MouseEvent, node: Node) => {
-      onNodeClick?.(node.data as unknown as BeadGraphNode);
-    },
-    [onNodeClick],
-  );
 
   return (
     <div className="h-full w-full">
@@ -82,11 +67,15 @@ export function GraphCanvas({ data, onNodeClick, focused }: GraphCanvasProps) {
         nodeTypes={NODE_TYPES}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
-        onNodeClick={handleNodeClick}
         fitView
         fitViewOptions={{ padding: 0.1 }}
         minZoom={0.1}
         maxZoom={2}
+        nodesDraggable={false}
+        nodesConnectable={false}
+        nodesFocusable={false}
+        edgesFocusable={false}
+        elementsSelectable={false}
         proOptions={{ hideAttribution: true }}
       >
         <Background

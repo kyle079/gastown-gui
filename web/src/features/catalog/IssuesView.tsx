@@ -89,11 +89,11 @@ export function IssuesView() {
   const selectedId = search.id;
 
   const setStatus = (val: string) =>
-    void navigate({ to: '/catalog', search: (prev) => ({ ...prev, status: val, id: undefined }) });
+    void navigate({ to: '/catalog', search: (prev) => ({ ...prev, tab: prev.tab ?? 'issues', status: val, id: undefined }) });
   const setQuery = (val: string) =>
-    void navigate({ to: '/catalog', search: (prev) => ({ ...prev, q: val || undefined }) });
+    void navigate({ to: '/catalog', search: (prev) => ({ ...prev, tab: prev.tab ?? 'issues', q: val || undefined }) });
   const setSelectedId = (id: string | undefined) =>
-    void navigate({ to: '/catalog', search: (prev) => ({ ...prev, id }) });
+    void navigate({ to: '/catalog', search: (prev) => ({ ...prev, tab: prev.tab ?? 'issues', id }) });
 
   const { data, isLoading, isError, error, refetch } = useBeads(status);
 

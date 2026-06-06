@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { Surface } from '@/components/Surface';
-import { Badge, Input, Select, Table, type Column } from '@/components/primitives';
+import { Badge, Input, Table, type Column } from '@/components/primitives';
 import type { PullRequest } from '@/lib/api/types';
 import { usePullRequests } from '@/lib/query/hooks';
 import { relativeTime } from '@/lib/utils/format';
@@ -150,7 +150,7 @@ export function PullRequestsPage() {
   const query = search.q ?? '';
 
   const setSearch = (updates: Partial<PrsSearch>) =>
-    void navigate({ to: '/prs', search: (prev) => ({ ...prev, ...updates }) });
+    void navigate({ to: '/prs', search: (prev) => ({ ...prev, state: prev.state ?? 'open', ...updates }) });
 
   const { data, isLoading, isError, error, refetch } = usePullRequests(state);
   const rows = useMemo(() => (data ?? []).filter((pr) => matches(pr, query)), [data, query]);

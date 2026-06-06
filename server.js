@@ -52,6 +52,7 @@ import { TargetService } from './server/services/TargetService.js';
 import { WorkService } from './server/services/WorkService.js';
 import { createCLICompatibilityService } from './server/services/CLICompatibilityService.js';
 import { registerBeadRoutes } from './server/routes/beads.js';
+import { registerGraphRoutes } from './server/routes/graph.js';
 import { registerConvoyRoutes } from './server/routes/convoys.js';
 import { registerFormulaRoutes } from './server/routes/formulas.js';
 import { registerGitHubRoutes } from './server/routes/github.js';
@@ -681,6 +682,9 @@ registerWorkRoutes(app, { workService });
 
 // Beads
 registerBeadRoutes(app, { beadService });
+
+// Bead dependency graph
+registerGraphRoutes(app, { bdGateway });
 
 // Get available sling targets
 registerTargetRoutes(app, { targetService });

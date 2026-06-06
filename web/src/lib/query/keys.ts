@@ -12,4 +12,5 @@ export const queryKeys = {
   beads: (status: string) => ['beads', status] as const,
   pullRequests: (state: string) => ['pull-requests', state] as const,
   formulas: ['formulas'] as const,
+  beadGraph: ['bead-graph'] as const,
 };

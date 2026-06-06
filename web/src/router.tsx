@@ -15,6 +15,7 @@ import { EscalationsSurface } from '@/features/mail/EscalationsSurface';
 import { WorkSurface } from '@/features/work/WorkSurface';
 import { Catalog, isCatalogTab, type CatalogTab } from '@/features/catalog/Catalog';
 import { PlaceholderSurface } from '@/features/placeholder/PlaceholderSurface';
+import { GraphSurface } from '@/features/graph/GraphSurface';
 
 /**
  * Code-based route tree (no codegen). The keyboard layer + shell live in the
@@ -95,6 +96,13 @@ const helpRoute = createRoute({
   component: Help,
 });
 
+// Bead Graph — interactive dependency graph.
+const graphRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/graph',
+  component: GraphSurface,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   activityRoute,
@@ -103,6 +111,7 @@ const routeTree = rootRoute.addChildren([
   workRoute,
   mailRoute,
   escalationsRoute,
+  graphRoute,
   terminalRoute,
   helpRoute,
 ]);

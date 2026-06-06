@@ -242,3 +242,32 @@ export interface Formula {
   steps?: number;
   vars?: number;
 }
+
+/** A node in the bead dependency graph (from `/api/beads/graph`). */
+export interface BeadNode {
+  id: string;
+  title: string;
+  status: string;
+  priority: number | null;
+  issue_type: string | null;
+  owner: string | null;
+  assignee: string | null;
+  description: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  rig: string | null;
+}
+
+/** A directed edge in the bead dependency graph. */
+export interface BeadEdge {
+  id: string;
+  source: string;
+  target: string;
+  type: string;
+}
+
+/** Response shape for `GET /api/beads/graph`. */
+export interface BeadGraph {
+  nodes: BeadNode[];
+  edges: BeadEdge[];
+}

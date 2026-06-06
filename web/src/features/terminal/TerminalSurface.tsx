@@ -6,7 +6,7 @@
  * 127.0.0.1 or a trusted LAN interface only. Never expose publicly.
  */
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, type CSSProperties } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
@@ -34,6 +34,34 @@ const ROLE_GLYPHS: Record<string, string> = {
 
 function roleGlyph(role: string) {
   return ROLE_GLYPHS[role] ?? '·';
+}
+
+function getViewportHeight() {
+  if (typeof window === 'undefined') return 0;
+  return window.visualViewport?.height ?? window.innerHeight;
+}
+
+function useViewportHeight() {
+  const [height, setHeight] = useState(() => getViewportHeight());
+
+  useEffect(() => {
+    const update = () => setHeight(getViewportHeight());
+    update();
+
+    window.addEventListener('resize', update);
+    window.addEventListener('orientationchange', update);
+    window.visualViewport?.addEventListener('resize', update);
+    window.visualViewport?.addEventListener('scroll', update);
+
+    return () => {
+      window.removeEventListener('resize', update);
+      window.removeEventListener('orientationchange', update);
+      window.visualViewport?.removeEventListener('resize', update);
+      window.visualViewport?.removeEventListener('scroll', update);
+    };
+  }, []);
+
+  return height;
 }
 
 /** xterm.js theme matching the Tron/ink design palette */
@@ -91,7 +119,7 @@ function XtermPane({ session, onDetach }: XtermPaneProps) {
     const term = new Terminal({
       theme: XTERM_THEME,
       fontFamily: "'JetBrains Mono', 'Fira Mono', 'Cascadia Code', ui-monospace, monospace",
-      fontSize: 13,
+      fontSize: 12,
       lineHeight: 1.2,
       cursorBlink: true,
       cursorStyle: 'block',
@@ -231,18 +259,20 @@ function XtermPane({ session, onDetach }: XtermPaneProps) {
   }[connState];
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full min-h-0 flex-col">
       {/* Pane header */}
-      <div className="flex items-center justify-between border-b border-line bg-surface px-3 py-1.5">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-surface px-3 py-2 sm:px-4">
+        <div className="flex min-w-0 items-center gap-2">
           <span className="font-mono text-xs text-accent">{roleGlyph(session.role)}</span>
-          <span className="font-mono text-sm text-fg">{session.name}</span>
-          <span className="font-mono text-xs text-faint">{session.rig}</span>
+          <div className="min-w-0">
+            <div className="truncate font-mono text-sm text-fg">{session.name}</div>
+            <div className="truncate font-mono text-[11px] text-faint">{session.rig}</div>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {connBadge}
           {connState === 'error' && errorMsg && (
-            <span className="font-mono text-xs text-danger">{errorMsg}</span>
+            <span className="max-w-[18rem] truncate font-mono text-xs text-danger">{errorMsg}</span>
           )}
           <Button variant="ghost" size="sm" onClick={onDetach}>detach</Button>
         </div>
@@ -250,7 +280,7 @@ function XtermPane({ session, onDetach }: XtermPaneProps) {
       {/* xterm.js mount point — fills remaining height */}
       <div
         ref={containerRef}
-        className="min-h-0 flex-1 overflow-hidden bg-ink p-1"
+        className="min-h-0 flex-1 overflow-hidden bg-ink p-1.5 sm:p-2"
         style={{ fontFamily: 'monospace' }}
       />
     </div>
@@ -267,11 +297,16 @@ function roleSortKey(role: string) {
 export function TerminalSurface() {
   const { data, isLoading, isError, error } = useTerminalSessions();
   const [active, setActive] = useState<TerminalSession | null>(null);
+  const viewportHeight = useViewportHeight();
 
   const groups = data?.groups ?? [];
   const sortedGroups = [...groups].sort(
     (a, b) => roleSortKey(a.role) - roleSortKey(b.role),
   );
+  const sessionCount = data?.sessions.length ?? 0;
+  const shellStyle: CSSProperties = {
+    ['--terminal-vh' as string]: `${Math.max(viewportHeight, 1) * 0.01}px`,
+  };
 
   const handleSelect = useCallback((s: TerminalSession) => {
     setActive(s);
@@ -283,76 +318,108 @@ export function TerminalSurface() {
 
   return (
     <Surface
+      className="max-w-none px-3 py-3 sm:px-6 sm:py-5"
       title="Terminal"
       description={active ? `attached: ${active.name}` : 'select a session to attach'}
       actions={
         <div className="flex items-center gap-1.5">
-          <span className="font-mono text-xs text-warn">⚠ no-auth LAN-only</span>
+          <Badge tone="warn">LAN only</Badge>
         </div>
       }
+      style={shellStyle}
     >
-      {/* Security notice */}
-      <div className="mb-3 rounded border border-warn/30 bg-warn/5 px-3 py-2 font-mono text-xs text-warn">
+      <div className="mb-3 rounded border border-warn/30 bg-warn/5 px-3 py-2 font-mono text-[11px] leading-relaxed text-warn sm:text-xs">
         Browser shell — full interactive access to agent sessions. Server has no authentication (
         <span className="text-faint">gg-2wt</span>). Keep this interface LAN-only; do not expose
         publicly.
       </div>
 
-      <div className="flex h-[calc(100vh-220px)] min-h-[400px] gap-3">
-        {/* Session picker sidebar */}
-        <div className="flex w-52 shrink-0 flex-col gap-1 overflow-y-auto">
-          {isLoading && (
-            <Panel className="flex items-center justify-center gap-2 py-8 text-sm text-muted">
-              <Spinner />
-            </Panel>
-          )}
-          {isError && (
-            <Panel className="py-4 text-center">
-              <p className="font-mono text-xs text-danger">
-                {error instanceof Error ? error.message : 'Failed to load sessions'}
+      <div className="grid min-h-[calc(var(--terminal-vh)*100-var(--topbar-h)-8.5rem)] gap-3 lg:grid-cols-[18rem_minmax(0,1fr)]">
+        {/* Session picker */}
+        <Panel
+          flush
+          className="flex min-h-0 flex-col overflow-hidden lg:sticky lg:top-3 lg:self-start lg:max-h-[calc(var(--terminal-vh)*100-var(--topbar-h)-7rem)]"
+        >
+          <div className="flex items-center justify-between border-b border-line px-3 py-2 sm:px-4">
+            <div className="min-w-0">
+              <h2 className="truncate text-sm font-medium text-fg">Sessions</h2>
+              <p className="truncate font-mono text-2xs text-faint">
+                {sessionCount} available
               </p>
-            </Panel>
-          )}
-          {!isLoading && !isError && sortedGroups.length === 0 && (
-            <Panel className="py-4 text-center">
-              <p className="font-mono text-xs text-faint">no sessions found</p>
-            </Panel>
-          )}
-          {sortedGroups.map((group) => (
-            <div key={group.role}>
-              <div className="mb-0.5 px-2 py-0.5 font-mono text-2xs uppercase tracking-widest text-faint">
-                {roleGlyph(group.role)} {group.role}
-              </div>
-              {group.sessions.map((s) => (
-                <button
-                  key={s.name}
-                  onClick={() => handleSelect(s)}
-                  className={cn(
-                    'flex w-full items-center gap-1.5 rounded px-2 py-1 text-left font-mono text-xs transition-colors',
-                    active?.name === s.name
-                      ? 'bg-accent/15 text-accent'
-                      : 'text-muted hover:bg-raised hover:text-fg',
-                  )}
-                >
-                  <span className="text-[10px] opacity-60">{roleGlyph(s.role)}</span>
-                  <span className="truncate">{s.name}</span>
-                </button>
+            </div>
+            <Badge tone="neutral">{sessionCount}</Badge>
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-y-auto p-2">
+            {isLoading && (
+              <Panel className="flex items-center justify-center gap-2 py-8 text-sm text-muted">
+                <Spinner />
+                Loading sessions…
+              </Panel>
+            )}
+            {isError && (
+              <Panel className="py-4 text-center">
+                <p className="font-mono text-xs text-danger">
+                  {error instanceof Error ? error.message : 'Failed to load sessions'}
+                </p>
+              </Panel>
+            )}
+            {!isLoading && !isError && sortedGroups.length === 0 && (
+              <Panel className="py-4 text-center">
+                <p className="font-mono text-xs text-faint">no sessions found</p>
+              </Panel>
+            )}
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-1">
+              {sortedGroups.map((group) => (
+                <div key={group.role} className="space-y-1">
+                  <div className="px-1 py-0.5 font-mono text-2xs uppercase tracking-widest text-faint">
+                    {roleGlyph(group.role)} {group.role}
+                  </div>
+                  <div className="grid gap-1.5">
+                    {group.sessions.map((s) => (
+                      <button
+                        key={s.name}
+                        onClick={() => handleSelect(s)}
+                        className={cn(
+                          'flex min-h-12 w-full items-start gap-2 rounded border px-3 py-2 text-left transition-colors',
+                          active?.name === s.name
+                            ? 'border-accent/40 bg-accent/10 text-fg'
+                            : 'border-line bg-surface text-muted hover:bg-raised hover:text-fg',
+                        )}
+                      >
+                        <span className="mt-0.5 font-mono text-xs opacity-70">
+                          {roleGlyph(s.role)}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-mono text-xs">{s.name}</span>
+                          <span className="block truncate font-mono text-[11px] text-faint">
+                            {s.rig}
+                          </span>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
-          ))}
-        </div>
+          </div>
+        </Panel>
 
         {/* Terminal pane */}
-        <div className="min-w-0 flex-1 overflow-hidden rounded border border-line">
+        <Panel flush className="flex min-h-[28rem] flex-col overflow-hidden lg:min-h-0">
           {active ? (
             <XtermPane key={active.name} session={active} onDetach={handleDetach} />
           ) : (
-            <div className="flex h-full flex-col items-center justify-center gap-2 bg-ink">
+            <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 bg-ink px-4 py-12 text-center">
               <span className="font-mono text-2xl text-faint">⌗</span>
               <p className="font-mono text-xs text-faint">select a session to attach</p>
+              <p className="max-w-[22rem] font-mono text-[11px] leading-relaxed text-faint">
+                Pick a session on the left. The pane will reconnect automatically if the session
+                drops or the mobile keyboard changes the viewport.
+              </p>
             </div>
           )}
-        </div>
+        </Panel>
       </div>
     </Surface>
   );

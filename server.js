@@ -55,6 +55,7 @@ import { registerBeadRoutes } from './server/routes/beads.js';
 import { registerConvoyRoutes } from './server/routes/convoys.js';
 import { registerFormulaRoutes } from './server/routes/formulas.js';
 import { registerGitHubRoutes } from './server/routes/github.js';
+import { registerInfrastructureRoutes } from './server/routes/infrastructure.js';
 import { registerStatusRoutes } from './server/routes/status.js';
 import { registerTargetRoutes } from './server/routes/targets.js';
 import { registerTerminalRoutes } from './server/routes/terminal.js';
@@ -685,6 +686,9 @@ registerBeadRoutes(app, { beadService });
 
 // Get available sling targets
 registerTargetRoutes(app, { targetService });
+
+// Infrastructure: scheduler, dogs, escalations, MQ, refinery/witness, Dolt health, changelog
+registerInfrastructureRoutes(app, { gtGateway, cache: backendCache });
 
 // Get mail inbox
 app.get('/api/mail', async (req, res) => {

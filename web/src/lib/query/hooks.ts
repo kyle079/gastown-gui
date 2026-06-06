@@ -5,13 +5,22 @@ import type {
   ActivityResponse,
   Bead,
   BeadGraphData,
+  ChangelogEntry,
   Convoy,
+  DoltHealth,
+  DogsResponse,
+  Escalation,
   Formula,
   MailMessage,
+  MergeRequest,
   PullRequest,
+  RefineryStatus,
+  RigSummary,
+  SchedulerStatus,
   SetupStatus,
   Target,
   TownStatus,
+  WitnessStatus,
 } from '@/lib/api/types';
 
 /**
@@ -182,6 +191,121 @@ export function useBeadGraph() {
   return useQuery({
     queryKey: queryKeys.beadGraph,
     queryFn: () => apiClient.get<BeadGraphData>('/api/beads/graph'),
+    refetchInterval: 30_000,
+  });
+}
+
+/** Scheduler capacity and queue state. Reflects `gt scheduler status --json`. */
+export function useSchedulerStatus() {
+  return useQuery({
+    queryKey: queryKeys.schedulerStatus,
+    queryFn: () => apiClient.get<SchedulerStatus>('/api/scheduler/status'),
+    refetchInterval: 15_000,
+  });
+}
+
+/** The Pack — all dogs and their current state. Reflects `gt dog list --json`. */
+export function useDogs() {
+  return useQuery({
+    queryKey: queryKeys.dogs,
+    queryFn: () => apiClient.get<DogsResponse>('/api/dogs'),
+    refetchInterval: 15_000,
+  });
+}
+
+/** Open escalations from `gt escalate list --json`. More structured than sniffing mail subjects. */
+export function useEscalations() {
+  return useQuery({
+    queryKey: queryKeys.escalations,
+    queryFn: () => apiClient.get<Escalation[]>('/api/escalations'),
+    refetchInterval: 10_000,
+  });
+}
+
+export function useAckEscalation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiClient.post(`/api/escalations/${id}/ack`),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: queryKeys.escalations }),
+  });
+}
+
+export function useCloseEscalation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason?: string }) =>
+      apiClient.post(`/api/escalations/${id}/close`, { reason }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: queryKeys.escalations }),
+  });
+}
+
+/** Merge queue for a specific rig. Reflects `gt mq list <rig> --json`. */
+export function useMergeQueue(rig: string) {
+  return useQuery({
+    queryKey: queryKeys.mergeQueue(rig),
+    queryFn: () => apiClient.get<MergeRequest[]>(`/api/mq/${encodeURIComponent(rig)}`),
+    refetchInterval: 10_000,
+    enabled: Boolean(rig),
+  });
+}
+
+/** Refinery running state + queue length for a rig. */
+export function useRefineryStatus(rig: string) {
+  return useQuery({
+    queryKey: queryKeys.refineryStatus(rig),
+    queryFn: () => apiClient.get<RefineryStatus>(`/api/refinery/${encodeURIComponent(rig)}/status`),
+    refetchInterval: 10_000,
+    enabled: Boolean(rig),
+  });
+}
+
+/** Witness running state + monitored polecats for a rig. */
+export function useWitnessStatus(rig: string) {
+  return useQuery({
+    queryKey: queryKeys.witnessStatus(rig),
+    queryFn: () => apiClient.get<WitnessStatus>(`/api/witness/${encodeURIComponent(rig)}/status`),
+    refetchInterval: 10_000,
+    enabled: Boolean(rig),
+  });
+}
+
+/** Rich Dolt health: server metrics, per-database stats, backup freshness. */
+export function useDoltHealth() {
+  return useQuery({
+    queryKey: queryKeys.doltHealth,
+    queryFn: () => apiClient.get<DoltHealth>('/api/dolt/health'),
+    refetchInterval: 30_000,
+  });
+}
+
+export interface ChangelogOptions {
+  since?: string;
+  week?: boolean;
+  today?: boolean;
+  rig?: string;
+}
+
+/** Completed work from `gt changelog --json`. */
+export function useChangelog(opts: ChangelogOptions = {}) {
+  const params = new URLSearchParams();
+  if (opts.rig) params.set('rig', opts.rig);
+  if (opts.today) params.set('today', 'true');
+  else if (opts.week) params.set('week', 'true');
+  else if (opts.since) params.set('since', opts.since);
+  const qs = params.toString() ? `?${params.toString()}` : '';
+
+  return useQuery({
+    queryKey: queryKeys.changelog(opts),
+    queryFn: () => apiClient.get<ChangelogEntry[]>(`/api/changelog${qs}`),
+    refetchInterval: 60_000,
+  });
+}
+
+/** Structured rig list from `gt rig list --json`. Lighter than full /api/status. */
+export function useRigList() {
+  return useQuery({
+    queryKey: queryKeys.rigList,
+    queryFn: () => apiClient.get<RigSummary[]>('/api/rig-list'),
     refetchInterval: 30_000,
   });
 }

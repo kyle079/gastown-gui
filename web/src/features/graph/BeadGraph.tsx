@@ -1,14 +1,13 @@
 import { useCallback, useMemo, useState } from 'react';
-import ReactFlow, {
+import {
+  ReactFlow,
   Background,
   BackgroundVariant,
   Controls,
   MiniMap,
-  useNodesState,
-  useEdgesState,
-  type Node,
   type Edge,
   type NodeTypes,
+  type NodeMouseHandler,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Badge, Dialog, Spinner } from '@/components/primitives';
@@ -16,9 +15,9 @@ import { DetailField } from '@/features/catalog/DetailField';
 import { priorityLabel, priorityTone, statusLabel, statusTone } from '@/features/catalog/catalogMeta';
 import { relativeTime } from '@/lib/utils/format';
 import { useBeadGraph } from '@/lib/query/hooks';
-import type { BeadNode as BeadNodeData } from '@/lib/api/types';
+import type { BeadNode as ApiBeadNode } from '@/lib/api/types';
 import { nodeColor, edgeMeta, rigLabel } from './graphMeta';
-import { BeadGraphNode, type BeadNodeData as NodeData } from './BeadGraphNode';
+import { BeadGraphNode, type BeadFlowNode, type BeadNodeData } from './BeadGraphNode';
 
 const NODE_TYPES: NodeTypes = { bead: BeadGraphNode };
 
@@ -40,8 +39,7 @@ const PRIORITY_OPTIONS = [
   { value: '3', label: 'P3' },
 ];
 
-/** Dagre-like auto-layout: position nodes in a simple grid when no positions set. */
-function autoLayout(nodes: Node[]): Node[] {
+function autoLayout(nodes: BeadFlowNode[]): BeadFlowNode[] {
   const cols = Math.ceil(Math.sqrt(nodes.length)) || 1;
   const W = 220;
   const H = 90;
@@ -51,74 +49,7 @@ function autoLayout(nodes: Node[]): Node[] {
   }));
 }
 
-function buildFlowNodes(
-  apiNodes: BeadNodeData[],
-  focusedId: string | null,
-  focusNeighbors: Set<string>,
-  filterStatus: string,
-  filterPriority: string,
-  filterRig: string,
-): Node[] {
-  const filtered = apiNodes.filter((n) => {
-    if (filterStatus && n.status !== filterStatus) return false;
-    if (filterPriority && String(n.priority) !== filterPriority) return false;
-    if (filterRig && n.rig !== filterRig) return false;
-    return true;
-  });
-
-  const visibleIds = new Set(filtered.map((n) => n.id));
-
-  return autoLayout(
-    filtered.map((n) => {
-      const dimmed =
-        focusedId != null && n.id !== focusedId && !focusNeighbors.has(n.id);
-      return {
-        id: n.id,
-        type: 'bead',
-        data: { ...n, focused: n.id === focusedId, dimmed } as NodeData,
-        position: { x: 0, y: 0 },
-        selected: n.id === focusedId,
-      } as Node;
-    }),
-  );
-}
-
-function buildFlowEdges(
-  apiEdges: { id: string; source: string; target: string; type: string }[],
-  visibleIds: Set<string>,
-  focusedId: string | null,
-  focusNeighbors: Set<string>,
-): Edge[] {
-  return apiEdges
-    .filter((e) => visibleIds.has(e.source) && visibleIds.has(e.target))
-    .map((e) => {
-      const meta = edgeMeta(e.type);
-      const dimmed =
-        focusedId != null &&
-        e.source !== focusedId &&
-        e.target !== focusedId &&
-        !focusNeighbors.has(e.source) &&
-        !focusNeighbors.has(e.target);
-      return {
-        id: e.id,
-        source: e.source,
-        target: e.target,
-        label: meta.label,
-        animated: e.type === 'blocks',
-        style: {
-          stroke: dimmed ? '#2e3940' : (e.type === 'blocks' ? '#d29922' : '#21292e'),
-          strokeWidth: e.type === 'blocks' ? 1.5 : 1,
-          strokeDasharray: meta.dash,
-          opacity: dimmed ? 0.2 : 1,
-        },
-        labelStyle: { fill: '#5c676c', fontSize: 9 },
-        labelBgStyle: { fill: '#101417', fillOpacity: 0.8 },
-      } as Edge;
-    });
-}
-
-/** Collect all neighbor IDs of focusedId across edge list. */
-function focusNeighbors(
+function collectNeighbors(
   focusedId: string,
   edges: { source: string; target: string }[],
 ): Set<string> {
@@ -137,7 +68,7 @@ export function BeadGraph() {
   const [filterPriority, setFilterPriority] = useState('');
   const [filterRig, setFilterRig] = useState('');
   const [focusedId, setFocusedId] = useState<string | null>(null);
-  const [selected, setSelected] = useState<BeadNodeData | null>(null);
+  const [selected, setSelected] = useState<ApiBeadNode | null>(null);
 
   const allRigs = useMemo(() => {
     if (!data) return [];
@@ -148,37 +79,76 @@ export function BeadGraph() {
 
   const neighbors = useMemo(() => {
     if (!focusedId || !data) return new Set<string>();
-    return focusNeighbors(focusedId, data.edges);
+    return collectNeighbors(focusedId, data.edges);
   }, [focusedId, data]);
 
-  const flowNodes = useMemo(() => {
+  const flowNodes = useMemo((): BeadFlowNode[] => {
     if (!data) return [];
-    return buildFlowNodes(
-      data.nodes,
-      focusedId,
-      neighbors,
-      filterStatus,
-      filterPriority,
-      filterRig,
-    );
+
+    const filtered = data.nodes.filter((n) => {
+      if (filterStatus && n.status !== filterStatus) return false;
+      if (filterPriority && String(n.priority) !== filterPriority) return false;
+      if (filterRig && n.rig !== filterRig) return false;
+      return true;
+    });
+
+    const raw: BeadFlowNode[] = filtered.map((n) => {
+      const dimmed =
+        focusedId != null && n.id !== focusedId && !neighbors.has(n.id);
+      const nodeData: BeadNodeData = {
+        ...n,
+        focused: n.id === focusedId,
+        dimmed,
+      };
+      return {
+        id: n.id,
+        type: 'bead' as const,
+        data: nodeData,
+        position: { x: 0, y: 0 },
+        selected: n.id === focusedId,
+      };
+    });
+
+    return autoLayout(raw);
   }, [data, focusedId, neighbors, filterStatus, filterPriority, filterRig]);
 
-  const visibleIds = useMemo(() => new Set(flowNodes.map((n) => n.id)), [flowNodes]);
-
-  const flowEdges = useMemo(() => {
+  const flowEdges = useMemo((): Edge[] => {
     if (!data) return [];
-    return buildFlowEdges(data.edges, visibleIds, focusedId, neighbors);
-  }, [data, visibleIds, focusedId, neighbors]);
+    const visibleIds = new Set(flowNodes.map((n) => n.id));
+    return data.edges
+      .filter((e) => visibleIds.has(e.source) && visibleIds.has(e.target))
+      .map((e) => {
+        const meta = edgeMeta(e.type);
+        const dimmed =
+          focusedId != null &&
+          e.source !== focusedId &&
+          e.target !== focusedId &&
+          !neighbors.has(e.source) &&
+          !neighbors.has(e.target);
+        return {
+          id: e.id,
+          source: e.source,
+          target: e.target,
+          label: meta.label,
+          animated: e.type === 'blocks',
+          style: {
+            stroke: dimmed
+              ? 'rgb(46 57 64)'
+              : e.type === 'blocks'
+              ? 'rgb(210 153 34)'
+              : 'rgb(46 57 64 / 0.8)',
+            strokeWidth: e.type === 'blocks' ? 1.5 : 1,
+            strokeDasharray: meta.dash,
+            opacity: dimmed ? 0.2 : 1,
+          },
+          labelStyle: { fill: 'rgb(92 103 108)', fontSize: 9 },
+          labelBgStyle: { fill: 'rgb(16 20 23)', fillOpacity: 0.85 },
+        } satisfies Edge;
+      });
+  }, [data, flowNodes, focusedId, neighbors]);
 
-  const [nodes, , onNodesChange] = useNodesState(flowNodes);
-  const [edges, , onEdgesChange] = useEdgesState(flowEdges);
-
-  // Keep node/edge state in sync with filter/focus changes.
-  const syncedNodes = flowNodes;
-  const syncedEdges = flowEdges;
-
-  const handleNodeClick = useCallback(
-    (_: React.MouseEvent, node: Node) => {
+  const handleNodeClick = useCallback<NodeMouseHandler<BeadFlowNode>>(
+    (_e, node) => {
       const bead = data?.nodes.find((n) => n.id === node.id) ?? null;
       setSelected(bead);
     },
@@ -189,15 +159,22 @@ export function BeadGraph() {
     setFocusedId(null);
   }, []);
 
+  const handleNodeDoubleClick = useCallback<NodeMouseHandler<BeadFlowNode>>(
+    (_e, node) => {
+      setFocusedId((prev) => (prev === node.id ? null : node.id));
+    },
+    [],
+  );
+
   const toggleFocus = useCallback((id: string) => {
     setFocusedId((prev) => (prev === id ? null : id));
   }, []);
 
   if (isLoading) {
     return (
-      <div className="flex h-full items-center justify-center">
+      <div className="flex h-full items-center justify-center gap-2">
         <Spinner />
-        <span className="ml-2 text-sm text-muted">Loading graph…</span>
+        <span className="text-sm text-muted">Loading graph…</span>
       </div>
     );
   }
@@ -211,7 +188,7 @@ export function BeadGraph() {
   }
 
   const nodeCount = flowNodes.length;
-  const edgeCount = syncedEdges.length;
+  const edgeCount = flowEdges.length;
 
   return (
     <div className="flex h-full flex-col">
@@ -267,15 +244,15 @@ export function BeadGraph() {
         )}
       </div>
 
-      {/* Graph canvas */}
+      {/* Graph canvas — fills remaining height */}
       <div className="flex-1" style={{ background: 'rgb(10 13 15)' }}>
-        <ReactFlow
-          nodes={syncedNodes}
-          edges={syncedEdges}
+        <ReactFlow<BeadFlowNode, Edge>
+          nodes={flowNodes}
+          edges={flowEdges}
           nodeTypes={NODE_TYPES}
           onNodeClick={handleNodeClick}
           onPaneClick={handlePaneClick}
-          onNodeDoubleClick={(_e, node) => toggleFocus(node.id)}
+          onNodeDoubleClick={handleNodeDoubleClick}
           fitView
           fitViewOptions={{ padding: 0.2 }}
           minZoom={0.1}
@@ -294,10 +271,7 @@ export function BeadGraph() {
             showInteractive={false}
           />
           <MiniMap
-            nodeColor={(n) => {
-              const d = n.data as NodeData;
-              return nodeColor(d.status);
-            }}
+            nodeColor={(n) => nodeColor((n.data as BeadNodeData).status)}
             maskColor="rgba(10,13,15,0.7)"
             style={{ background: 'rgb(16 20 23)', border: '1px solid rgb(33 41 46)' }}
           />

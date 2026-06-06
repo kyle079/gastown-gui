@@ -1,18 +1,30 @@
 import { memo } from 'react';
-import { Handle, Position, type NodeProps } from '@xyflow/react';
+import { Handle, Position, type Node, type NodeProps } from '@xyflow/react';
 import { cn } from '@/lib/utils/cn';
-import type { BeadNode } from '@/lib/api/types';
 import { nodeColor, nodeBorderWidth } from './graphMeta';
 
-export type BeadNodeData = BeadNode & { focused: boolean; dimmed: boolean };
+export interface BeadNodeData extends Record<string, unknown> {
+  id: string;
+  title: string;
+  status: string;
+  priority: number | null;
+  issue_type: string | null;
+  owner: string | null;
+  assignee: string | null;
+  description: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  rig: string | null;
+  focused: boolean;
+  dimmed: boolean;
+}
 
-function BeadGraphNodeInner({ data, selected }: NodeProps) {
-  const d = data as BeadNodeData;
-  const color = nodeColor(d.status);
-  const bw = nodeBorderWidth(d.priority);
+export type BeadFlowNode = Node<BeadNodeData, 'bead'>;
 
-  const shortTitle =
-    d.title.length > 32 ? d.title.slice(0, 30) + '…' : d.title;
+function BeadGraphNodeInner({ data, selected }: NodeProps<BeadFlowNode>) {
+  const color = nodeColor(data.status);
+  const bw = nodeBorderWidth(data.priority);
+  const shortTitle = data.title.length > 32 ? data.title.slice(0, 30) + '…' : data.title;
 
   return (
     <div
@@ -20,7 +32,7 @@ function BeadGraphNodeInner({ data, selected }: NodeProps) {
         'relative flex flex-col gap-0.5 rounded px-2.5 py-1.5 text-left',
         'bg-surface transition-opacity duration-100',
         selected && 'ring-1 ring-accent',
-        d.dimmed && 'opacity-30',
+        data.dimmed && 'opacity-30',
       )}
       style={{
         border: `${bw}px solid ${color}`,
@@ -41,11 +53,8 @@ function BeadGraphNodeInner({ data, selected }: NodeProps) {
         style={{ background: color }}
       />
 
-      <span className="font-mono text-[10px] leading-none text-faint">{d.id}</span>
-      <span
-        className="text-[11px] leading-snug text-fg"
-        title={d.title}
-      >
+      <span className="font-mono text-[10px] leading-none text-faint">{data.id}</span>
+      <span className="text-[11px] leading-snug text-fg" title={data.title}>
         {shortTitle}
       </span>
       <div className="mt-0.5 flex items-center gap-1.5">
@@ -53,11 +62,11 @@ function BeadGraphNodeInner({ data, selected }: NodeProps) {
           className="rounded-sm px-1 py-px font-mono text-[9px] leading-none"
           style={{ background: `${color}22`, color }}
         >
-          {d.status.replace(/_/g, ' ')}
+          {data.status.replace(/_/g, ' ')}
         </span>
-        {d.priority != null && (
+        {data.priority != null && (
           <span className="font-mono text-[9px] leading-none text-faint">
-            P{d.priority}
+            P{data.priority}
           </span>
         )}
       </div>

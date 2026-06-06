@@ -16,6 +16,7 @@ import { renderMailList } from './components/mail-list.js';
 import { renderRigList } from './components/rig-list.js';
 import { renderCrewList, loadCrews, showNewCrewModal } from './components/crew-list.js';
 import { initPRList, loadPRs } from './components/pr-list.js';
+import { loadGitHubAuthStatus, renderGitHubAuthWidget } from './components/github-auth.js';
 import { initFormulaList, loadFormulas } from './components/formula-list.js';
 import { initIssueList, loadIssues } from './components/issue-list.js';
 import { initHealthCheck, loadHealthCheck } from './components/health-check.js';
@@ -107,6 +108,10 @@ async function init() {
   // Set up PR list
   initPRList();
 
+  // Load GitHub auth status and render connect widget
+  await loadGitHubAuthStatus();
+  renderGitHubAuthWidget(document.getElementById('github-auth-widget-prs'));
+
   // Set up Formula list
   initFormulaList();
 
@@ -144,6 +149,12 @@ async function init() {
   await loadInitialData();
 
   console.log('[App] Initialization complete');
+
+  // Show toast after GitHub OAuth redirect
+  if (new URLSearchParams(window.location.search).get('github_connected') === '1') {
+    showToast('GitHub connected successfully', 'success');
+    history.replaceState({}, '', window.location.pathname);
+  }
 
   // Check for first-time users - show onboarding wizard
   const showOnboarding = await shouldShowOnboarding();

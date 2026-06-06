@@ -54,6 +54,7 @@ import { createCLICompatibilityService } from './server/services/CLICompatibilit
 import { registerBeadRoutes } from './server/routes/beads.js';
 import { registerConvoyRoutes } from './server/routes/convoys.js';
 import { registerFormulaRoutes } from './server/routes/formulas.js';
+import { registerAuthRoutes } from './server/routes/auth.js';
 import { registerGitHubRoutes } from './server/routes/github.js';
 import { registerInfrastructureRoutes } from './server/routes/infrastructure.js';
 import { registerStatusRoutes } from './server/routes/status.js';
@@ -101,7 +102,10 @@ const workService = new WorkService({
   bdGateway,
   emit: (type, data) => emitMutationEvent(type, data),
 });
+// Server-side gateway uses GITHUB_TOKEN env var for background operations (default branch detection, PR linking).
+// User-facing API routes use the OAuth session token via gitHubGatewayFactory.
 const gitHubGateway = new GitHubGateway({ token: process.env.GITHUB_TOKEN });
+const gitHubGatewayFactory = (token) => new GitHubGateway({ token });
 const gitHubService = new GitHubService({ gitHubGateway, statusService, cache: backendCache });
 
 const defaultOrigins = buildDefaultOrigins({ host: HOST, port: PORT });
@@ -1826,8 +1830,11 @@ const formulaService = new FormulaService({
 
 registerFormulaRoutes(app, { formulaService });
 
+// ============= Auth (GitHub OAuth) =============
+registerAuthRoutes(app);
+
 // ============= GitHub Integration =============
-registerGitHubRoutes(app, { gitHubService });
+registerGitHubRoutes(app, { gitHubService, gitHubGatewayFactory, statusService });
 
 // ============= Terminal (PTY-over-WebSocket) =============
 // Registered after wss is created; terminal WS handler is added to the shared wss.

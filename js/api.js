@@ -324,6 +324,15 @@ export const api = {
     const query = params.toString();
     return this.get(`/api/github/repos${query ? '?' + query : ''}`);
   },
+
+  // === GitHub OAuth ===
+  getAuthStatus() {
+    return this.get('/api/auth/status');
+  },
+
+  githubLogout() {
+    return this.post('/auth/logout', {});
+  },
 };
 
 // WebSocket Client

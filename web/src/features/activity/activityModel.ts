@@ -36,6 +36,10 @@ export interface ActivityView {
   target?: string;
   /** Free-text detail: reason, subject, branch… */
   detail?: string;
+  /** Raw event type string — shown in expanded view. */
+  eventType: string;
+  /** Raw payload — available for expanded detail rendering. */
+  payload: Record<string, unknown>;
 }
 
 type Payload = Record<string, unknown>;
@@ -154,6 +158,8 @@ export function toActivityView(event: ActivityEvent): ActivityView {
       tone: 'neutral',
       label: humanize(event.type).toLowerCase(),
       actor: event.actor ?? 'system',
+      eventType: event.type,
+      payload,
     };
   }
 
@@ -166,6 +172,8 @@ export function toActivityView(event: ActivityEvent): ActivityView {
     actor: event.actor ?? 'system',
     target: d.target?.(payload),
     detail: d.detail?.(payload),
+    eventType: event.type,
+    payload,
   };
 }
 

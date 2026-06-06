@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Link } from '@tanstack/react-router';
 import { Surface } from '@/components/Surface';
 import {
   Panel,
@@ -8,7 +9,6 @@ import {
   StatusPill,
   Spinner,
   Button,
-  ListRow,
 } from '@/components/primitives';
 import { useActivity } from '@/lib/query/hooks';
 import { useActivityStream } from '@/lib/realtime/useActivityStream';
@@ -24,9 +24,109 @@ import {
 
 type Filter = ActivityCategory | 'all';
 
-// System events are rare and uncategorised; they still appear under "All" but
-// don't earn their own chip — keeping the filter row to the signal categories.
 const CHIP_CATEGORIES = CATEGORIES.filter((c) => c.key !== 'system');
+
+/** Derive a bead id from a branch name, e.g. "polecat/chrome/gg-2q5@session" → "gg-2q5". */
+function beadFromBranch(branch?: string): string | undefined {
+  if (!branch) return undefined;
+  const last = branch.split('/').pop();
+  if (!last) return undefined;
+  const id = last.includes('@') ? last.slice(0, last.indexOf('@')) : last;
+  return /^[a-z]+-[a-z0-9]+$/.test(id) ? id : undefined;
+}
+
+/** Render a payload value as a routed link where the shape is recognisable. */
+function PayloadLink({ label, value }: { label: string; value: string }) {
+  // Bead IDs look like "gg-abc" or "hq-cv-xyz"
+  const isBead = /^[a-z]+-[a-z0-9]+$/.test(value);
+  // Branch names contain a slash or "@" — extract bead id
+  const beadFromBr = label === 'branch' ? beadFromBranch(value) : undefined;
+  // Rig names are hyphen/underscore separated identifiers without slashes
+  const isRig = !value.includes('/') && !value.includes('@') && value.includes('_');
+
+  return (
+    <div className="flex items-baseline gap-2 text-xs">
+      <span className="w-24 shrink-0 font-mono text-2xs uppercase tracking-wider text-faint">
+        {label}
+      </span>
+      <span className="min-w-0 break-all font-mono text-fg">
+        {isBead && label !== 'branch' ? (
+          <Link
+            to="/catalog"
+            search={{ tab: 'issues', id: value }}
+            className="text-accent underline-offset-2 hover:underline"
+          >
+            {value}
+          </Link>
+        ) : beadFromBr ? (
+          <>
+            {value}{' '}
+            <Link
+              to="/catalog"
+              search={{ tab: 'issues', id: beadFromBr }}
+              className="text-accent underline-offset-2 hover:underline"
+            >
+              ({beadFromBr})
+            </Link>
+          </>
+        ) : isRig ? (
+          <Link
+            to="/rigs/$rig"
+            params={{ rig: value }}
+            className="text-accent underline-offset-2 hover:underline"
+          >
+            {value}
+          </Link>
+        ) : (
+          value
+        )}
+      </span>
+    </div>
+  );
+}
+
+/** Expanded detail for an activity event — full content, no truncation. */
+function ActivityExpanded({ view }: { view: ActivityView }) {
+  const ts = view.ts ? new Date(view.ts).toLocaleString() : null;
+
+  // Collect meaningful payload fields (strings/numbers, non-empty)
+  const fields = Object.entries(view.payload).filter(([, v]) => {
+    if (v == null) return false;
+    if (typeof v === 'string') return v.trim().length > 0;
+    if (typeof v === 'number') return true;
+    return false;
+  }) as [string, string | number][];
+
+  return (
+    <div className="border-t border-line/60 bg-raised/40 px-4 py-3">
+      <div className="flex flex-col gap-1.5">
+        <div className="flex items-baseline gap-2 text-xs">
+          <span className="w-24 shrink-0 font-mono text-2xs uppercase tracking-wider text-faint">
+            type
+          </span>
+          <span className="font-mono text-muted">{view.eventType}</span>
+        </div>
+        <div className="flex items-baseline gap-2 text-xs">
+          <span className="w-24 shrink-0 font-mono text-2xs uppercase tracking-wider text-faint">
+            actor
+          </span>
+          <span className="font-mono text-fg">{view.actor}</span>
+        </div>
+        {ts && (
+          <div className="flex items-baseline gap-2 text-xs">
+            <span className="w-24 shrink-0 font-mono text-2xs uppercase tracking-wider text-faint">
+              time
+            </span>
+            <span className="font-mono text-fg">{ts}</span>
+          </div>
+        )}
+        {fields.map(([k, v]) => (
+          <PayloadLink key={k} label={k} value={String(v)} />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 /**
  * Activity — the live town event stream. One job: scan what's happening and
@@ -149,7 +249,7 @@ export function ActivityFeed() {
               {views.length === 0 ? 'No activity yet.' : 'No events match this filter.'}
             </div>
           ) : (
-            <div className="divide-hairline">
+            <div className="divide-y divide-line/60">
               {filtered.map((v) => (
                 <ActivityRow key={v.id} view={v} />
               ))}
@@ -180,7 +280,6 @@ function FilterChip({
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        // Roomier tap target on touch; dense on desktop.
         'inline-flex items-center gap-1.5 rounded border px-2.5 py-1.5 text-xs transition-colors lg:py-1',
         'focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent',
         active
@@ -197,8 +296,6 @@ function FilterChip({
   );
 }
 
-// Idle chip dots carry their category color (muted by the dot's own opacity-free
-// fill); the active chip uses the accent so selection reads clearly.
 const toneDotClass: Record<ActivityCategory, string> = {
   escalation: 'bg-danger',
   work: 'bg-accent',
@@ -207,25 +304,52 @@ const toneDotClass: Record<ActivityCategory, string> = {
   system: 'bg-faint',
 };
 
+/** One activity event row — collapsed by default, expands inline on click. */
 function ActivityRow({ view }: { view: ActivityView }) {
+  const [expanded, setExpanded] = useState(false);
+
+  const toggle = () => setExpanded((v) => !v);
+
   return (
-    <ListRow
-      leading={<StatusDot tone={view.tone} />}
-      title={
-        <span className="flex items-baseline gap-2">
-          <span className="shrink-0 font-mono text-xs text-muted">{view.actor}</span>
-          <span className="shrink-0 text-fg">{view.label}</span>
-          {view.target && (
-            <span className="truncate font-mono text-xs text-accent">{view.target}</span>
+    <div>
+      <button
+        type="button"
+        onClick={toggle}
+        aria-expanded={expanded}
+        className={cn(
+          'flex w-full items-start gap-3 px-4 py-2.5 text-left transition-colors',
+          'hover:bg-raised focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-accent',
+          expanded && 'bg-raised/60',
+        )}
+      >
+        <div className="mt-0.5 flex shrink-0 items-center">
+          <StatusDot tone={view.tone} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline gap-2">
+            <span className="shrink-0 font-mono text-xs text-muted">{view.actor}</span>
+            <span className="shrink-0 text-sm text-fg">{view.label}</span>
+            {view.target && (
+              <span className="truncate font-mono text-xs text-accent">{view.target}</span>
+            )}
+          </div>
+          {view.detail && (
+            <p className={cn('mt-0.5 text-xs text-muted', !expanded && 'line-clamp-1')}>
+              {view.detail}
+            </p>
           )}
-        </span>
-      }
-      subtitle={view.detail}
-      trailing={
-        <span className="font-mono text-2xs text-faint" title={view.ts ?? undefined}>
-          {relativeTime(view.ts)}
-        </span>
-      }
-    />
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <span className="font-mono text-2xs text-faint" title={view.ts ?? undefined}>
+            {relativeTime(view.ts)}
+          </span>
+          <span className={cn('font-mono text-2xs text-faint transition-transform', expanded && 'rotate-180')}>
+            ▾
+          </span>
+        </div>
+      </button>
+
+      {expanded && <ActivityExpanded view={view} />}
+    </div>
   );
 }

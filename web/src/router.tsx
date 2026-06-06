@@ -17,6 +17,7 @@ import { EscalationsSurface } from '@/features/mail/EscalationsSurface';
 import { WorkSurface } from '@/features/work/WorkSurface';
 import { ConvoyDetailPage } from '@/features/work/ConvoyDetailPage';
 import { Catalog, validateCatalogSearch } from '@/features/catalog/Catalog';
+import { PullRequestsPage, validatePrsSearch } from '@/features/prs/PullRequestsPage';
 import { PlaceholderSurface } from '@/features/placeholder/PlaceholderSurface';
 
 /**
@@ -82,6 +83,14 @@ const workDetailRoute = createRoute({
   component: ConvoyDetailPage,
 });
 
+// Pull requests — own top-level page with state/query search params.
+const prsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/prs',
+  validateSearch: validatePrsSearch,
+  component: PullRequestsPage,
+});
+
 // Mail — inbox at /mail; message detail at /mail/$messageId.
 const mailRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -133,6 +142,7 @@ const routeTree = rootRoute.addChildren([
   rigsRoute.addChildren([rigDetailRoute]),
   workRoute,
   workDetailRoute,
+  prsRoute,
   mailRoute,
   mailDetailRoute,
   escalationsRoute,

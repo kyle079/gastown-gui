@@ -49,6 +49,7 @@ const columns: Column<Convoy>[] = [
   {
     key: 'work',
     header: 'Work',
+    primary: true,
     width: '46%',
     cell: (c) => (
       <div className="min-w-0">

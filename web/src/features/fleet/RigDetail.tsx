@@ -1,3 +1,4 @@
+import { Link } from '@tanstack/react-router';
 import { Panel, PanelHeader, StatusPill, StatusDot } from '@/components/primitives';
 import type { Agent, Rig } from '@/lib/api/types';
 import { pluralize } from '@/lib/utils/format';
@@ -34,8 +35,15 @@ export function RigDetail({ rig }: { rig: Rig }) {
           <div className="min-w-0">
             <h2 className="font-mono text-base text-fg">{rig.name}</h2>
             {rig.git_url && (
-              <p className="mt-1 truncate font-mono text-xs text-faint">{rig.git_url}</p>
+              <p className="mt-1 break-all font-mono text-xs text-faint">{rig.git_url}</p>
             )}
+            <Link
+              to="/prs"
+              search={{ state: 'open', q: rig.name }}
+              className="mt-1 inline-block font-mono text-xs text-accent underline-offset-2 hover:underline"
+            >
+              view PRs →
+            </Link>
           </div>
           <div className="flex shrink-0 flex-col items-end gap-1.5">
             <StatusPill tone={health.tone} pulse={health.pulse} label={health.label} />

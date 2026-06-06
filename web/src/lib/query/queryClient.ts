@@ -8,7 +8,9 @@ import { ApiError } from '@/lib/api/client';
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 4_000,
+      // 30s staleTime: navigating back shows cached data instantly, with a
+      // background refresh only if the data is older than 30s.
+      staleTime: 30_000,
       gcTime: 5 * 60_000,
       refetchOnWindowFocus: true,
       retry: (failureCount, error) => {

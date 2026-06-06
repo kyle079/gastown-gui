@@ -49,6 +49,7 @@ const columns: Column<Bead>[] = [
   {
     key: 'title',
     header: 'Title',
+    primary: true,
     cell: (b) => <span className="text-fg">{b.title}</span>,
   },
   {

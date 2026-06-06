@@ -49,6 +49,7 @@ const columns: Column<MailMessage>[] = [
   {
     key: 'subject',
     header: 'Subject',
+    primary: true,
     cell: (m) => (
       <span className="flex items-center gap-2">
         <StatusDot

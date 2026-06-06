@@ -9,6 +9,13 @@ export interface Column<T> {
   className?: string;
   align?: 'left' | 'right' | 'center';
   width?: string;
+  /**
+   * Mark this column as the primary content for the mobile card layout.
+   * The primary column renders prominently at the top (line-clamped); all
+   * other columns collapse into a compact metadata strip below it.
+   * Exactly one column should be marked primary per table.
+   */
+  primary?: boolean;
 }
 
 export interface TableProps<T> {
@@ -30,8 +37,9 @@ const alignClass = {
  * A dense, technical table. Hairline rows, mono-friendly.
  *
  * Responsive: a real `<table>` at `md+`; below `md` each row reflows into a
- * stacked card (label/value pairs keyed off each column header) so the page
- * never scrolls horizontally on a phone. Both modes render from one schema.
+ * title-first card — the primary column renders prominently with line-clamp,
+ * and the remaining columns collapse into a compact inline metadata strip.
+ * Both modes render from one column schema.
  */
 export function Table<T>({
   columns,
@@ -41,6 +49,9 @@ export function Table<T>({
   empty = 'No data',
   className,
 }: TableProps<T>) {
+  const primaryCol = columns.find((c) => c.primary) ?? columns[0];
+  const metaCols = columns.filter((c) => c !== primaryCol);
+
   return (
     <>
       {/* Desktop / tablet: the dense table. */}
@@ -96,7 +107,7 @@ export function Table<T>({
         </tbody>
       </table>
 
-      {/* Mobile: stacked cards — no horizontal scroll. */}
+      {/* Mobile: title-first card — primary content prominent, metadata compact below. */}
       <div className="divide-hairline md:hidden">
         {rows.length === 0 ? (
           <div className="px-4 py-8 text-center text-sm text-faint">{empty}</div>
@@ -106,20 +117,22 @@ export function Table<T>({
               key={rowKey(row, i)}
               onClick={onRowClick ? () => onRowClick(row) : undefined}
               className={cn(
-                'flex flex-col gap-1.5 px-4 py-3 transition-colors',
+                'px-4 py-3 transition-colors',
                 onRowClick && 'cursor-pointer hover:bg-raised',
               )}
             >
-              {columns.map((col) => (
-                <div key={col.key} className="flex items-center justify-between gap-3">
-                  <span className="shrink-0 text-2xs font-medium uppercase tracking-wider text-faint">
-                    {col.header}
-                  </span>
-                  <span className={cn('min-w-0 text-right text-fg', col.className)}>
-                    {col.cell(row)}
-                  </span>
+              {/* Primary: the title/main content, line-clamped to 2 lines. */}
+              <div className="line-clamp-2 text-sm">{primaryCol.cell(row)}</div>
+              {/* Metadata: all other columns in a compact horizontal strip. */}
+              {metaCols.length > 0 && (
+                <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+                  {metaCols.map((col) => (
+                    <span key={col.key} className="text-xs">
+                      {col.cell(row)}
+                    </span>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
           ))
         )}

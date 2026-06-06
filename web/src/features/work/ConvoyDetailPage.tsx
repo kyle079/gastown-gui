@@ -37,7 +37,7 @@ function TrackedRow({ bead }: { bead: TrackedBead }) {
     <div className="flex flex-col gap-1.5 px-4 py-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="truncate text-sm text-fg">{bead.title}</div>
+          <div className="break-words text-sm text-fg">{bead.title}</div>
           <div className="font-mono text-2xs text-faint">{bead.id}</div>
         </div>
         <Badge tone={beadTone(bead)}>{bead.blocked ? 'blocked' : String(bead.status)}</Badge>
@@ -75,7 +75,7 @@ function ConvoyDetail({ convoy }: { convoy: Convoy }) {
       <Panel>
         <div className="flex items-start justify-between gap-3 pb-3 border-b border-line">
           <div className="min-w-0">
-            <h2 className="text-sm font-medium text-fg truncate">{title}</h2>
+            <h2 className="text-sm font-medium text-fg break-words">{title}</h2>
             <p className="font-mono text-xs text-faint mt-0.5">
               {convoy.id}
               {convoy.created_at ? ` · ${relativeTime(convoy.created_at)}` : ''}

@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
 import { queryKeys } from './keys';
 import type {
@@ -152,6 +152,8 @@ export function useBeads(status: string) {
       return apiClient.get<Bead[]>(`/api/beads${qs}`);
     },
     refetchInterval: 15_000,
+    // Show previous status's data while new status loads (no blank flash on filter change).
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -161,6 +163,7 @@ export function usePullRequests(state: string) {
     queryKey: queryKeys.pullRequests(state),
     queryFn: () => apiClient.get<PullRequest[]>(`/api/github/prs?state=${encodeURIComponent(state)}`),
     refetchInterval: 60_000,
+    placeholderData: keepPreviousData,
   });
 }
 

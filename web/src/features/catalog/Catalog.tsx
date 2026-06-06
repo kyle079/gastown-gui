@@ -2,13 +2,12 @@ import { useNavigate, useSearch } from '@tanstack/react-router';
 import { Surface } from '@/components/Surface';
 import { cn } from '@/lib/utils/cn';
 import { IssuesView } from './IssuesView';
-import { PullRequestsView } from './PullRequestsView';
 import { FormulasView } from './FormulasView';
 
-export type CatalogTab = 'issues' | 'prs' | 'formulas';
+export type CatalogTab = 'issues' | 'formulas';
 
 export function isCatalogTab(value: unknown): value is CatalogTab {
-  return value === 'issues' || value === 'prs' || value === 'formulas';
+  return value === 'issues' || value === 'formulas';
 }
 
 export interface CatalogSearch {
@@ -35,11 +34,6 @@ const TABS: { id: CatalogTab; label: string; description: string }[] = [
     id: 'issues',
     label: 'Issues',
     description: 'Beads tracked in this town — bugs, tasks, and features. Filter, then drill in.',
-  },
-  {
-    id: 'prs',
-    label: 'Pull requests',
-    description: 'Open code review across every rig with a GitHub remote. Click through to GitHub.',
   },
   {
     id: 'formulas',
@@ -94,7 +88,6 @@ export function Catalog() {
         </div>
 
         {tab === 'issues' && <IssuesView />}
-        {tab === 'prs' && <PullRequestsView />}
         {tab === 'formulas' && <FormulasView />}
       </div>
     </Surface>

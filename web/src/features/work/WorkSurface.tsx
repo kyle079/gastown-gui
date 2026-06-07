@@ -2,12 +2,16 @@ import { useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { Surface } from '@/components/Surface';
 import { Panel, Spinner, Button } from '@/components/primitives';
-import { useConvoys } from '@/lib/query/hooks';
+import { useBeads, useConvoys, useSchedulerStatus } from '@/lib/query/hooks';
 import type { Convoy } from '@/lib/api/types';
 import { workTotals } from './workState';
 import { WorkSummary } from './WorkSummary';
 import { ConvoysPanel } from './ConvoysPanel';
 import { DispatchDialog } from './DispatchDialog';
+import { WorkAttentionPanel } from './WorkAttentionPanel';
+import { NextActionsPanel } from './NextActionsPanel';
+import { BeadQueuePanel } from './BeadQueuePanel';
+import { collectNextActions, collectWorkAttention, triageBeads } from './triageModel';
 
 /**
  * Work & Convoys list view (/work). Clicking a convoy deep-links to /work/$id
@@ -16,6 +20,8 @@ import { DispatchDialog } from './DispatchDialog';
 export function WorkSurface() {
   const navigate = useNavigate();
   const { data, isLoading, isError, error, refetch } = useConvoys();
+  const beadsQuery = useBeads('all');
+  const schedulerQuery = useSchedulerStatus();
   const [dispatching, setDispatching] = useState(false);
 
   const onInspect = (convoy: Convoy) =>
@@ -51,11 +57,28 @@ export function WorkSurface() {
   }
 
   const convoys = data ?? [];
+  const beads = beadsQuery.data ?? [];
+  const attention = collectWorkAttention(convoys, beads, schedulerQuery.data);
+  const nextActions = collectNextActions(convoys, beads, schedulerQuery.data);
+  const queue = triageBeads(beads);
+  const attentionItems = [
+    ...(beadsQuery.isError || schedulerQuery.isError
+      ? [
+          {
+            id: 'partial-data',
+            tone: 'warn' as const,
+            title: 'Partial triage data',
+            detail: 'Beads or scheduler status is unavailable, so this board is operating with reduced signal.',
+          },
+        ]
+      : []),
+    ...attention,
+  ];
 
   return (
     <Surface
       title="Work"
-      description="Active and queued convoys — what's in flight and who's on it."
+      description="Operator triage board for convoys, queued beads, and the next move."
       actions={
         <Button variant="primary" size="sm" onClick={() => setDispatching(true)}>
           Dispatch
@@ -64,11 +87,18 @@ export function WorkSurface() {
     >
       <div className="flex flex-col gap-4">
         <WorkSummary totals={workTotals(convoys)} />
-        <ConvoysPanel
-          convoys={convoys}
-          onInspect={onInspect}
-          onDispatch={() => setDispatching(true)}
-        />
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[0.95fr_1.45fr]">
+          <div className="flex flex-col gap-4">
+            <WorkAttentionPanel items={attentionItems} />
+            <NextActionsPanel actions={nextActions} />
+          </div>
+          <ConvoysPanel
+            convoys={convoys}
+            onInspect={onInspect}
+            onDispatch={() => setDispatching(true)}
+          />
+        </div>
+        <BeadQueuePanel beads={queue} isLoading={beadsQuery.isLoading} isError={beadsQuery.isError} />
       </div>
 
       <DispatchDialog open={dispatching} onClose={() => setDispatching(false)} />

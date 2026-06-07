@@ -3,6 +3,8 @@ import type { Tone } from '@/components/primitives';
 
 export type ConvoyState = 'blocked' | 'active' | 'queued' | 'done';
 
+export const CONVOY_STATE_ORDER: ConvoyState[] = ['blocked', 'active', 'queued', 'done'];
+
 export interface ConvoySignal {
   state: ConvoyState;
   tone: Tone;
@@ -43,6 +45,19 @@ export function sortConvoys(convoys: Convoy[]): Convoy[] {
     if (byState !== 0) return byState;
     return (b.created_at ?? '').localeCompare(a.created_at ?? '');
   });
+}
+
+export function groupConvoysByState(convoys: Convoy[]): Record<ConvoyState, Convoy[]> {
+  const grouped: Record<ConvoyState, Convoy[]> = {
+    blocked: [],
+    active: [],
+    queued: [],
+    done: [],
+  };
+  for (const convoy of sortConvoys(convoys)) {
+    grouped[convoySignal(convoy).state].push(convoy);
+  }
+  return grouped;
 }
 
 /** Distinct agents working a convoy's tracked beads, in first-seen order. */

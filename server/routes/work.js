@@ -3,8 +3,24 @@ export function registerWorkRoutes(app, { workService } = {}) {
 
   app.post('/api/sling', async (req, res) => {
     try {
-      const { bead, target, molecule, quality, args } = req.body;
-      const result = await workService.sling({ bead, target, molecule, quality, args });
+      const {
+        bead,
+        target,
+        molecule,
+        quality,
+        args,
+        title,
+        description,
+      } = req.body;
+      const result = await workService.sling({
+        bead,
+        target,
+        molecule,
+        quality,
+        args,
+        title,
+        description,
+      });
 
       if (!result.ok) {
         return res.status(result.statusCode || 500).json(result.body || { error: 'Sling failed' });
@@ -94,4 +110,3 @@ export function registerWorkRoutes(app, { workService } = {}) {
     });
   });
 }
-

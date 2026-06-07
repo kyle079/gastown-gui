@@ -60,7 +60,7 @@ function slingErrorResponse({ errorMsg }) {
 }
 
 export class WorkService {
-  constructor({ gtGateway, bdGateway, emit } = {}) {
+  constructor({ gtGateway, bdGateway, beadService, emit } = {}) {
     if (!gtGateway) throw new Error('WorkService requires gtGateway');
     if (!gtGateway.sling) throw new Error('WorkService requires gtGateway.sling()');
     if (!gtGateway.escalate) throw new Error('WorkService requires gtGateway.escalate()');
@@ -72,11 +72,48 @@ export class WorkService {
 
     this._gt = gtGateway;
     this._bd = bdGateway;
+    this._beadService = beadService;
     this._emit = emit ?? null;
   }
 
-  async sling({ bead, target, molecule, quality, args } = {}) {
-    const result = await this._gt.sling({ bead, target, molecule, quality, args });
+  _normalizePriority(input) {
+    if (input === undefined || input === null) return undefined;
+    const normalized = String(input).trim();
+    return normalized.length === 0 ? undefined : normalized;
+  }
+
+  async _ensureBeadId({ bead, title, description } = {}) {
+    if (bead) return { ok: true, beadId: bead };
+
+    const normalizedTitle = this._normalizePriority(title);
+    if (!normalizedTitle) {
+      return { ok: false, statusCode: 400, error: 'Bead ID or title is required' };
+    }
+
+    if (!this._beadService || !this._beadService.create) {
+      return { ok: false, statusCode: 500, error: 'Bead service unavailable' };
+    }
+
+    const createResult = await this._beadService.create({
+      title: normalizedTitle,
+      description: this._normalizePriority(description),
+    });
+
+    if (!createResult.ok) {
+      return { ok: false, statusCode: 500, error: createResult.error || 'Failed to create bead' };
+    }
+
+    return { ok: true, beadId: createResult.beadId, created: true };
+  }
+
+  async sling({ bead, target, molecule, quality, args, title, description } = {}) {
+    const beadResult = await this._ensureBeadId({ bead, title, description });
+    if (!beadResult.ok) {
+      return { ok: false, statusCode: beadResult.statusCode || 500, error: beadResult.error };
+    }
+
+    const resolvedBead = beadResult.beadId;
+    const result = await this._gt.sling({ bead: resolvedBead, target, molecule, quality, args });
     const { raw, workAttached, promptSent, polecatSpawned } = analyzeSlingOutput(result.raw);
 
     const ok = Boolean(result.ok || workAttached || promptSent);
@@ -87,8 +124,9 @@ export class WorkService {
 
     const jsonData = parseJsonOrNull(String(result.stdout || '').trim());
     const responseData = jsonData || {
-      bead,
+      bead: resolvedBead,
       target,
+      bead_created: beadResult.created,
       workAttached,
       promptSent,
       polecatSpawned,

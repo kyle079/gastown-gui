@@ -26,6 +26,8 @@ export function DispatchCommandCenter({
   const sling = useSling();
   const [query, setQuery] = useState('');
   const [beadId, setBeadId] = useState('');
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
   const [selectedBeadId, setSelectedBeadId] = useState('');
   const [target, setTarget] = useState('');
   const [formulaArgs, setFormulaArgs] = useState('');
@@ -34,10 +36,13 @@ export function DispatchCommandCenter({
   const { data: bead } = useBeadDetail(selectedBeadId || beadId.trim());
   const sortedTargets = useMemo(() => rankTargets(targets ?? []), [targets]);
   const suggestions = sortedTargets.slice(0, 5);
+  const resolvedTitle = title.trim();
 
   useEffect(() => {
     if (!selectedBeadId || beadId.trim()) return;
     setBeadId(selectedBeadId);
+    setTitle('');
+    setDescription('');
   }, [selectedBeadId, beadId]);
 
   const error =
@@ -49,25 +54,33 @@ export function DispatchCommandCenter({
 
   function submit() {
     const id = beadId.trim();
-    if (!id) return;
-    sling.mutate(
-      {
-        bead: id,
-        target: target || undefined,
-        molecule: selectedFormula || undefined,
-        args: formulaArgs.trim() || undefined,
+    if (!id && !resolvedTitle) return;
+
+    const payload = {
+      target: target || undefined,
+      molecule: selectedFormula || undefined,
+      args: formulaArgs.trim() || undefined,
+      ...(id
+        ? { bead: id }
+        : {
+            title: resolvedTitle,
+            ...(description.trim() ? { description: description.trim() } : {}),
+          }),
+    };
+
+    sling.mutate(payload, {
+      onSuccess: (data) => {
+        const resolved = data?.data?.bead || id || resolvedTitle;
+        notify(`Dispatched ${resolved}${target ? ` → ${target}` : ''}`, 'accent');
+        setQuery('');
+        setBeadId('');
+        setSelectedBeadId('');
+        setTitle('');
+        setDescription('');
+        setFormulaArgs('');
+        setTarget('');
       },
-      {
-        onSuccess: () => {
-          notify(`Dispatched ${id}${target ? ` → ${target}` : ''}`, 'accent');
-          setQuery('');
-          setBeadId('');
-          setSelectedBeadId('');
-          setTarget('');
-          setFormulaArgs('');
-        },
-      },
-    );
+    });
   }
 
   return (
@@ -85,7 +98,15 @@ export function DispatchCommandCenter({
             placeholder="Selected bead id"
             className="font-mono"
             value={beadId}
-            onChange={(e) => setBeadId(e.target.value)}
+            onChange={(e) => {
+              const next = e.target.value;
+              setBeadId(next);
+              if (next.trim()) {
+                setSelectedBeadId('');
+                setTitle('');
+                setDescription('');
+              }
+            }}
           />
         </PanelBody>
 
@@ -126,7 +147,7 @@ export function DispatchCommandCenter({
             <h2 className="text-sm font-medium text-fg">Dispatch Preview</h2>
             <p className="mt-1 text-sm text-muted">Dependency context, target suggestions, and formula options before sling.</p>
           </div>
-          <Button size="sm" variant="primary" disabled={!beadId.trim() || sling.isPending} onClick={submit}>
+          <Button size="sm" variant="primary" disabled={(!beadId.trim() && !resolvedTitle) || sling.isPending} onClick={submit}>
             {sling.isPending ? 'Dispatching…' : 'Dispatch'}
           </Button>
         </div>
@@ -164,6 +185,30 @@ export function DispatchCommandCenter({
           />
         </label>
 
+        {!beadId.trim() && (
+          <label className="mt-4 flex flex-col gap-1.5">
+            <span className="text-2xs uppercase tracking-wider text-faint">Title (create new bead)</span>
+            <Input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="font-mono"
+              placeholder="A descriptive title"
+            />
+          </label>
+        )}
+
+        {!beadId.trim() && (
+          <label className="mt-4 flex flex-col gap-1.5">
+            <span className="text-2xs uppercase tracking-wider text-faint">Description (optional)</span>
+            <Input
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="font-mono"
+              placeholder="Optional details"
+            />
+          </label>
+        )}
+
         {suggestions.length > 0 && (
           <div className="mt-4">
             <div className="mb-2 font-mono text-2xs uppercase tracking-wider text-faint">Suggested Targets</div>
@@ -180,8 +225,10 @@ export function DispatchCommandCenter({
         <div className="mt-4 rounded-md border border-line bg-surface-alt p-3">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <div className="font-mono text-xs text-fg">{bead?.id || beadId || 'No bead selected'}</div>
-              <div className="mt-1 text-sm text-muted">{bead?.title || 'Select a bead to preview dispatch context.'}</div>
+              <div className="font-mono text-xs text-fg">{bead?.id || beadId || title || 'No bead selected'}</div>
+              <div className="mt-1 text-sm text-muted">
+                {bead?.title || resolvedTitle || 'Select a bead or create a title to preview dispatch context.'}
+              </div>
             </div>
             {bead && (
               <div className="flex items-center gap-2">

@@ -122,6 +122,7 @@ const beadService = new BeadService({
 const workService = new WorkService({
   gtGateway,
   bdGateway,
+  beadService,
   emit: (type, data) => emitMutationEvent(type, data),
 });
 // Server-side gateway uses GITHUB_TOKEN env var for background operations (default branch detection, PR linking).

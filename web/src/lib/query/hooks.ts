@@ -120,7 +120,9 @@ export function useTargets() {
 }
 
 interface SlingArgs {
-  bead: string;
+  bead?: string;
+  title?: string;
+  description?: string;
   target?: string;
   molecule?: string;
   quality?: string;

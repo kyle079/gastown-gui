@@ -47,6 +47,43 @@ describe('WorkService', () => {
     expect(result.data).toMatchObject({ bead: 'bead-1', target: 'mayor', workAttached: true });
   });
 
+  it('creates a bead when no id is provided', async () => {
+    const { calls, gtGateway, bdGateway } = createStubGateways();
+    const emitted = [];
+    const beadService = {
+      create: async ({ title, description }) => {
+        calls.push(['create', { title, description }]);
+        return { ok: true, beadId: 'new-bead', raw: 'created' };
+      },
+    };
+    gtGateway.sling = async (opts) => {
+      calls.push(['sling', opts]);
+      return { ok: false, stdout: '', stderr: '', raw: 'Work attached to hook', error: 'exit 1' };
+    };
+
+    const service = new WorkService({
+      gtGateway,
+      bdGateway,
+      beadService,
+      emit: (type, data) => emitted.push([type, data]),
+    });
+
+    const result = await service.sling({ title: 'New work item', description: 'Do the thing' });
+    expect(result.ok).toBe(true);
+    expect(calls).toContainEqual(['create', { title: 'New work item', description: 'Do the thing' }]);
+    expect(calls).toContainEqual(['sling', { bead: 'new-bead', target: undefined, molecule: undefined, quality: undefined, args: undefined }]);
+    expect(result.data).toMatchObject({ bead: 'new-bead', bead_created: true, workAttached: true });
+    expect(emitted[0]).toMatchObject([
+      'work_slung',
+      {
+        bead: 'new-bead',
+        target: undefined,
+        bead_created: true,
+        workAttached: true,
+      },
+    ]);
+  });
+
   it('returns a typed 400 when formula is missing', async () => {
     const { gtGateway, bdGateway } = createStubGateways();
     gtGateway.sling = async () => ({ ok: false, stdout: '', stderr: '', raw: "formula 'foo' not found", error: null });

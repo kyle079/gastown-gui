@@ -65,6 +65,23 @@ describe('Work routes (real Express app)', () => {
     expect(calls[0]).toEqual(['sling', { bead: 'bead-1', target: 'mayor', molecule: 'm', quality: 'q', args: '--x' }]);
   });
 
+  it('POST /api/sling can dispatch by title when bead is omitted', async () => {
+    const res = await fetch(`${baseUrl}/api/sling`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'new bead', description: 'auto-created', target: 'mayor' }),
+    });
+
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.success).toBe(true);
+    expect(json.data).toMatchObject({ target: 'mayor' });
+    expect(calls[calls.length - 1]).toEqual([
+      'sling',
+      { bead: undefined, target: 'mayor', title: 'new bead', description: 'auto-created' },
+    ]);
+  });
+
   it('POST /api/escalate returns success', async () => {
     const res = await fetch(`${baseUrl}/api/escalate`, {
       method: 'POST',
@@ -74,7 +91,7 @@ describe('Work routes (real Express app)', () => {
 
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual({ success: true, data: 'sent' });
-    expect(calls[1]).toEqual(['escalate', { convoy_id: 'convoy-1', reason: 'Blocked', priority: 'high' }]);
+    expect(calls).toContainEqual(['escalate', { convoy_id: 'convoy-1', reason: 'Blocked', priority: 'high' }]);
   });
 
   it('POST /api/work/:beadId/done calls service and returns message', async () => {
@@ -86,7 +103,7 @@ describe('Work routes (real Express app)', () => {
 
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toMatchObject({ success: true, beadId: 'bead-1' });
-    expect(calls[2]).toEqual(['markDone', { beadId: 'bead-1', summary: 'done' }]);
+    expect(calls).toContainEqual(['markDone', { beadId: 'bead-1', summary: 'done' }]);
   });
 
   it('POST /api/work/:beadId/reassign returns 400 when target missing', async () => {
@@ -99,4 +116,3 @@ describe('Work routes (real Express app)', () => {
     expect(res.status).toBe(400);
   });
 });
-

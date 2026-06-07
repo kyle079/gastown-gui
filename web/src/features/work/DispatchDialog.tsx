@@ -4,19 +4,22 @@ import { ApiError } from '@/lib/api/client';
 import { useSling, useTargets } from '@/lib/query/hooks';
 
 /**
- * Dispatch a bead onto a target's hook. Deliberately minimal: a bead id and a
- * target — the two things `gt sling` needs. The surface does the inspecting;
- * this does the one write action.
+ * Dispatch a bead onto a target's hook. Deliberately minimal: either an existing
+ * bead id or a new title (and optional description) to create-on-dispatch.
  */
 export function DispatchDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { data: targets } = useTargets();
   const sling = useSling();
   const { notify } = useToast();
   const [bead, setBead] = useState('');
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
   const [target, setTarget] = useState('');
 
   function reset() {
     setBead('');
+    setTitle('');
+    setDescription('');
     setTarget('');
     sling.reset();
   }
@@ -28,16 +31,26 @@ export function DispatchDialog({ open, onClose }: { open: boolean; onClose: () =
 
   function submit() {
     const id = bead.trim();
-    if (!id) return;
-    sling.mutate(
-      { bead: id, target: target || undefined },
-      {
-        onSuccess: () => {
-          notify(`Dispatched ${id}${target ? ` → ${target}` : ''}`, 'accent');
-          close();
-        },
+    const resolvedTitle = title.trim();
+    if (!id && !resolvedTitle) return;
+
+    const payload = {
+      target: target || undefined,
+      ...(id
+        ? { bead: id }
+        : {
+            title: resolvedTitle,
+            ...(description.trim() ? { description: description.trim() } : {}),
+          }),
+    };
+
+    sling.mutate(payload, {
+      onSuccess: (data) => {
+        const beaded = data?.data?.bead || id || resolvedTitle;
+        notify(`Dispatched ${beaded}${target ? ` → ${target}` : ''}`, 'accent');
+        close();
       },
-    );
+    });
   }
 
   const error =
@@ -62,7 +75,7 @@ export function DispatchDialog({ open, onClose }: { open: boolean; onClose: () =
             size="sm"
             variant="primary"
             onClick={submit}
-            disabled={!bead.trim() || sling.isPending}
+            disabled={(!bead.trim() && !title.trim()) || sling.isPending}
           >
             {sling.isPending ? 'Dispatching…' : 'Dispatch'}
           </Button>
@@ -86,6 +99,27 @@ export function DispatchDialog({ open, onClose }: { open: boolean; onClose: () =
             autoFocus
           />
         </label>
+
+        {!bead.trim() && (
+          <>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-2xs uppercase tracking-wider text-faint">Title</span>
+              <Input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="A descriptive title"
+              />
+            </label>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-2xs uppercase tracking-wider text-faint">Description (optional)</span>
+              <Input
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Optional details"
+              />
+            </label>
+          </>
+        )}
 
         <label className="flex flex-col gap-1.5">
           <span className="text-2xs uppercase tracking-wider text-faint">Target</span>

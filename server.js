@@ -21,6 +21,7 @@ import { fileURLToPath } from 'url';
 
 import { createApp } from './server/app/createApp.js';
 import { buildDefaultOrigins } from './server/app/corsOrigins.js';
+import { isLegacyFrontendPath } from './server/app/frontendDelivery.js';
 import { normalizeRigAgents } from './server/domain/agents/normalizeRigAgents.js';
 import {
   buildSessionRegistryFromTown,
@@ -74,6 +75,8 @@ const HOME = process.env.HOME || os.homedir();
 const GT_ROOT = process.env.GT_ROOT || path.join(HOME, 'gt');
 const REPO_ROOT = process.env.GASTOWN_GUI_ROOT || __dirname;
 const REPO_BEADS_DIR = path.join(REPO_ROOT, '.beads');
+const FRONTEND_DIST_DIR = path.join(__dirname, 'web/dist');
+const FRONTEND_INDEX_PATH = path.join(FRONTEND_DIST_DIR, 'index.html');
 const GT_EXECUTABLE = resolveExecutable({
   command: 'gt',
   envVarName: 'GT_BIN',
@@ -361,12 +364,21 @@ setInterval(() => {
   }
 }, CACHE_CLEANUP_INTERVAL);
 
-// Middleware — React app (web/dist) takes priority for /assets JS/CSS bundles
-app.use(express.static(path.join(__dirname, 'web/dist')));
+app.use((req, res, next) => {
+  if (!isLegacyFrontendPath(req.path)) {
+    next();
+    return;
+  }
+
+  res.status(404).type('text/plain').send('Legacy frontend path removed');
+});
+
+// Middleware — serve the built React app and static assets only
+app.use(express.static(FRONTEND_DIST_DIR));
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
 app.get('/', (req, res) => {
   res.setHeader('Cache-Control', 'no-store, must-revalidate');
-  res.sendFile(path.join(__dirname, 'web/dist/index.html'));
+  res.sendFile(FRONTEND_INDEX_PATH);
 });
 app.get('/favicon.ico', (req, res) => {
   res.sendFile(path.join(__dirname, 'assets', 'favicon.ico'));
@@ -1891,7 +1903,7 @@ registerTerminalRoutes(app, { wss, gtRoot: GT_ROOT });
 app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api/') || req.path.startsWith('/ws')) return next();
   res.setHeader('Cache-Control', 'no-store, must-revalidate');
-  res.sendFile(path.join(__dirname, 'web/dist/index.html'));
+  res.sendFile(FRONTEND_INDEX_PATH);
 });
 
 // ============= WebSocket for Real-time Events =============

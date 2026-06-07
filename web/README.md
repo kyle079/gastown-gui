@@ -12,7 +12,7 @@ The Vite dev server proxies `/api` and `/ws` to the Express bridge, so run both:
 
 ```bash
 # Terminal 1 — the gt bridge backend (repo root)
-npm start                       # serves the legacy app + the API on :7667
+npm start                       # serves the API bridge on :7667
 
 # Terminal 2 — the React app (this directory)
 cd web
@@ -83,7 +83,6 @@ The shipped top-level route tree is:
 
 ## Delivery
 
-The Express bridge prefers `web/dist/index.html` and serves this React app when
-that build artifact exists. If the dist output is absent, the server falls back
-to the legacy root-level SPA. Develop the React app through the Vite proxy; ship
-it by building `dist/`.
+The Express bridge serves `web/dist/index.html` as the shipped UI, while local
+development should run through the Vite proxy. The old root-level SPA is no
+longer served or published.

@@ -10,12 +10,15 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js --dev",
+    "build": "npm --prefix web run build",
+    "web:dev": "npm --prefix web run dev",
+    "web:preview": "npm --prefix web run preview",
     "test": "vitest run",
     "test:unit": "vitest run --config vitest.unit.config.js",
     "test:e2e": "vitest run test/e2e.test.js",
     "test:watch": "vitest watch",
     "test:ui": "vitest run --ui",
-    "prepublishOnly": "npm test"
+    "prepublishOnly": "npm test && npm run build"
   },
   "dependencies": {
     "@octokit/rest": "^22.0.1",
@@ -69,11 +72,9 @@
   },
   "files": [
     "bin/",
-    "css/",
-    "js/",
     "server/",
     "assets/",
-    "index.html",
+    "web/dist/",
     "server.js",
     "start.sh",
     "README.md"

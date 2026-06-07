@@ -43,6 +43,8 @@ npm install -g gastown-gui
 git clone https://github.com/web3dev1337/gastown-gui.git
 cd gastown-gui
 npm install
+npm --prefix web install
+npm run build
 npm link
 ```
 
@@ -263,7 +265,6 @@ All operations execute through the official `gt` and `bd` commands - the GUI nev
 
 - **Backend:** Node.js + Express bridge over `gt`, `bd`, `gh`, `git`, and tmux
 - **Primary frontend:** React + TypeScript + Vite + Tailwind + TanStack Router/Query (`web/`)
-- **Fallback frontend:** Legacy vanilla JS SPA (`js/`, `css/`, `index.html`) when `web/dist` is not present
 - **Communication:** HTTP API + WebSocket for real-time updates
 - **Testing:** Vitest unit/integration tests, Vitest browser coverage for the React app, and Puppeteer E2E tests
 
@@ -307,8 +308,7 @@ gastown-gui/
 │       ├── features/    # Dashboard, fleet, work, mail, PRs, graph, help, terminal
 │       ├── lib/         # API client, query hooks, keyboard, utils
 │       └── styles/      # Design tokens + global styles
-├── js/                  # Legacy SPA fallback
-├── css/                 # Legacy SPA styles
+├── js/                  # Archived legacy browser modules and shared test fixtures
 ├── test/                # Unit, integration, and E2E coverage
 ├── assets/              # Favicons, screenshots, loading art
 └── docs/                # Audits, architecture notes, and reviews
@@ -336,9 +336,9 @@ npm run test:watch
 
 ## Delivery Notes
 
-- The Express server prefers the built React frontend at `web/dist` when present.
-- If `web/dist/index.html` is missing, the server falls back to the legacy SPA in the repo root.
-- The React app is the current information architecture and active product surface; the legacy SPA remains as a compatibility fallback while the bridge server still serves both asset trees.
+- The Express server serves the built React frontend from `web/dist`.
+- Legacy root frontend paths (`/index.html`, `/js/*`, `/css/*`) are intentionally blocked so they cannot shadow the active UI.
+- The LAN preview on `:8080` is the Vite-served React app from `web/`; the backend bridge remains on `:7667`.
 
 ---
 

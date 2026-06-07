@@ -8,7 +8,7 @@
 ENTRY:    server.js - Express bridge server (gt/bd CLI → HTTP/WS)
 CLI:      bin/cli.js - npx gastown-gui entry point
 WEB:      web/ - Primary React/TS/Vite/Tailwind/TanStack frontend
-LEGACY:   js/ + css/ + index.html - Legacy SPA fallback when web/dist is absent
+ARCHIVE:  js/ - Unshipped legacy browser modules and shared JS test fixtures
 BACKEND:  server/ - Refactored backend modules (services, gateways, routes)
 TESTS:    test/ - Vitest unit + integration, Puppeteer E2E
 CONFIG:   vitest.config.js, vitest.unit.config.js, package.json, flake.nix
@@ -19,7 +19,7 @@ DOCS:     docs/, refactoring-analysis/, CLI-COMPATIBILITY.md, PRODUCT.md, DESIGN
 ## Frontend — Primary React Console (web/)
 
 The React app is the current information architecture for the console. The
-Express bridge server remains the backend and serves `web/dist` when available.
+Express bridge server remains the backend and serves `web/dist`.
 
 ```
 web/ - React + TS + Vite + Tailwind + TanStack Router/Query app
@@ -50,8 +50,9 @@ Design direction + tokens are documented in `DESIGN.md`; product brief in `PRODU
 
 ```
 server/app/frontendDelivery.js
-├─ Prefers web/dist/index.html when present   → mode: react-dist
-└─ Falls back to root index.html when absent  → mode: legacy-spa
+├─ Serves web/dist/index.html                 → mode: react-dist
+├─ Reports missing dist explicitly            → mode: react-dist-missing
+└─ Blocks legacy /index.html, /js/*, /css/*  → isLegacyFrontendPath()
 ```
 
 ## Backend — Entry & App
@@ -133,7 +134,11 @@ server/routes/github.js - GET /api/github/{prs,issues,repos}
 server/routes/targets.js - GET /api/targets
 ```
 
-## Frontend — Legacy SPA Core
+## Archive — Legacy Browser Modules (Unshipped)
+
+These files remain in-tree for historical reference and a few shared unit-test
+imports, but they are not served by `server.js` and are not included in the
+published package.
 
 ```
 js/app.js - App init, tab routing, event wiring, status polling
@@ -141,7 +146,7 @@ js/api.js - HTTP client for /api/* + WebSocket client class
 js/state.js - Global reactive state store, component subscriptions
 ```
 
-## Frontend — Legacy SPA Components
+## Archive — Legacy Browser Components
 
 ```
 js/components/dashboard.js - Main dashboard layout + tab switching
@@ -164,7 +169,7 @@ js/components/autocomplete.js - Search input with suggestions
 js/components/toast.js - Toast notification system
 ```
 
-## Frontend — Legacy SPA Shared & Utils
+## Archive — Shared Legacy Utilities
 
 ```
 js/shared/agent-types.js - Agent type definitions, icons, colors
@@ -181,15 +186,11 @@ js/utils/performance.js - Debounce/throttle utilities
 js/utils/tooltip.js - Tooltip positioning helpers
 ```
 
-## Styles
+## Removed Root Static Shell
 
-```
-css/variables.css - CSS custom properties (colors, spacing, z-index)
-css/reset.css - Browser reset
-css/layout.css - Grid/flex layouts, responsive breakpoints
-css/components.css - Component-specific styles
-css/animations.css - Transitions & keyframes
-```
+The old root `index.html` and `css/` asset tree have been removed. React is the
+only shipped frontend surface; the root legacy browser shell is no longer
+served, packaged, or documented as a fallback.
 
 ## Tests
 
@@ -252,7 +253,7 @@ refactoring-analysis/trace/ - Sanitized prompt/trace exports
 - **Gateway pattern:** CLI tools (gt, bd, gh, git, tmux) wrapped in gateway classes; services compose gateways; routes call services
 - **Safe execution:** All CLI calls use `execFile` (no shell) + `SafeSegment` validation — prevents injection
 - **Cache + invalidation:** `CacheRegistry` with TTL; `EventBus` triggers cache clears on mutations
-- **Frontend delivery:** Express serves the built React app when available and falls back to the legacy SPA otherwise
+- **Frontend delivery:** Express serves the built React app and blocks the removed legacy root frontend paths
 - **React frontend:** TanStack Router drives the current IA; TanStack Query feeds presentational feature surfaces
-- **Legacy frontend:** The vanilla JS SPA remains in-tree as a fallback path and compatibility surface
+- **Legacy frontend:** Historical browser modules remain in-tree only as archival code and a small shared test surface
 - **Service controls:** Witness/refinery require a `rig` parameter for start/stop/restart; mayor/deacon do not

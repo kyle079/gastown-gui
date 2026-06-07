@@ -1875,7 +1875,7 @@ registerGitHubRoutes(app, { gitHubService, gitHubGatewayFactory, statusService }
 // ============= Terminal (PTY-over-WebSocket) =============
 // Registered after wss is created; terminal WS handler is added to the shared wss.
 // SECURITY: app binds to 127.0.0.1 by default. No auth — LAN-only (see gg-2wt).
-registerTerminalRoutes(app, { wss });
+registerTerminalRoutes(app, { wss, gtRoot: GT_ROOT });
 
 // SPA catch-all: serve React app for any non-API path not matched above
 app.get('*', (req, res, next) => {

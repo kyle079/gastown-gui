@@ -10,6 +10,9 @@
  */
 
 import { execFile } from 'child_process';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 import { promisify } from 'util';
 import pty from 'node-pty';
 
@@ -90,6 +93,82 @@ function parseTmuxSessions(output) {
   return sessions;
 }
 
+function pathExists(targetPath) {
+  if (!targetPath) return false;
+  try {
+    return fs.existsSync(targetPath);
+  } catch {
+    return false;
+  }
+}
+
+function staleReasonForCwd(cwd, { gtRoot } = {}) {
+  if (!cwd) return 'missing_cwd_metadata';
+  if (pathExists(cwd)) return null;
+  if (gtRoot && cwd.startsWith(gtRoot)) return 'missing_worktree_cwd';
+  return 'missing_cwd';
+}
+
+function resolveSafeSpawnCwd({ gtRoot = process.env.GT_ROOT, home = process.env.HOME || os.homedir() } = {}) {
+  const candidates = [process.cwd(), gtRoot, home, '/tmp', '/'];
+  for (const candidate of candidates) {
+    if (pathExists(candidate)) return candidate;
+  }
+  return '/';
+}
+
+function parsePaneMetadata(output, { gtRoot } = {}) {
+  const sessions = new Map();
+
+  for (const line of output.split('\n')) {
+    if (!line.trim()) continue;
+    const [name, attachedRaw, windowActiveRaw, paneActiveRaw, paneDeadRaw, cwdRaw] = line.split('\t');
+    if (!name) continue;
+    const entry = {
+      attached: attachedRaw === '1',
+      windowActive: windowActiveRaw === '1',
+      paneActive: paneActiveRaw === '1',
+      paneDead: paneDeadRaw === '1',
+      cwd: cwdRaw || null,
+    };
+    const existing = sessions.get(name);
+    if (!existing || entry.paneActive || entry.windowActive) {
+      sessions.set(name, entry);
+    }
+  }
+
+  const metadata = new Map();
+  for (const [name, entry] of sessions.entries()) {
+    const staleReason = staleReasonForCwd(entry.cwd, { gtRoot });
+    metadata.set(name, {
+      cwd: entry.cwd,
+      cwdExists: entry.cwd ? pathExists(entry.cwd) : false,
+      attached: entry.attached,
+      paneDead: entry.paneDead,
+      stale: Boolean(staleReason) || entry.paneDead,
+      staleReason: entry.paneDead ? 'dead_pane' : staleReason,
+      cleanupSafe: Boolean(staleReason) || entry.paneDead,
+    });
+  }
+
+  return metadata;
+}
+
+function enrichSessions(sessions, paneMetadata) {
+  return sessions.map((session) => {
+    const meta = paneMetadata.get(session.name);
+    return {
+      ...session,
+      cwd: meta?.cwd ?? null,
+      cwdExists: meta?.cwdExists ?? false,
+      attached: meta?.attached ?? false,
+      stale: meta?.stale ?? false,
+      staleReason: meta?.staleReason ?? null,
+      cleanupSafe: meta?.cleanupSafe ?? false,
+    };
+  });
+}
+
 /**
  * Group sessions by role, sorted by role order then name.
  */
@@ -117,7 +196,30 @@ function groupSessions(sessions) {
   return result;
 }
 
-export function registerTerminalRoutes(app, { wss }) {
+async function listSessionsWithMetadata({ socket, gtRoot }) {
+  const { stdout } = await execFileAsync('tmux', ['-L', socket, 'ls'], { timeout: 5000 });
+  const sessions = parseTmuxSessions(stdout);
+  let paneMetadata = new Map();
+
+  try {
+    const { stdout: paneStdout } = await execFileAsync(
+      'tmux',
+      ['-L', socket, 'list-panes', '-a', '-F', '#{session_name}\t#{session_attached}\t#{window_active}\t#{pane_active}\t#{pane_dead}\t#{pane_current_path}'],
+      { timeout: 5000 },
+    );
+    paneMetadata = parsePaneMetadata(paneStdout, { gtRoot });
+  } catch (err) {
+    console.warn('[Terminal] pane metadata unavailable:', err.message);
+  }
+
+  return enrichSessions(sessions, paneMetadata);
+}
+
+function isValidSessionName(sessionName) {
+  return /^[a-zA-Z0-9_-]+$/.test(sessionName);
+}
+
+export function registerTerminalRoutes(app, { wss, gtRoot = process.env.GT_ROOT } = {}) {
   // GET /api/terminal/sessions
   app.get('/api/terminal/sessions', async (req, res) => {
     try {
@@ -126,8 +228,7 @@ export function registerTerminalRoutes(app, { wss }) {
         return res.json({ sessions: [], groups: [], socket: null, warning: 'No gt tmux socket detected' });
       }
 
-      const { stdout } = await execFileAsync('tmux', ['-L', socket, 'ls'], { timeout: 5000 });
-      const sessions = parseTmuxSessions(stdout);
+      const sessions = await listSessionsWithMetadata({ socket, gtRoot });
       const groups = groupSessions(sessions);
 
       res.json({ sessions, groups, socket });
@@ -138,6 +239,38 @@ export function registerTerminalRoutes(app, { wss }) {
       }
       console.error('[Terminal] sessions error:', err.message);
       res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.delete('/api/terminal/sessions/:sessionName', async (req, res) => {
+    const { sessionName } = req.params;
+    if (!isValidSessionName(sessionName)) {
+      return res.status(400).json({ error: 'invalid session name', errorType: 'invalid_session_name' });
+    }
+
+    try {
+      const socket = await detectGtSocket();
+      if (!socket) {
+        return res.status(503).json({ error: 'No gt tmux socket found', errorType: 'no_socket' });
+      }
+
+      const sessions = await listSessionsWithMetadata({ socket, gtRoot });
+      const session = sessions.find((item) => item.name === sessionName);
+      if (!session) {
+        return res.status(404).json({ error: `Session "${sessionName}" not found`, errorType: 'session_not_found' });
+      }
+      if (!session.stale || !session.cleanupSafe) {
+        return res.status(409).json({
+          error: `Session "${sessionName}" is live; refusing cleanup`,
+          errorType: 'live_session_cleanup_refused',
+        });
+      }
+
+      await execFileAsync('tmux', ['-L', socket, 'kill-session', '-t', sessionName], { timeout: 3000 });
+      return res.json({ ok: true, session: sessionName, cleanedUp: true });
+    } catch (err) {
+      console.error('[Terminal] cleanup error:', err.message);
+      return res.status(500).json({ error: err.message, errorType: 'cleanup_failed' });
     }
   });
 
@@ -155,7 +288,7 @@ export function registerTerminalRoutes(app, { wss }) {
     }
 
     // Sanitize session name — only allow alphanumeric, hyphens, underscores
-    if (!/^[a-zA-Z0-9_-]+$/.test(sessionName)) {
+    if (!isValidSessionName(sessionName)) {
       ws.send(JSON.stringify({ type: 'error', message: 'invalid session name' }));
       ws.close(1008, 'invalid session name');
       return;
@@ -171,6 +304,9 @@ export function registerTerminalRoutes(app, { wss }) {
         return;
       }
 
+      const sessions = await listSessionsWithMetadata({ socket, gtRoot });
+      const sessionMeta = sessions.find((item) => item.name === sessionName) ?? null;
+
       // Verify session exists
       try {
         await execFileAsync('tmux', ['-L', socket, 'has-session', '-t', sessionName], { timeout: 3000 });
@@ -180,10 +316,25 @@ export function registerTerminalRoutes(app, { wss }) {
         return;
       }
 
+      if (sessionMeta?.stale) {
+        const message = sessionMeta.cwd
+          ? `Session "${sessionName}" is stale: ${sessionMeta.staleReason} (${sessionMeta.cwd})`
+          : `Session "${sessionName}" is stale: ${sessionMeta.staleReason}`;
+        ws.send(JSON.stringify({
+          type: 'error',
+          errorType: 'stale_session',
+          message,
+          session: sessionMeta,
+        }));
+        ws.close(1011, 'stale session');
+        return;
+      }
+
       console.log(`[Terminal] Attaching to ${sessionName} via socket ${socket}`);
 
       // Spawn PTY with tmux attach
       ptyProcess = pty.spawn('tmux', ['-L', socket, 'attach-session', '-t', sessionName], {
+        cwd: sessionMeta?.cwdExists ? sessionMeta.cwd : resolveSafeSpawnCwd({ gtRoot }),
         name: 'xterm-256color',
         cols: 220,
         rows: 50,
@@ -248,3 +399,11 @@ export function registerTerminalRoutes(app, { wss }) {
     });
   });
 }
+
+export {
+  enrichSessions,
+  parsePaneMetadata,
+  parseTmuxSessions,
+  resolveSafeSpawnCwd,
+  staleReasonForCwd,
+};

@@ -45,18 +45,6 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
       run: () => void navigate({ to: item.path }),
     }));
 
-    // Catalog sub-views and extra nav shortcuts.
-    const catalogViews: Command[] = [
-      {
-        id: 'nav:catalog:formulas',
-        title: 'Go to Formulas',
-        group: 'Navigation',
-        glyph: '⊟',
-        keywords: ['formula', 'workflow', 'convoy', 'template', 'catalog'],
-        run: () => void navigate({ to: '/catalog', search: { tab: 'formulas' } }),
-      },
-    ];
-
     const actions: Command[] = [
       {
         id: 'action:compose',
@@ -82,7 +70,7 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
       },
     ];
 
-    return [...nav, ...catalogViews, ...actions];
+    return [...nav, ...actions];
   }, [navigate, queryClient, notify]);
 
   // Global open: Cmd/Ctrl+K.

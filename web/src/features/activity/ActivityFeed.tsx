@@ -56,8 +56,8 @@ function PayloadLink({ label, value }: { label: string; value: string }) {
       <span className="min-w-0 break-all font-mono text-fg">
         {isBead && label !== 'branch' ? (
           <Link
-            to="/catalog"
-            search={{ tab: 'issues', id: value }}
+            to="/issues"
+            search={{ id: value }}
             className="text-accent underline-offset-2 hover:underline"
           >
             {value}
@@ -66,8 +66,8 @@ function PayloadLink({ label, value }: { label: string; value: string }) {
           <>
             {value}{' '}
             <Link
-              to="/catalog"
-              search={{ tab: 'issues', id: beadFromBr }}
+              to="/issues"
+              search={{ id: beadFromBr }}
               className="text-accent underline-offset-2 hover:underline"
             >
               ({beadFromBr})

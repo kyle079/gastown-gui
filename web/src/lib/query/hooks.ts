@@ -4,6 +4,7 @@ import { queryKeys } from './keys';
 import type {
   ActivityResponse,
   Bead,
+  BeadDetail,
   BeadGraphData,
   ChangelogEntry,
   Convoy,
@@ -168,6 +169,16 @@ export function useBeads(status: string) {
     refetchInterval: 15_000,
     // Show previous status's data while new status loads (no blank flash on filter change).
     placeholderData: keepPreviousData,
+  });
+}
+
+/** Full bead detail from `bd show --json`, fetched only when a bead is opened. */
+export function useBeadDetail(beadId: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.beadDetail(beadId ?? ''),
+    queryFn: () => apiClient.get<BeadDetail>(`/api/bead/${encodeURIComponent(beadId ?? '')}`),
+    staleTime: 15_000,
+    enabled: Boolean(beadId),
   });
 }
 

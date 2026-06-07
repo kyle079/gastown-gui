@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
+import { useNavigate, useSearch } from '@tanstack/react-router';
 import { Badge, Dialog, Input, Table, type Column, type Tone } from '@/components/primitives';
+import { Surface } from '@/components/Surface';
 import type { Formula } from '@/lib/api/types';
 import { useFormulas } from '@/lib/query/hooks';
 import { CatalogPanel } from './CatalogPanel';
@@ -14,6 +16,16 @@ function typeTone(type: string | undefined): Tone {
     default:
       return 'neutral';
   }
+}
+
+export interface FormulasSearch {
+  q?: string;
+}
+
+export function validateFormulasSearch(search: Record<string, unknown>): FormulasSearch {
+  return {
+    q: typeof search.q === 'string' ? search.q : undefined,
+  };
 }
 
 function matches(f: Formula, q: string): boolean {
@@ -54,7 +66,9 @@ const columns: Column<Formula>[] = [
 ];
 
 export function FormulasView() {
-  const [query, setQuery] = useState('');
+  const navigate = useNavigate();
+  const search = useSearch({ strict: false }) as FormulasSearch;
+  const query = search.q ?? '';
   const [selected, setSelected] = useState<Formula | null>(null);
 
   const { data, isLoading, isError, error, refetch } = useFormulas();
@@ -70,9 +84,12 @@ export function FormulasView() {
   const hint = query ? `${rows.length} of ${total}` : String(total);
 
   return (
-    <>
+    <Surface
+      title="Formulas"
+      description="Workflow and convoy templates available for dispatch. Search by name, type, or purpose."
+    >
       <CatalogPanel
-        title="Formulas"
+        title="Templates"
         hint={hint}
         isLoading={isLoading}
         isError={isError}
@@ -83,7 +100,9 @@ export function FormulasView() {
             type="search"
             placeholder="Filter by name, type, or description…"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) =>
+              void navigate({ to: '/formulas', search: { q: e.target.value || undefined } })
+            }
             className="sm:max-w-xs"
           />
         }
@@ -121,6 +140,6 @@ export function FormulasView() {
           </div>
         )}
       </Dialog>
-    </>
+    </Surface>
   );
 }

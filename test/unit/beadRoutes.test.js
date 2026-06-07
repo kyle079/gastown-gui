@@ -31,6 +31,11 @@ describe('Bead routes (real Express app)', () => {
         if (beadId === 'missing') return { ok: false };
         return { ok: true, bead: { id: beadId } };
       },
+      update: async (opts) => {
+        calls.push(['update', opts]);
+        if (!opts.beadId) return { ok: false, statusCode: 400, error: 'Bead ID is required' };
+        return { ok: true, raw: 'Updated bead: bead-xyz' };
+      },
     };
 
     const app = createApp({ allowedOrigins: ['*'] });
@@ -75,5 +80,38 @@ describe('Bead routes (real Express app)', () => {
     const res = await fetch(`${baseUrl}/api/bead/missing`);
     expect(res.status).toBe(404);
   });
-});
 
+  it('PATCH /api/bead/:beadId forwards body and returns success', async () => {
+    const res = await fetch(`${baseUrl}/api/bead/bead-xyz`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: 'Renamed',
+        description: 'Updated description',
+        priority: 1,
+        status: 'in_progress',
+        assignee: 'rig/polecat',
+        labels: ['operator', 'ui'],
+      }),
+    });
+
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual({
+      success: true,
+      bead_id: 'bead-xyz',
+      raw: 'Updated bead: bead-xyz',
+    });
+    expect(calls.at(-1)).toEqual([
+      'update',
+      {
+        beadId: 'bead-xyz',
+        title: 'Renamed',
+        description: 'Updated description',
+        priority: 1,
+        status: 'in_progress',
+        assignee: 'rig/polecat',
+        labels: ['operator', 'ui'],
+      },
+    ]);
+  });
+});

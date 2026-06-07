@@ -19,6 +19,7 @@ export class BeadService {
     if (!bdGateway.search) throw new Error('BeadService requires bdGateway.search()');
     if (!bdGateway.show) throw new Error('BeadService requires bdGateway.show()');
     if (!bdGateway.create) throw new Error('BeadService requires bdGateway.create()');
+    if (!bdGateway.update) throw new Error('BeadService requires bdGateway.update()');
 
     this._bd = bdGateway;
     this._emit = emit ?? null;
@@ -96,5 +97,29 @@ export class BeadService {
     }
 
     return { ok: true, beadId, raw: result.raw };
+  }
+
+  async update({ beadId, title, description, priority, status, assignee, labels } = {}) {
+    if (!beadId) return { ok: false, statusCode: 400, error: 'Bead ID is required' };
+
+    const normalizedPriority = priority
+      ? PRIORITY_MAP[String(priority).toLowerCase()] || String(priority)
+      : null;
+    const normalizedLabels = Array.isArray(labels) ? normalizeLabels(labels) : undefined;
+
+    const result = await this._bd.update({
+      beadId,
+      title,
+      description,
+      priority: normalizedPriority,
+      status,
+      assignee,
+      labels: normalizedLabels,
+    });
+
+    if (!result.ok) return { ok: false, statusCode: 500, error: result.error || 'Failed to update bead' };
+
+    this._emit?.('bead_updated', { bead_id: beadId, title, status, assignee });
+    return { ok: true, raw: result.raw };
   }
 }

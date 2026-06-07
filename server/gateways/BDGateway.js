@@ -98,6 +98,24 @@ export class BDGateway {
     return { ...result, raw, beadId };
   }
 
+  async update({ beadId, title, description, priority, status, assignee, labels } = {}) {
+    const args = ['update', beadId];
+    if (title !== undefined) args.push('--title', title);
+    if (description !== undefined) args.push('--description', description);
+    if (priority) args.push('--priority', priority);
+    if (status) args.push('--status', status);
+    if (assignee !== undefined) args.push('--assignee', assignee);
+    if (Array.isArray(labels)) {
+      args.push('--set-labels');
+      labels.forEach((label) => {
+        args.push(label);
+      });
+    }
+
+    const result = await this._execCompat(args, { timeoutMs: 30000 });
+    return { ...result, raw: (result.stdout || '').trim() };
+  }
+
   async show(beadId) {
     const result = await this.exec(['show', beadId, '--json'], { timeoutMs: 30000 });
     const raw = (result.stdout || '').trim();

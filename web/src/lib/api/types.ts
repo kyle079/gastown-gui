@@ -198,6 +198,8 @@ export interface Bead {
   priority?: number;
   issue_type?: string;
   owner?: string;
+  assignee?: string | null;
+  labels?: string[];
   created_at?: string;
   created_by?: string;
   updated_at?: string;
@@ -220,7 +222,6 @@ export interface BeadDependency {
 }
 
 export interface BeadDetail extends Bead {
-  assignee?: string | null;
   dependencies?: BeadDependency[];
 }
 

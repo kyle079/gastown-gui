@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 import path from 'node:path';
 
 // The Express bridge server (gt/bd CLI -> HTTP/WS). Defaults match server.js.
-const BACKEND_PORT = process.env.GASTOWN_PORT ?? '8080';
+const BACKEND_PORT = process.env.GASTOWN_PORT ?? '7667';
 const BACKEND = `http://127.0.0.1:${BACKEND_PORT}`;
 
 // https://vitejs.dev/config/

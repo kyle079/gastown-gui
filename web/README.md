@@ -1,9 +1,8 @@
-# Gas Town — Web Console
+# Gas Town — Web Console (React rewrite)
 
-The modern React frontend for the Gas Town control console. It is the primary
-frontend target for the app now; the existing Express bridge server
-(`../server.js`) remains the backend and serves `dist/` in production, falling
-back to the legacy SPA only when `web/dist` has not been built yet.
+The modern React frontend for the Gas Town control console. This is the Phase 0
+foundation of a full rewrite of the GUI from vanilla JS to a React stack. The
+existing Express bridge server (`../server.js`) remains the backend, unchanged.
 
 **Stack:** React + TypeScript + Vite + Tailwind + TanStack Router + TanStack Query.
 
@@ -13,12 +12,12 @@ The Vite dev server proxies `/api` and `/ws` to the Express bridge, so run both:
 
 ```bash
 # Terminal 1 — the gt bridge backend (repo root)
-npm start                       # serves the API + built frontend on :8080
+npm start                       # serves the legacy app + the API on :7667
 
 # Terminal 2 — the React app (this directory)
 cd web
 npm install
-npm run dev                     # http://localhost:5173  (API proxied to :8080)
+npm run dev                     # http://localhost:5173  (API proxied to :7667)
 ```
 
 Point the proxy at a different backend port with `GASTOWN_PORT` (see `vite.config.ts`).
@@ -33,9 +32,6 @@ Point the proxy at a different backend port with `GASTOWN_PORT` (see `vite.confi
 | `npm run typecheck` | Types only, no emit |
 | `npm run lint` | ESLint (zero-warning gate) |
 
-From the repo root, the same lifecycle is available as `npm run build`,
-`npm run lint`, `npm run typecheck`, and `npm run test:web`.
-
 ## Layout
 
 ```
@@ -46,8 +42,8 @@ src/
     command-palette/    Command palette + provider (mod+k, g _ sequences)
     Surface.tsx         Page-level container
   features/
-    dashboard/          The reference surface
-    placeholder/        Temporary stand-ins for unfinished surfaces
+    dashboard/          The Phase 0 reference surface
+    placeholder/        Stand-ins for Phase 1 surfaces
   lib/
     api/                Typed fetch client + gt API types
     query/              QueryClient, keys, data hooks
@@ -61,9 +57,10 @@ src/
 
 Design tokens and the visual direction are documented in `../DESIGN.md`.
 
-## Runtime boundary
+## Phase boundary
 
-The React app is the intended runtime frontend. Some surfaces are still lighter
-than others, but the production server now prefers `web/dist` and only falls
-back to the legacy SPA when the build output is missing. During development,
-use the Vite proxy for HMR against the same Express backend.
+Phase 0 ships the scaffold, design system, primitives, keyboard layer, app shell,
+data layer, and **one** fully built surface (Dashboard) to prove the pattern.
+The other nav entries are route stubs that Phase 1 fills in. Production serving of
+`dist/` from the Express server (replacing the legacy SPA) is also a Phase 1 step;
+until then, develop via the Vite proxy.

@@ -52,7 +52,7 @@ npm link
 gastown-gui start --open
 ```
 
-Opens `http://localhost:8080` in your browser.
+Opens `http://localhost:7667` in your browser.
 
 ### 4. Verify Setup
 
@@ -88,7 +88,7 @@ Import the module from this repository's flake and enable it:
           services.gastown-gui = {
             enable = true;
             host = "127.0.0.1";
-            port = 8080;
+            port = 7667;
             openFirewall = false; # keep false when reverse-proxying locally
 
             # Optional: add runtime tools to PATH for service subprocesses
@@ -139,7 +139,7 @@ Service hardening defaults are enabled in the module (for example `NoNewPrivileg
 ## CLI Usage
 
 ```bash
-# Start server (default port 8080)
+# Start server (default port 7667)
 gastown-gui
 
 # Custom port
@@ -165,7 +165,7 @@ gastown-gui help
 
 | Option | Description | Default |
 |--------|-------------|---------|
-| `--port, -p` | Server port | 8080 |
+| `--port, -p` | Server port | 7667 |
 | `--host, -h` | Server host | 127.0.0.1 |
 | `--open, -o` | Open browser | false |
 | `--dev` | Development mode | false |
@@ -174,7 +174,7 @@ gastown-gui help
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `GASTOWN_PORT` | Server port | 8080 |
+| `GASTOWN_PORT` | Server port | 7667 |
 | `HOST` | Server host | 127.0.0.1 |
 | `GT_ROOT` | Gas Town root directory | ~/gt |
 | `GT_BIN` | Override `gt` executable path | auto-detect (`PATH`, `/opt/homebrew/bin/gt`, `/usr/local/bin/gt`) |
@@ -186,8 +186,8 @@ When `GT_BIN` or `BD_BIN` resolve outside the server's inherited `PATH`, the bac
 
 Register a **GitHub OAuth App** at https://github.com/settings/applications/new.
 
-- **Homepage URL:** your deployed app URL (e.g., `https://your-host:8080`)
-- **Authorization callback URL:** `https://your-host:8080/auth/github/callback`
+- **Homepage URL:** your deployed app URL (e.g., `https://your-host:7667`)
+- **Authorization callback URL:** `https://your-host:7667/auth/github/callback`
   - ⚠️ This URL must be set in the OAuth App settings AND match `GITHUB_OAUTH_CALLBACK_URL` exactly.
 
 | Variable | Description | Default |
@@ -233,7 +233,7 @@ All operations execute through the official `gt` and `bd` commands - the GUI nev
 ### Tech Stack
 
 - **Backend:** Node.js + Express
-- **Frontend:** React + TypeScript + Vite + Tailwind (with legacy SPA fallback when `web/dist` is absent)
+- **Frontend:** Vanilla JavaScript (no framework)
 - **Communication:** WebSocket for real-time updates
 - **Testing:** Vitest + Puppeteer E2E tests
 

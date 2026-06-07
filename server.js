@@ -21,7 +21,6 @@ import { fileURLToPath } from 'url';
 
 import { createApp } from './server/app/createApp.js';
 import { buildDefaultOrigins } from './server/app/corsOrigins.js';
-import { createFrontendDelivery } from './server/app/frontendDelivery.js';
 import { normalizeRigAgents } from './server/domain/agents/normalizeRigAgents.js';
 import {
   buildSessionRegistryFromTown,
@@ -68,7 +67,7 @@ const execFileAsync = promisify(execFile);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const PORT = process.env.GASTOWN_PORT || 8080;
+const PORT = process.env.GASTOWN_PORT || 7667;
 const HOST = process.env.HOST || '127.0.0.1';
 const HOME = process.env.HOME || os.homedir();
 const GT_ROOT = process.env.GT_ROOT || path.join(HOME, 'gt');
@@ -144,10 +143,6 @@ const mailFeedCache = {
   size: 0,
   events: null,
 };
-const frontendDelivery = createFrontendDelivery({
-  rootDir: __dirname,
-  staticFactory: express.static.bind(express),
-});
 
 // Activity feed cache — keyed off the events file mtime/size so we re-read only
 // when the file actually changes (the file is the single source of truth).
@@ -349,11 +344,12 @@ setInterval(() => {
   }
 }, CACHE_CLEANUP_INTERVAL);
 
-// Frontend assets. Prefer the React bundle when present, but keep the legacy
-// SPA runnable for local dev and recovery when web/dist has not been built yet.
-frontendDelivery.mount(app);
+// Middleware — React app (web/dist) takes priority for /assets JS/CSS bundles
+app.use(express.static(path.join(__dirname, 'web/dist')));
+app.use('/assets', express.static(path.join(__dirname, 'assets')));
 app.get('/', (req, res) => {
-  frontendDelivery.sendIndex(res);
+  res.setHeader('Cache-Control', 'no-store, must-revalidate');
+  res.sendFile(path.join(__dirname, 'web/dist/index.html'));
 });
 app.get('/favicon.ico', (req, res) => {
   res.sendFile(path.join(__dirname, 'assets', 'favicon.ico'));
@@ -1869,7 +1865,8 @@ registerTerminalRoutes(app, { wss });
 // SPA catch-all: serve React app for any non-API path not matched above
 app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api/') || req.path.startsWith('/ws')) return next();
-  frontendDelivery.sendIndex(res);
+  res.setHeader('Cache-Control', 'no-store, must-revalidate');
+  res.sendFile(path.join(__dirname, 'web/dist/index.html'));
 });
 
 // ============= WebSocket for Real-time Events =============
@@ -2021,7 +2018,6 @@ server.listen(PORT, HOST, () => {
 ╠══════════════════════════════════════════════════════════╣
 ║  URL:        http://${displayHost}:${PORT}                       ║
 ║  GT_ROOT:    ${GT_ROOT.padEnd(40)}║
-║  Frontend:   ${frontendDelivery.mode.padEnd(40)}║
 ║  WebSocket:  ws://${displayHost}:${PORT}/ws                      ║
 ╚══════════════════════════════════════════════════════════╝
   `);

@@ -14,7 +14,7 @@
  *   help          Show help
  *
  * Options:
- *   --port, -p    Port to run on (default: 8080)
+ *   --port, -p    Port to run on (default: 7667)
  *   --host, -h    Host to bind to (default: 127.0.0.1)
  *   --open, -o    Open browser after starting
  *   --dev         Enable development mode (auto-reload)
@@ -44,7 +44,7 @@ if (args.includes('--version') || args.includes('-v')) {
 
 const command = args.find(a => !a.startsWith('-')) || 'start';
 const options = {
-  port: getOption(['--port', '-p']) || process.env.GASTOWN_PORT || '8080',
+  port: getOption(['--port', '-p']) || process.env.GASTOWN_PORT || '7667',
   host: getOption(['--host', '-h']) || process.env.HOST || '127.0.0.1',
   open: hasFlag(['--open', '-o']),
   dev: hasFlag(['--dev']),
@@ -78,13 +78,13 @@ Commands:
   help          Show this help message
 
 Options:
-  --port, -p <port>   Port to run on (default: 8080, or GASTOWN_PORT env var)
+  --port, -p <port>   Port to run on (default: 7667, or GASTOWN_PORT env var)
   --host, -h <host>   Host to bind to (default: 127.0.0.1, or HOST env var)
   --open, -o          Open browser after starting
   --dev               Enable development mode
 
 Environment Variables:
-  GASTOWN_PORT Server port (default: 8080)
+  GASTOWN_PORT Server port (default: 7667)
   HOST         Server host (default: 127.0.0.1)
   GT_ROOT      Gas Town root directory (default: ~/gt)
 

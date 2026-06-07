@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { Convoy, TrackedBead } from '@/lib/api/types';
-import { assignees, convoySignal, shortAgent, sortConvoys, workTotals } from './workState';
+import { assignees, convoySignal, groupConvoysByState, shortAgent, sortConvoys, workTotals } from './workState';
 
 function bead(partial: Partial<TrackedBead> = {}): TrackedBead {
   return { id: 'b', title: 't', status: 'open', ...partial };
@@ -45,6 +45,22 @@ describe('sortConvoys', () => {
 
     const order = sortConvoys([done, queuedOld, active, queuedNew, blocked]).map((c) => c.id);
     expect(order).toEqual(['blk', 'act', 'q2', 'q1', 'dn']);
+  });
+});
+
+describe('groupConvoysByState', () => {
+  it('buckets convoys into state lanes using sorted order', () => {
+    const blocked = convoy({ id: 'blk', tracked: [bead({ blocked: true })] });
+    const active = convoy({ id: 'act', tracked: [bead({ status: 'hooked' })] });
+    const queued = convoy({ id: 'q', tracked: [bead({ status: 'open' })] });
+    const done = convoy({ id: 'dn', completed: 1, total: 1, tracked: [bead({ status: 'closed' })] });
+
+    expect(groupConvoysByState([done, queued, active, blocked])).toEqual({
+      blocked: [blocked],
+      active: [active],
+      queued: [queued],
+      done: [done],
+    });
   });
 });
 

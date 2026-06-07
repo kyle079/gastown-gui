@@ -1,6 +1,6 @@
 import type { Tone } from '@/components/primitives';
 import type { Escalation, MailMessage } from '@/lib/api/types';
-import { isEscalation, mailSignal, severityOf, severityTone, type Severity } from './mailSignal';
+import { isEscalation, mailSignal, severityTone, type Severity } from './mailSignal';
 
 export type QueueFilter = 'all' | 'action' | 'unread' | 'escalations';
 export type QueueActionState = 'needs_ack' | 'acked' | 'needs_review' | 'unread' | 'read';

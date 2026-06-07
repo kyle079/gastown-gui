@@ -14,7 +14,7 @@ function mail(overrides: Partial<MailMessage>): MailMessage {
   };
 }
 
-function escalation(overrides: Partial<Escalation>): Escalation {
+function escalation(overrides: Partial<Escalation> = {}): Escalation {
   return {
     id: 'esc-1',
     title: 'ESCALATION HIGH: Witness blocked',

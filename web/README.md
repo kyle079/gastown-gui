@@ -87,3 +87,34 @@ The Express bridge prefers `web/dist/index.html` and serves this React app when
 that build artifact exists. If the dist output is absent, the server falls back
 to the legacy root-level SPA. Develop the React app through the Vite proxy; ship
 it by building `dist/`.
+
+## Tronvercel Consumption
+
+Gas Town's current token layer and several local primitives are already API- and
+style-aligned with the shared `@tronvercel/ui` library. The safe direct-consumption
+subset is:
+
+- `Button`
+- `Input`
+- `Badge`, `StatusDot`, `StatusPill`
+- `Panel`, `PanelHeader`, `PanelBody`
+- `Kbd`
+- `Spinner`
+
+Direct package consumption is currently blocked, though: the GitHub-distributed
+`@tronvercel/ui` artifact available to this repo does not include its built `dist/`
+outputs, so TypeScript/build resolution fails for consumers even though the package
+metadata advertises those exports.
+
+The local primitive folder remains as the app boundary, but those files should be
+thin adapters or re-exports once the upstream package is consumable. App-specific
+contracts still live locally where Gas Town has not yet aligned with upstream
+Tronvercel APIs:
+
+- `Dialog` keeps the simplified `open/onClose/title/footer` wrapper used across the app.
+- `Select` remains native because current surfaces depend on `<select>/<option>` semantics.
+- `Table` remains local because it owns Gas Town's responsive card/table dual rendering.
+- `ToastProvider` remains local because the app currently exposes a `notify()` hook rather than Tronvercel's Radix toast primitives.
+
+Any new reusable primitive should land in Tronvercel first or alongside the
+consumer change rather than growing as a one-off component in this repo.

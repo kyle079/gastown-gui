@@ -41,7 +41,7 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
       group: 'Navigation',
       glyph: item.glyph,
       shortcut: `g ${item.seq}`,
-      keywords: [item.label, 'goto', 'open'],
+      keywords: [item.label, item.objectLabel, item.section, 'goto', 'open'],
       run: () => void navigate({ to: item.path }),
     }));
 

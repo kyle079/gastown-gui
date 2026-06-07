@@ -4,6 +4,8 @@ import { NAV_ITEMS } from './navigation';
 import { useStatus } from '@/lib/query/hooks';
 import { StatusDot } from '@/components/primitives';
 
+const NAV_SECTIONS = ['Run', 'Coordinate', 'Inspect', 'Reference'] as const;
+
 /**
  * Primary navigation rail. Quiet, structural, keyboard-discoverable
  * (each item shows its `g _` sequence). One job: move between surfaces.
@@ -39,42 +41,54 @@ export function Sidebar({
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto p-2">
-        {NAV_ITEMS.map((item) => {
-          const active =
-            item.path === '/'
-              ? location.pathname === '/'
-              : location.pathname.startsWith(item.path);
-          return (
-            <Link
-              key={item.path}
-              to={item.path}
-              onClick={onNavigate}
-              className={cn(
-                // Roomier tap target in the mobile drawer; dense on desktop.
-                'group flex items-center gap-2.5 rounded px-2.5 py-2.5 text-sm transition-colors lg:py-1.5',
-                active ? 'bg-raised text-fg' : 'text-muted hover:bg-raised/60 hover:text-fg',
-              )}
-            >
-              <span
-                className={cn(
-                  'w-4 text-center font-mono text-xs',
-                  active ? 'text-accent' : 'text-faint group-hover:text-muted',
-                )}
-              >
-                {item.glyph}
-              </span>
-              <span className="flex-1">{item.label}</span>
-              {!item.ready && (
-                <span className="font-mono text-2xs text-faint" title="Arrives in Phase 1">
-                  soon
-                </span>
-              )}
-              <kbd className="font-mono text-2xs text-faint opacity-0 transition-opacity group-hover:opacity-100">
-                g {item.seq}
-              </kbd>
-            </Link>
-          );
-        })}
+        {NAV_SECTIONS.map((section) => (
+          <div key={section} className="mb-4 last:mb-0">
+            <div className="px-2.5 pb-1.5 font-mono text-2xs uppercase tracking-[0.18em] text-faint">
+              {section}
+            </div>
+            <div className="space-y-1">
+              {NAV_ITEMS.filter((item) => item.section === section).map((item) => {
+                const active =
+                  item.path === '/'
+                    ? location.pathname === '/'
+                    : location.pathname.startsWith(item.path);
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    onClick={onNavigate}
+                    className={cn(
+                      // Roomier tap target in the mobile drawer; dense on desktop.
+                      'group flex items-center gap-2.5 rounded px-2.5 py-2.5 text-sm transition-colors lg:py-1.5',
+                      active ? 'bg-raised text-fg' : 'text-muted hover:bg-raised/60 hover:text-fg',
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        'w-4 self-start pt-0.5 text-center font-mono text-xs',
+                        active ? 'text-accent' : 'text-faint group-hover:text-muted',
+                      )}
+                    >
+                      {item.glyph}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate">{item.label}</span>
+                      <span className="block truncate text-2xs text-faint">{item.objectLabel}</span>
+                    </span>
+                    {!item.ready && (
+                      <span className="font-mono text-2xs text-faint" title="Arrives in Phase 1">
+                        soon
+                      </span>
+                    )}
+                    <kbd className="self-start pt-0.5 font-mono text-2xs text-faint opacity-0 transition-opacity group-hover:opacity-100">
+                      g {item.seq}
+                    </kbd>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
       {/* Service health footer */}

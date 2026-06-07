@@ -26,7 +26,12 @@ export function KeyboardPanel() {
         <div className="divide-hairline">
           {NAV_ITEMS.map((item) => (
             <div key={item.path} className="flex items-center justify-between gap-3 py-1.5">
-              <span className="text-sm text-muted">{item.label}</span>
+              <span className="min-w-0">
+                <span className="block text-sm text-muted">{item.label}</span>
+                <span className="block truncate font-mono text-2xs text-faint">
+                  {item.objectLabel}
+                </span>
+              </span>
               <span className="flex shrink-0 items-center gap-1">
                 <Kbd>g</Kbd>
                 <Kbd>{item.seq}</Kbd>

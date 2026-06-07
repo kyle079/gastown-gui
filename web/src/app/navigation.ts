@@ -9,8 +9,12 @@
 export interface NavItem {
   path: string;
   label: string;
+  /** Secondary object-type noun so the operator still knows what's underneath. */
+  objectLabel: string;
   /** Mono glyph — a single technical character, never an icon-font. */
   glyph: string;
+  /** Intent-focused grouping in the rail/palette docs. */
+  section: 'Run' | 'Coordinate' | 'Inspect' | 'Reference';
   /** Sequence hint shown in the palette (chord after `g`). */
   seq: string;
   /** False until the surface is built. */
@@ -18,15 +22,15 @@ export interface NavItem {
 }
 
 export const NAV_ITEMS: NavItem[] = [
-  { path: '/', label: 'Dashboard', glyph: '◇', seq: 'd', ready: true },
-  { path: '/activity', label: 'Activity', glyph: '≋', seq: 'a', ready: true },
-  { path: '/rigs', label: 'Rigs', glyph: '▤', seq: 'r', ready: true },
-  { path: '/work', label: 'Work', glyph: '◷', seq: 'w', ready: true },
-  { path: '/catalog', label: 'Catalog', glyph: '⊟', seq: 'c', ready: true },
-  { path: '/prs', label: 'Pull requests', glyph: '⌥', seq: 'p', ready: true },
-  { path: '/mail', label: 'Mail', glyph: '✉', seq: 'm', ready: true },
-  { path: '/escalations', label: 'Escalations', glyph: '!', seq: 'e', ready: true },
-  { path: '/terminal', label: 'Terminal', glyph: '⌗', seq: 't', ready: true },
-  { path: '/graph', label: 'Graph', glyph: '⬡', seq: 'g', ready: true },
-  { path: '/help', label: 'Help', glyph: '?', seq: 'h', ready: true },
+  { path: '/', label: 'Monitor', objectLabel: 'Dashboard', glyph: '◇', section: 'Run', seq: 'd', ready: true },
+  { path: '/activity', label: 'Watch', objectLabel: 'Activity feed', glyph: '≋', section: 'Run', seq: 'a', ready: true },
+  { path: '/escalations', label: 'Unblock', objectLabel: 'Escalations', glyph: '!', section: 'Run', seq: 'e', ready: true },
+  { path: '/rigs', label: 'Direct', objectLabel: 'Rigs and agents', glyph: '▤', section: 'Coordinate', seq: 'r', ready: true },
+  { path: '/work', label: 'Track', objectLabel: 'Convoys and work', glyph: '◷', section: 'Coordinate', seq: 'w', ready: true },
+  { path: '/mail', label: 'Message', objectLabel: 'Mail', glyph: '✉', section: 'Coordinate', seq: 'm', ready: true },
+  { path: '/prs', label: 'Review', objectLabel: 'Pull requests', glyph: '⌥', section: 'Inspect', seq: 'p', ready: true },
+  { path: '/catalog', label: 'Browse', objectLabel: 'Issues, PRs, formulas', glyph: '⊟', section: 'Inspect', seq: 'c', ready: true },
+  { path: '/graph', label: 'Trace', objectLabel: 'Dependency graph', glyph: '⬡', section: 'Inspect', seq: 'g', ready: true },
+  { path: '/terminal', label: 'Command', objectLabel: 'Terminal', glyph: '⌗', section: 'Reference', seq: 't', ready: true },
+  { path: '/help', label: 'Learn', objectLabel: 'Help', glyph: '?', section: 'Reference', seq: 'h', ready: true },
 ];

@@ -13,7 +13,7 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
   const current =
     NAV_ITEMS.find((n) =>
       n.path === '/' ? location.pathname === '/' : location.pathname.startsWith(n.path),
-    )?.label ?? 'Gas Town';
+    ) ?? null;
 
   return (
     <header
@@ -30,7 +30,14 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
         >
           ☰
         </button>
-        <h1 className="truncate text-sm font-medium text-fg">{current}</h1>
+        <div className="min-w-0">
+          <h1 className="truncate text-sm font-medium text-fg">
+            {current?.label ?? 'Gas Town'}
+          </h1>
+          {current && (
+            <p className="truncate font-mono text-2xs text-faint">{current.objectLabel}</p>
+          )}
+        </div>
         {isFetching && <Spinner className="h-3 w-3 shrink-0" />}
       </div>
 

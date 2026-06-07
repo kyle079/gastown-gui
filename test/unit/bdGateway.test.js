@@ -57,6 +57,20 @@ describe('BDGateway', () => {
     expect(runner.calls[0].command).toBe('/opt/homebrew/bin/bd');
   });
 
+  it('supports separate command root and beads directory', async () => {
+    const runner = new FakeRunner();
+    const gateway = new BDGateway({
+      runner,
+      workspaceRoot: '/tmp/repo',
+      beadsDir: '/tmp/repo/.beads',
+    });
+
+    await gateway.exec(['list', '--json']);
+
+    expect(runner.calls[0].options.cwd).toBe('/tmp/repo');
+    expect(runner.calls[0].options.env).toEqual({ BEADS_DIR: '/tmp/repo/.beads' });
+  });
+
   it('list() probes no-daemon support once and reuses cached support', async () => {
     const runner = new FakeRunner();
     runner.queue(okResult('bd v0.44.0'));

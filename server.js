@@ -71,6 +71,8 @@ const PORT = process.env.GASTOWN_PORT || 7667;
 const HOST = process.env.HOST || '127.0.0.1';
 const HOME = process.env.HOME || os.homedir();
 const GT_ROOT = process.env.GT_ROOT || path.join(HOME, 'gt');
+const REPO_ROOT = process.env.GASTOWN_GUI_ROOT || __dirname;
+const REPO_BEADS_DIR = path.join(REPO_ROOT, '.beads');
 const GT_EXECUTABLE = resolveExecutable({
   command: 'gt',
   envVarName: 'GT_BIN',
@@ -89,7 +91,12 @@ const commandRunner = new CommandRunner({
   }),
 });
 const gtGateway = new GTGateway({ runner: commandRunner, gtRoot: GT_ROOT, executable: GT_EXECUTABLE });
-const bdGateway = new BDGateway({ runner: commandRunner, gtRoot: GT_ROOT, executable: BD_EXECUTABLE });
+const bdGateway = new BDGateway({
+  runner: commandRunner,
+  workspaceRoot: REPO_ROOT,
+  beadsDir: REPO_BEADS_DIR,
+  executable: BD_EXECUTABLE,
+});
 const tmuxGateway = new TmuxGateway({ runner: commandRunner });
 const backendCache = new CacheRegistry();
 const convoyService = new ConvoyService({
@@ -532,14 +539,11 @@ async function executeBD(args, options = {}) {
   const cmd = `${BD_EXECUTABLE} ${args.join(' ')}`;
   console.log(`[BD] Executing: ${cmd}`);
 
-  // Set BEADS_DIR to ensure bd finds the database
-  const beadsDir = path.join(GT_ROOT, '.beads');
-
   try {
     const { stdout } = await execFileAsync(BD_EXECUTABLE, args, {
-      cwd: options.cwd || GT_ROOT,
+      cwd: options.cwd || REPO_ROOT,
       timeout: options.timeout || 30000,
-      env: { ...commandRunner._baseEnv, BEADS_DIR: beadsDir, ...options.env }
+      env: { ...commandRunner._baseEnv, BEADS_DIR: REPO_BEADS_DIR, ...options.env }
     });
 
     return { success: true, data: String(stdout || '').trim() };

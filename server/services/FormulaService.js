@@ -10,6 +10,21 @@ function parseJsonOrNull(text) {
   }
 }
 
+function normalizeFormulaInputs(formulaArgs) {
+  if (!formulaArgs) return [];
+
+  if (Array.isArray(formulaArgs)) {
+    return formulaArgs
+      .map((value) => String(value || '').trim())
+      .filter(Boolean);
+  }
+
+  return String(formulaArgs)
+    .split(/[\n,]+/)
+    .map((value) => value.trim())
+    .filter(Boolean);
+}
+
 export class FormulaService {
   constructor({ gtGateway, bdGateway, cache, emit, formulasDir } = {}) {
     this._gt = gtGateway;
@@ -92,13 +107,37 @@ export class FormulaService {
   async use({ name, target, args: formulaArgs } = {}) {
     const cmdArgs = ['formula', 'run', name];
     if (target) cmdArgs.push('--rig', target);
-    if (formulaArgs) cmdArgs.push('--args', formulaArgs);
+    for (const value of normalizeFormulaInputs(formulaArgs)) {
+      cmdArgs.push('--set', value);
+    }
 
     const result = await this._gt.exec(cmdArgs, { timeoutMs: 30000 });
     if (result.ok) {
       this._emit?.('formula_used', { name, target });
     }
     return { ok: result.ok, raw: (result.stdout || '').trim(), error: result.error };
+  }
+
+  async preview({ name, target, args: formulaArgs } = {}) {
+    const cmdArgs = ['formula', 'run', name, '--dry-run'];
+    if (target) cmdArgs.push('--rig', target);
+    for (const value of normalizeFormulaInputs(formulaArgs)) {
+      cmdArgs.push('--set', value);
+    }
+
+    const result = await this._gt.exec(cmdArgs, { timeoutMs: 30000 });
+    const raw = `${result.stdout || ''}${result.stderr || ''}`.trim();
+
+    if (!result.ok) {
+      return { ok: false, error: result.error || raw || 'Dry-run failed' };
+    }
+
+    return {
+      ok: true,
+      preview: raw,
+      vars: normalizeFormulaInputs(formulaArgs),
+      target: target || null,
+    };
   }
 
   async update({ name, description, template } = {}) {

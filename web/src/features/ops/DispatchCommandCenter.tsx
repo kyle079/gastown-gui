@@ -7,10 +7,11 @@ import {
   PanelBody,
   PanelHeader,
   Select,
+  Textarea,
   useToast,
 } from '@/components/primitives';
 import { ApiError } from '@/lib/api/client';
-import { useBeadDetail, useBeadSearch, useSling, useTargets } from '@/lib/query/hooks';
+import { useAppendBeadNotes, useBeadDetail, useBeadSearch, useSling, useTargets } from '@/lib/query/hooks';
 import { priorityLabel, priorityTone, statusLabel, statusTone } from '@/features/catalog/catalogMeta';
 import { compactAddress, rankTargets } from './opsModel';
 
@@ -24,11 +25,13 @@ export function DispatchCommandCenter({
   const { notify } = useToast();
   const { data: targets } = useTargets();
   const sling = useSling();
+  const appendNotes = useAppendBeadNotes();
   const [query, setQuery] = useState('');
   const [beadId, setBeadId] = useState('');
   const [selectedBeadId, setSelectedBeadId] = useState('');
   const [target, setTarget] = useState('');
   const [formulaArgs, setFormulaArgs] = useState('');
+  const [operatorNote, setOperatorNote] = useState('');
 
   const { data: searchResults } = useBeadSearch(query);
   const { data: bead } = useBeadDetail(selectedBeadId || beadId.trim());
@@ -65,6 +68,7 @@ export function DispatchCommandCenter({
           setSelectedBeadId('');
           setTarget('');
           setFormulaArgs('');
+          setOperatorNote('');
         },
       },
     );
@@ -160,7 +164,7 @@ export function DispatchCommandCenter({
             value={formulaArgs}
             onChange={(e) => setFormulaArgs(e.target.value)}
             className="font-mono"
-            placeholder="base_branch=master"
+            placeholder="issue=gg-123, base_branch=master"
           />
         </label>
 
@@ -216,6 +220,54 @@ export function DispatchCommandCenter({
                 ))}
               </div>
             )}
+          </div>
+
+          <div className="mt-4 border-t border-line pt-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="font-mono text-2xs uppercase tracking-wider text-faint">Operator Handoff Context</div>
+                <div className="mt-1 text-sm text-muted">
+                  Append dispatch notes directly onto the bead so context survives handoffs and session loss.
+                </div>
+              </div>
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={!bead?.id || !operatorNote.trim() || appendNotes.isPending}
+                onClick={() => {
+                  if (!bead?.id || !operatorNote.trim()) return;
+                  appendNotes.mutate(
+                    { beadId: bead.id, notes: operatorNote.trim() },
+                    {
+                      onSuccess: () => {
+                        notify(`Saved note to ${bead.id}`, 'ok');
+                        setOperatorNote('');
+                      },
+                      onError: (err) => notify(err instanceof Error ? err.message : 'Could not save note', 'danger'),
+                    },
+                  );
+                }}
+              >
+                {appendNotes.isPending ? 'Saving…' : 'Append note'}
+              </Button>
+            </div>
+
+            {bead?.notes && (
+              <div className="mt-3 rounded border border-line bg-surface px-3 py-2.5">
+                <div className="font-mono text-2xs text-faint">Current notes</div>
+                <div className="mt-1 whitespace-pre-wrap text-xs text-muted">{bead.notes}</div>
+              </div>
+            )}
+
+            <label className="mt-3 flex flex-col gap-1.5">
+              <span className="text-2xs uppercase tracking-wider text-faint">New handoff note</span>
+              <Textarea
+                value={operatorNote}
+                onChange={(e) => setOperatorNote(e.target.value)}
+                rows={4}
+                placeholder="What should the next operator or worker know before this bead moves?"
+              />
+            </label>
           </div>
 
           {error && <div className="mt-3 font-mono text-xs text-danger">{error}</div>}

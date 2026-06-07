@@ -11,11 +11,15 @@ export const queryKeys = {
   targets: ['targets'] as const,
   beads: (status: string) => ['beads', status] as const,
   beadDetail: (beadId: string) => ['bead-detail', beadId] as const,
+  beadSearch: (query: string) => ['bead-search', query] as const,
   beadGraph: ['bead-graph'] as const,
   pullRequests: (state: string) => ['pull-requests', state] as const,
   pullRequestDetail: (owner: string, repo: string, number: number) =>
     ['pull-request-detail', owner, repo, number] as const,
   formulas: ['formulas'] as const,
+  formulaDetail: (name: string) => ['formula-detail', name] as const,
+  formulaPreview: (name: string, target: string, args: string) =>
+    ['formula-preview', name, target, args] as const,
   schedulerStatus: ['scheduler-status'] as const,
   dogs: ['dogs'] as const,
   escalations: ['escalations'] as const,

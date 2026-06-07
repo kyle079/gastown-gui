@@ -15,6 +15,7 @@ describe('BeadService', () => {
         calls.push(opts);
         return { ok: true, beadId: 'gt-abc123', raw: 'Created bead: gt-abc123' };
       },
+      appendNotes: async ({ beadId, notes }) => ({ ok: true, raw: `${beadId}:${notes}` }),
     };
 
     const service = new BeadService({
@@ -49,6 +50,7 @@ describe('BeadService', () => {
         calls.push(opts);
         return { ok: true, beadId: 'bead-1', raw: 'Created bead: bead-1' };
       },
+      appendNotes: async ({ beadId, notes }) => ({ ok: true, raw: `${beadId}:${notes}` }),
     };
 
     const service = new BeadService({ bdGateway });
@@ -62,11 +64,31 @@ describe('BeadService', () => {
       list: async () => ({ ok: true, data: [] }),
       search: async () => ({ ok: true, data: [] }),
       create: async () => ({ ok: true, beadId: 'bead-1', raw: '' }),
+      appendNotes: async ({ beadId, notes }) => ({ ok: true, raw: `${beadId}:${notes}` }),
       show: async () => ({ ok: false, error: 'not found' }),
     };
 
     const service = new BeadService({ bdGateway });
     await expect(service.get('missing')).resolves.toEqual({ ok: false });
   });
-});
 
+  it('appendNotes() validates and delegates to the gateway', async () => {
+    const calls = [];
+    const bdGateway = {
+      list: async () => ({ ok: true, data: [] }),
+      search: async () => ({ ok: true, data: [] }),
+      show: async () => ({ ok: false }),
+      create: async () => ({ ok: true, beadId: 'bead-1', raw: '' }),
+      appendNotes: async (opts) => {
+        calls.push(opts);
+        return { ok: true, raw: 'updated' };
+      },
+    };
+
+    const service = new BeadService({ bdGateway });
+    const result = await service.appendNotes({ beadId: 'gg-1', notes: 'Need handoff context' });
+
+    expect(result).toEqual({ ok: true, raw: 'updated' });
+    expect(calls[0]).toEqual({ beadId: 'gg-1', notes: 'Need handoff context' });
+  });
+});

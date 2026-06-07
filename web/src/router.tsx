@@ -16,6 +16,7 @@ import { MailMessagePage } from '@/features/mail/MailMessagePage';
 import { EscalationsSurface } from '@/features/mail/EscalationsSurface';
 import { WorkSurface } from '@/features/work/WorkSurface';
 import { ConvoyDetailPage } from '@/features/work/ConvoyDetailPage';
+import { OpsSurface } from '@/features/ops/OpsSurface';
 import { CatalogRedirect } from '@/features/catalog/CatalogRedirect';
 import { FormulasView, validateFormulasSearch } from '@/features/catalog/FormulasView';
 import { IssuesView, validateIssuesSearch } from '@/features/catalog/IssuesView';
@@ -93,6 +94,12 @@ const workRoute = createRoute({
   component: WorkSurface,
 });
 
+const opsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/ops',
+  component: OpsSurface,
+});
+
 const workDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/work/$convoyId',
@@ -168,6 +175,7 @@ const routeTree = rootRoute.addChildren([
   formulasRoute,
   rigsRoute.addChildren([rigDetailRoute]),
   workRoute,
+  opsRoute,
   workDetailRoute,
   prsRoute,
   prDetailRoute,

@@ -2,9 +2,6 @@
  * Single source of truth for primary navigation.
  * Consumed by the router skeleton, the sidebar, and the command palette so a
  * new surface is wired everywhere by adding one entry.
- *
- * Phase 0 ships Dashboard as the reference surface; the rest are route stubs
- * that Phase 1 fills in.
  */
 export interface NavItem {
   path: string;

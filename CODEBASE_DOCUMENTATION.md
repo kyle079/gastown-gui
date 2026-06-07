@@ -7,27 +7,35 @@
 ```
 ENTRY:    server.js - Express bridge server (gt/bd CLI → HTTP/WS)
 CLI:      bin/cli.js - npx gastown-gui entry point
-FRONTEND: js/ - Legacy browser SPA (vanilla JS, no framework) — being rewritten
-WEB:      web/ - NEW React/TS/Vite/Tailwind/TanStack frontend (Phase 0 foundation)
+WEB:      web/ - Primary React/TS/Vite/Tailwind/TanStack frontend
+LEGACY:   js/ + css/ + index.html - Legacy SPA fallback when web/dist is absent
 BACKEND:  server/ - Refactored backend modules (services, gateways, routes)
-STYLES:   css/ - CSS custom properties + component styles (legacy SPA)
 TESTS:    test/ - Vitest unit + integration, Puppeteer E2E
 CONFIG:   vitest.config.js, vitest.unit.config.js, package.json, flake.nix
 ASSETS:   assets/ - Favicons + screenshots
 DOCS:     docs/, refactoring-analysis/, CLI-COMPATIBILITY.md, PRODUCT.md, DESIGN.md
 ```
 
-## Frontend — React Rewrite (web/)
+## Frontend — Primary React Console (web/)
 
-The GUI is being rewritten from the vanilla `js/` SPA to a modern React stack.
-The Express bridge server is unchanged and remains the backend.
+The React app is the current information architecture for the console. The
+Express bridge server remains the backend and serves `web/dist` when available.
 
 ```
 web/ - React + TS + Vite + Tailwind + TanStack Router/Query app
 ├─ src/app/          App shell, sidebar, top bar, navigation config
 ├─ src/components/primitives/   TS+Tailwind component library (tokens-driven)
 ├─ src/components/command-palette/  Command palette + mod+k / `g _` keyboard layer
-├─ src/features/dashboard/      Phase 0 reference surface (fed by TanStack Query)
+├─ src/features/activity/       Live event stream
+├─ src/features/catalog/        Issues + formulas surface
+├─ src/features/dashboard/      Town overview surface (status, rigs, services)
+├─ src/features/fleet/          Rigs master/detail + infrastructure panels
+├─ src/features/graph/          Bead dependency graph
+├─ src/features/help/           Concepts, workflow, readiness
+├─ src/features/mail/           Inbox + escalations + compose/detail flows
+├─ src/features/prs/            Pull request list + detail
+├─ src/features/terminal/       Browser terminal sessions
+├─ src/features/work/           Convoys, dispatch, convoy detail
 ├─ src/lib/api/      Typed fetch client + gt API types
 ├─ src/lib/query/    QueryClient, keys, data hooks (useStatus, useMail)
 ├─ src/lib/keyboard/ Hotkey + key-sequence primitives
@@ -37,6 +45,14 @@ web/ - React + TS + Vite + Tailwind + TanStack Router/Query app
 
 Dev: `cd web && npm run dev` (proxies `/api` + `/ws` to the Express bridge on :7667).
 Design direction + tokens are documented in `DESIGN.md`; product brief in `PRODUCT.md`.
+
+## Frontend — Delivery Behavior
+
+```
+server/app/frontendDelivery.js
+├─ Prefers web/dist/index.html when present   → mode: react-dist
+└─ Falls back to root index.html when absent  → mode: legacy-spa
+```
 
 ## Backend — Entry & App
 
@@ -117,7 +133,7 @@ server/routes/github.js - GET /api/github/{prs,issues,repos}
 server/routes/targets.js - GET /api/targets
 ```
 
-## Frontend — Core
+## Frontend — Legacy SPA Core
 
 ```
 js/app.js - App init, tab routing, event wiring, status polling
@@ -125,7 +141,7 @@ js/api.js - HTTP client for /api/* + WebSocket client class
 js/state.js - Global reactive state store, component subscriptions
 ```
 
-## Frontend — Components
+## Frontend — Legacy SPA Components
 
 ```
 js/components/dashboard.js - Main dashboard layout + tab switching
@@ -148,7 +164,7 @@ js/components/autocomplete.js - Search input with suggestions
 js/components/toast.js - Toast notification system
 ```
 
-## Frontend — Shared & Utils
+## Frontend — Legacy SPA Shared & Utils
 
 ```
 js/shared/agent-types.js - Agent type definitions, icons, colors
@@ -236,5 +252,7 @@ refactoring-analysis/trace/ - Sanitized prompt/trace exports
 - **Gateway pattern:** CLI tools (gt, bd, gh, git, tmux) wrapped in gateway classes; services compose gateways; routes call services
 - **Safe execution:** All CLI calls use `execFile` (no shell) + `SafeSegment` validation — prevents injection
 - **Cache + invalidation:** `CacheRegistry` with TTL; `EventBus` triggers cache clears on mutations
-- **Frontend:** Vanilla JS SPA, no build step. Components render via innerHTML, subscribe to global state
+- **Frontend delivery:** Express serves the built React app when available and falls back to the legacy SPA otherwise
+- **React frontend:** TanStack Router drives the current IA; TanStack Query feeds presentational feature surfaces
+- **Legacy frontend:** The vanilla JS SPA remains in-tree as a fallback path and compatibility surface
 - **Service controls:** Witness/refinery require a `rig` parameter for start/stop/restart; mayor/deacon do not

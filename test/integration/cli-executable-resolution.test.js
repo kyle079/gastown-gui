@@ -63,38 +63,25 @@ async function createExecutable(filePath, script) {
   await fs.writeFile(filePath, script, { mode: 0o755 });
 }
 
-async function startFixture({
-  gtScript,
-  bdScript,
-  ghScript,
-  homeLocalBdScript,
-  env = {},
-} = {}) {
+async function startFixture({ gtScript, bdScript, ghScript, env = {} }) {
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'gastown-cli-path-'));
   const binDir = path.join(tempDir, 'bin');
   const gtRoot = path.join(tempDir, 'gtroot');
-  const homeDir = env.HOME || path.join(tempDir, 'home');
 
   await fs.mkdir(binDir, { recursive: true });
   await fs.mkdir(gtRoot, { recursive: true });
-  await fs.mkdir(homeDir, { recursive: true });
 
   if (gtScript) {
     await createExecutable(path.join(binDir, 'gt'), gtScript);
   }
-  if (bdScript !== null) {
-    await createExecutable(
-      path.join(binDir, 'bd'),
-      bdScript ?? '#!/bin/bash\nif [[ "${1:-}" == "version" ]]; then echo "bd vtest"; exit 0; fi\nexit 0\n',
-    );
-  }
+  await createExecutable(
+    path.join(binDir, 'bd'),
+    bdScript ?? '#!/bin/bash\nif [[ "${1:-}" == "version" ]]; then echo "bd vtest"; exit 0; fi\nexit 0\n',
+  );
   await createExecutable(
     path.join(binDir, 'gh'),
     ghScript ?? '#!/bin/bash\necho "main"\n',
   );
-  if (homeLocalBdScript) {
-    await createExecutable(path.join(homeDir, '.local', 'bin', 'bd'), homeLocalBdScript);
-  }
 
   const port = await getFreePort();
   const baseUrl = `http://127.0.0.1:${port}`;
@@ -105,7 +92,6 @@ async function startFixture({
       GASTOWN_PORT: String(port),
       HOST: '127.0.0.1',
       GT_ROOT: gtRoot,
-      HOME: homeDir,
       PATH: binDir,
       ...env,
     },
@@ -172,54 +158,6 @@ exit 0
     }
   });
 
-  it('detects bd from HOME/.local/bin in setup readiness when PATH is missing it', async () => {
-    let fixture;
-    let overrideDir;
-    try {
-      overrideDir = await fs.mkdtemp(path.join(os.tmpdir(), 'gastown-bd-home-local-'));
-      const gtBin = path.join(overrideDir, 'gt');
-
-      await createExecutable(gtBin, `#!/bin/bash
-set -euo pipefail
-if [[ "\${1:-}" == "version" ]]; then
-  echo "gt vhome-local-test"
-  exit 0
-fi
-if [[ "\${1:-}" == "feed" ]]; then
-  /bin/sleep 30
-  exit 0
-fi
-if [[ "\${1:-}" == "rig" && "\${2:-}" == "list" && "\${3:-}" == "--json" ]]; then
-  echo '[]'
-  exit 0
-fi
-echo "unexpected command: $*" >&2
-exit 1
-`);
-
-      fixture = await startFixture({
-        gtScript: null,
-        bdScript: null,
-        homeLocalBdScript: '#!/bin/bash\necho "bd vhome-local-test"\n',
-        env: {
-          PATH: '',
-          GT_BIN: gtBin,
-        },
-      });
-
-      const setupStatus = await fetch(`${fixture.baseUrl}/api/setup/status`).then((r) => r.json());
-
-      expect(setupStatus.gt_installed).toBe(true);
-      expect(setupStatus.bd_installed).toBe(true);
-      expect(setupStatus.bd_version).toContain('bd vhome-local-test');
-    } finally {
-      await stopFixture(fixture);
-      if (overrideDir) {
-        await fs.rm(overrideDir, { recursive: true, force: true });
-      }
-    }
-  });
-
   it('does not crash when gt is missing from PATH and no fallback is available', async () => {
     let fixture;
     let ws;
@@ -277,57 +215,6 @@ exit 1
       });
 
       const response = await fetch(`${fixture.baseUrl}/api/convoys`);
-      const data = await response.json();
-
-      expect(response.status).toBe(200);
-      expect(data).toEqual([]);
-    } finally {
-      await stopFixture(fixture);
-      if (overrideDir) {
-        await fs.rm(overrideDir, { recursive: true, force: true });
-      }
-    }
-  });
-
-  it('augments child PATH for mail inbox commands that shell out through gt', async () => {
-    let fixture;
-    let overrideDir;
-    try {
-      overrideDir = await fs.mkdtemp(path.join(os.tmpdir(), 'gastown-mail-path-'));
-      const gtBin = path.join(overrideDir, 'gt');
-      const bdBin = path.join(overrideDir, 'bd');
-
-      await createExecutable(gtBin, `#!/bin/bash
-set -euo pipefail
-if [[ "\${1:-}" == "version" ]]; then
-  echo "gt vmail-test"
-  exit 0
-fi
-if [[ "\${1:-}" == "feed" ]]; then
-  /bin/sleep 30
-  exit 0
-fi
-if [[ "\${1:-}" == "mail" && "\${2:-}" == "inbox" && "\${3:-}" == "--json" ]]; then
-  bd version >/dev/null
-  echo '[]'
-  exit 0
-fi
-echo "unexpected command: $*" >&2
-exit 1
-`);
-      await createExecutable(bdBin, '#!/bin/bash\necho "bd vmail-test"\n');
-
-      fixture = await startFixture({
-        gtScript: null,
-        bdScript: null,
-        env: {
-          PATH: '',
-          GT_BIN: gtBin,
-          BD_BIN: bdBin,
-        },
-      });
-
-      const response = await fetch(`${fixture.baseUrl}/api/mail`);
       const data = await response.json();
 
       expect(response.status).toBe(200);

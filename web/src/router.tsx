@@ -14,7 +14,6 @@ import { ActivityFeed } from '@/features/activity/ActivityFeed';
 import { MailSurface } from '@/features/mail/MailSurface';
 import { MailMessagePage } from '@/features/mail/MailMessagePage';
 import { EscalationsSurface } from '@/features/mail/EscalationsSurface';
-import { OpsSurface } from '@/features/ops/OpsSurface';
 import { WorkSurface } from '@/features/work/WorkSurface';
 import { ConvoyDetailPage } from '@/features/work/ConvoyDetailPage';
 import { CatalogRedirect } from '@/features/catalog/CatalogRedirect';
@@ -141,12 +140,6 @@ const escalationDetailRoute = createRoute({
   component: MailMessagePage,
 });
 
-const opsRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/ops',
-  component: OpsSurface,
-});
-
 const terminalRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/terminal',
@@ -182,7 +175,6 @@ const routeTree = rootRoute.addChildren([
   mailDetailRoute,
   escalationsRoute,
   escalationDetailRoute,
-  opsRoute,
   terminalRoute,
   graphRoute,
   helpRoute,

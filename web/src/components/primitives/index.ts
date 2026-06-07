@@ -2,7 +2,6 @@
 export { Button, type ButtonProps, type ButtonVariant, type ButtonSize } from './Button';
 export { Input, type InputProps } from './Input';
 export { Select, type SelectProps } from './Select';
-export { Textarea, type TextareaProps } from './Textarea';
 export {
   Badge,
   StatusDot,

@@ -4,7 +4,7 @@ import path from 'path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { createFrontendDelivery, isLegacyFrontendPath } from '../../server/app/frontendDelivery.js';
+import { createFrontendDelivery } from '../../server/app/frontendDelivery.js';
 
 const tempDirs = [];
 
@@ -18,6 +18,7 @@ describe('createFrontendDelivery', () => {
   it('prefers the built React frontend when web/dist exists', () => {
     const rootDir = makeFixture({
       'web/dist/index.html': '<html>modern</html>',
+      'index.html': '<html>legacy</html>',
     });
 
     const mounted = [];
@@ -35,11 +36,12 @@ describe('createFrontendDelivery', () => {
 
     expect(delivery.mode).toBe('react-dist');
     expect(mounted[0][0]).toEqual({ dir: path.join(rootDir, 'web/dist') });
-    expect(mounted[1]).toEqual(['/assets', { dir: path.join(rootDir, 'assets') }]);
   });
 
-  it('keeps React delivery mode explicit when web/dist is missing', () => {
-    const rootDir = makeFixture({});
+  it('falls back to the legacy spa when web/dist is missing', () => {
+    const rootDir = makeFixture({
+      'index.html': '<html>legacy</html>',
+    });
 
     const delivery = createFrontendDelivery({
       rootDir,
@@ -58,17 +60,9 @@ describe('createFrontendDelivery', () => {
       },
     });
 
-    expect(delivery.mode).toBe('react-dist-missing');
+    expect(delivery.mode).toBe('legacy-spa');
     expect(headers.get('Cache-Control')).toBe('no-store, must-revalidate');
-    expect(sentPath).toBe(path.join(rootDir, 'web/dist/index.html'));
-  });
-
-  it('identifies removed legacy frontend paths', () => {
-    expect(isLegacyFrontendPath('/index.html')).toBe(true);
-    expect(isLegacyFrontendPath('/js/app.js')).toBe(true);
-    expect(isLegacyFrontendPath('/css/layout.css')).toBe(true);
-    expect(isLegacyFrontendPath('/assets/favicon.ico')).toBe(false);
-    expect(isLegacyFrontendPath('/work/convoy-1')).toBe(false);
+    expect(sentPath).toBe(path.join(rootDir, 'index.html'));
   });
 });
 

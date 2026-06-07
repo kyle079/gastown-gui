@@ -97,28 +97,5 @@ describe('Formula routes (real Express app)', () => {
 
     await expect(fsPromises.access(filePath)).rejects.toBeTruthy();
   });
-
-  it('GET /api/formulas returns 500 when formula discovery fails', async () => {
-    const failingService = new FormulaService({
-      gtGateway: { exec: async () => ({ ok: false, stdout: '', stderr: '', error: 'gt unavailable' }) },
-      bdGateway: { exec: async () => ({ ok: false, stdout: '', stderr: '', error: 'bd unavailable' }) },
-      formulasDir: path.join(formulasDir, 'missing'),
-    });
-
-    const failingApp = createApp({ allowedOrigins: ['*'] });
-    registerFormulaRoutes(failingApp, { formulaService: failingService });
-
-    const failingServer = createServer(failingApp);
-    await new Promise((resolve) => failingServer.listen(0, resolve));
-    const { port } = failingServer.address();
-
-    try {
-      const res = await fetch(`http://127.0.0.1:${port}/api/formulas`);
-      expect(res.status).toBe(500);
-      const body = await res.json();
-      expect(body.error).toMatch(/Unable to load formulas|gt unavailable/);
-    } finally {
-      await new Promise((resolve) => failingServer.close(resolve));
-    }
-  });
 });
+

@@ -1,6 +1,6 @@
-# systemd service for the mayor preview refresh loop.
-# Triggered by gastown-gui-autodeploy.timer every minute.
-# Fetches origin/master; refreshes only if HEAD advanced or preview is unhealthy.
+# systemd service for the auto-deploy poller.
+# Triggered by gastown-gui-autodeploy.timer every 5 minutes.
+# Fetches origin/master; deploys only if HEAD advanced.
 #
 # One-time install (run as root):
 #   cp scripts/gastown-gui-autodeploy.service /etc/systemd/system/
@@ -9,16 +9,15 @@
 #   systemctl enable --now gastown-gui-autodeploy.timer
 
 [Unit]
-Description=Gastown GUI preview auto-refresh
-After=network.target
+Description=Gastown GUI auto-deploy (poll origin/master)
+After=network.target gastown-gui.service
+Requires=gastown-gui.service
 
 [Service]
 Type=oneshot
 User=kyle
-WorkingDirectory=/home/kyle/gt/gastown_gui/mayor/rig
-Environment=PREVIEW_REPO_DIR=/home/kyle/gt/gastown_gui/mayor/rig
-ExecStart=/bin/bash /home/kyle/gt/gastown_gui/mayor/rig/scripts/autodeploy-poll.sh
+ExecStart=/bin/bash /home/kyle/gt/gastown_gui/crew/kyle/scripts/autodeploy-poll.sh
 
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=gastown-gui-preview-refresh
+SyslogIdentifier=gastown-gui-autodeploy

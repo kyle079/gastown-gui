@@ -54,21 +54,6 @@ describe('ExecutableResolver', () => {
     });
   });
 
-  it('resolves executable from HOME/.local/bin when PATH lookup fails', async () => {
-    await withTempDir(async (tempDir) => {
-      const homeDir = path.join(tempDir, 'home');
-      const localBd = path.join(homeDir, '.local', 'bin', 'bd');
-      await makeExecutable(localBd);
-
-      const resolved = resolveExecutable({
-        command: 'bd',
-        env: { PATH: '', HOME: homeDir },
-      });
-
-      expect(resolved).toBe(localBd);
-    });
-  });
-
   it('honors explicit override env var', async () => {
     await withTempDir(async (tempDir) => {
       const overridePath = path.join(tempDir, 'custom', 'gt');

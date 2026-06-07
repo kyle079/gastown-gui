@@ -21,7 +21,6 @@ import { fileURLToPath } from 'url';
 
 import { createApp } from './server/app/createApp.js';
 import { buildDefaultOrigins } from './server/app/corsOrigins.js';
-import { isLegacyFrontendPath } from './server/app/frontendDelivery.js';
 import { normalizeRigAgents } from './server/domain/agents/normalizeRigAgents.js';
 import {
   buildSessionRegistryFromTown,
@@ -42,7 +41,6 @@ import {
   resolveExecutable,
 } from './server/infrastructure/ExecutableResolver.js';
 import { BDGateway } from './server/gateways/BDGateway.js';
-import { BeadsReadGateway } from './server/gateways/BeadsReadGateway.js';
 import { GTGateway } from './server/gateways/GTGateway.js';
 import { GitHubGateway } from './server/gateways/GitHubGateway.js';
 import { TmuxGateway } from './server/gateways/TmuxGateway.js';
@@ -73,10 +71,6 @@ const PORT = process.env.GASTOWN_PORT || 7667;
 const HOST = process.env.HOST || '127.0.0.1';
 const HOME = process.env.HOME || os.homedir();
 const GT_ROOT = process.env.GT_ROOT || path.join(HOME, 'gt');
-const REPO_ROOT = process.env.GASTOWN_GUI_ROOT || __dirname;
-const REPO_BEADS_DIR = path.join(REPO_ROOT, '.beads');
-const FRONTEND_DIST_DIR = path.join(__dirname, 'web/dist');
-const FRONTEND_INDEX_PATH = path.join(FRONTEND_DIST_DIR, 'index.html');
 const GT_EXECUTABLE = resolveExecutable({
   command: 'gt',
   envVarName: 'GT_BIN',
@@ -95,15 +89,7 @@ const commandRunner = new CommandRunner({
   }),
 });
 const gtGateway = new GTGateway({ runner: commandRunner, gtRoot: GT_ROOT, executable: GT_EXECUTABLE });
-const bdGateway = new BDGateway({
-  runner: commandRunner,
-  workspaceRoot: REPO_ROOT,
-  beadsDir: REPO_BEADS_DIR,
-  executable: BD_EXECUTABLE,
-});
-const beadsReadGateway = new BeadsReadGateway({
-  beadsDir: REPO_BEADS_DIR,
-});
+const bdGateway = new BDGateway({ runner: commandRunner, gtRoot: GT_ROOT, executable: BD_EXECUTABLE });
 const tmuxGateway = new TmuxGateway({ runner: commandRunner });
 const backendCache = new CacheRegistry();
 const convoyService = new ConvoyService({
@@ -115,8 +101,6 @@ const statusService = new StatusService({ gtGateway, tmuxGateway, cache: backend
 const targetService = new TargetService({ statusService });
 const beadService = new BeadService({
   bdGateway,
-  beadsReadGateway,
-  cache: backendCache,
   emit: (type, data) => emitMutationEvent(type, data),
 });
 const workService = new WorkService({
@@ -261,10 +245,6 @@ const CACHE_INVALIDATION_BY_EVENT = {
     backendKeys: ['status'],
     backendPrefixes: ['convoys_'],
   },
-  bead_updated: {
-    backendKeys: ['status'],
-    backendPrefixes: ['convoys_'],
-  },
   escalation: {
     backendKeys: ['status'],
     backendPrefixes: ['convoys_'],
@@ -364,21 +344,12 @@ setInterval(() => {
   }
 }, CACHE_CLEANUP_INTERVAL);
 
-app.use((req, res, next) => {
-  if (!isLegacyFrontendPath(req.path)) {
-    next();
-    return;
-  }
-
-  res.status(404).type('text/plain').send('Legacy frontend path removed');
-});
-
-// Middleware — serve the built React app and static assets only
-app.use(express.static(FRONTEND_DIST_DIR));
+// Middleware — React app (web/dist) takes priority for /assets JS/CSS bundles
+app.use(express.static(path.join(__dirname, 'web/dist')));
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
 app.get('/', (req, res) => {
   res.setHeader('Cache-Control', 'no-store, must-revalidate');
-  res.sendFile(FRONTEND_INDEX_PATH);
+  res.sendFile(path.join(__dirname, 'web/dist/index.html'));
 });
 app.get('/favicon.ico', (req, res) => {
   res.sendFile(path.join(__dirname, 'assets', 'favicon.ico'));
@@ -526,7 +497,7 @@ async function executeGT(args, options = {}) {
     const { stdout, stderr } = await execFileAsync(GT_EXECUTABLE, args, {
       cwd: options.cwd || GT_ROOT,
       timeout: options.timeout || 30000,
-      env: { ...commandRunner._baseEnv, ...options.env }
+      env: { ...process.env, ...options.env }
     });
 
     if (stderr && !options.ignoreStderr) {
@@ -561,11 +532,14 @@ async function executeBD(args, options = {}) {
   const cmd = `${BD_EXECUTABLE} ${args.join(' ')}`;
   console.log(`[BD] Executing: ${cmd}`);
 
+  // Set BEADS_DIR to ensure bd finds the database
+  const beadsDir = path.join(GT_ROOT, '.beads');
+
   try {
     const { stdout } = await execFileAsync(BD_EXECUTABLE, args, {
-      cwd: options.cwd || REPO_ROOT,
+      cwd: options.cwd || GT_ROOT,
       timeout: options.timeout || 30000,
-      env: { ...commandRunner._baseEnv, BEADS_DIR: REPO_BEADS_DIR, ...options.env }
+      env: { ...process.env, BEADS_DIR: beadsDir }
     });
 
     return { success: true, data: String(stdout || '').trim() };
@@ -1337,28 +1311,18 @@ app.get('/api/setup/status', async (req, res) => {
 
   // Check gt
   try {
-    const gtResult = await commandRunner.exec(GT_EXECUTABLE, ['version'], {
-      cwd: GT_ROOT,
-      timeoutMs: 5000,
-    });
-    if (gtResult.ok) {
-      status.gt_installed = true;
-      status.gt_version = String(gtResult.stdout || '').trim().split('\n')[0];
-    }
+    const gtResult = await execFileAsync(GT_EXECUTABLE, ['version'], { timeout: 5000 });
+    status.gt_installed = true;
+    status.gt_version = String(gtResult.stdout || '').trim().split('\n')[0];
   } catch {
     status.gt_installed = false;
   }
 
   // Check bd
   try {
-    const bdResult = await commandRunner.exec(BD_EXECUTABLE, ['version'], {
-      cwd: GT_ROOT,
-      timeoutMs: 5000,
-    });
-    if (bdResult.ok) {
-      status.bd_installed = true;
-      status.bd_version = String(bdResult.stdout || '').trim().split('\n')[0];
-    }
+    const bdResult = await execFileAsync(BD_EXECUTABLE, ['version'], { timeout: 5000 });
+    status.bd_installed = true;
+    status.bd_version = String(bdResult.stdout || '').trim().split('\n')[0];
   } catch {
     status.bd_installed = false;
   }
@@ -1881,7 +1845,6 @@ const formulaCache = {
 const formulaService = new FormulaService({
   gtGateway,
   bdGateway,
-  gtRoot: GT_ROOT,
   cache: formulaCache,
   emit: (type, data) => emitMutationEvent(type, data),
 });
@@ -1897,13 +1860,13 @@ registerGitHubRoutes(app, { gitHubService, gitHubGatewayFactory, statusService }
 // ============= Terminal (PTY-over-WebSocket) =============
 // Registered after wss is created; terminal WS handler is added to the shared wss.
 // SECURITY: app binds to 127.0.0.1 by default. No auth — LAN-only (see gg-2wt).
-registerTerminalRoutes(app, { wss, gtRoot: GT_ROOT });
+registerTerminalRoutes(app, { wss });
 
 // SPA catch-all: serve React app for any non-API path not matched above
 app.get('*', (req, res, next) => {
   if (req.path.startsWith('/api/') || req.path.startsWith('/ws')) return next();
   res.setHeader('Cache-Control', 'no-store, must-revalidate');
-  res.sendFile(FRONTEND_INDEX_PATH);
+  res.sendFile(path.join(__dirname, 'web/dist/index.html'));
 });
 
 // ============= WebSocket for Real-time Events =============

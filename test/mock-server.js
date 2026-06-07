@@ -685,25 +685,6 @@ app.post('/api/beads', (req, res) => {
   res.status(201).json({ success: true, bead_id: newBead.id, bead: newBead });
 });
 
-app.patch('/api/bead/:beadId', (req, res) => {
-  const { beadId } = req.params;
-  const bead = mockBeads.find((item) => item.id === beadId);
-  if (!bead) {
-    return res.status(404).json({ error: 'Bead not found' });
-  }
-
-  const { title, description, priority, status, assignee, labels } = req.body ?? {};
-  if (title !== undefined) bead.title = title;
-  if (description !== undefined) bead.description = description;
-  if (priority !== undefined) bead.priority = priority;
-  if (status !== undefined) bead.status = status;
-  if (assignee !== undefined) bead.assignee = assignee || null;
-  if (labels !== undefined) bead.labels = Array.isArray(labels) ? labels : [];
-  bead.updated_at = new Date().toISOString();
-
-  res.json({ success: true, bead_id: beadId, bead });
-});
-
 app.get('/api/bead/:beadId', (req, res) => {
   const { beadId } = req.params;
   const bead = mockBeads.find(b => b.id === beadId);

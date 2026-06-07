@@ -9,20 +9,19 @@ function parseJsonOrNull(text) {
 }
 
 export class BDGateway {
-  constructor({ runner, gtRoot, workspaceRoot, beadsDir, executable = 'bd' }) {
+  constructor({ runner, gtRoot, executable = 'bd' }) {
     if (!runner?.exec) throw new Error('BDGateway requires a runner with exec()');
-    const commandRoot = workspaceRoot ?? gtRoot;
-    if (!commandRoot) throw new Error('BDGateway requires workspaceRoot or gtRoot');
+    if (!gtRoot) throw new Error('BDGateway requires gtRoot');
     this._runner = runner;
-    this._commandRoot = commandRoot;
+    this._gtRoot = gtRoot;
     this._executable = executable;
-    this._beadsDir = beadsDir ?? path.join(commandRoot, '.beads');
+    this._beadsDir = path.join(gtRoot, '.beads');
     this._supportsNoDaemon = null;
   }
 
   async exec(args, options = {}) {
     const env = { BEADS_DIR: this._beadsDir, ...(options.env ?? {}) };
-    return this._runner.exec(this._executable, args, { cwd: this._commandRoot, ...options, env });
+    return this._runner.exec(this._executable, args, { cwd: this._gtRoot, ...options, env });
   }
 
   _resultText(result) {
@@ -96,24 +95,6 @@ export class BDGateway {
     const beadId = match ? match[1] : raw || null;
 
     return { ...result, raw, beadId };
-  }
-
-  async update({ beadId, title, description, priority, status, assignee, labels } = {}) {
-    const args = ['update', beadId];
-    if (title !== undefined) args.push('--title', title);
-    if (description !== undefined) args.push('--description', description);
-    if (priority) args.push('--priority', priority);
-    if (status) args.push('--status', status);
-    if (assignee !== undefined) args.push('--assignee', assignee);
-    if (Array.isArray(labels)) {
-      args.push('--set-labels');
-      labels.forEach((label) => {
-        args.push(label);
-      });
-    }
-
-    const result = await this._execCompat(args, { timeoutMs: 30000 });
-    return { ...result, raw: (result.stdout || '').trim() };
   }
 
   async show(beadId) {

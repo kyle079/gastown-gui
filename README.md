@@ -261,7 +261,7 @@ All operations execute through the official `gt` and `bd` commands - the GUI nev
 
 ### Tech Stack
 
-- **Backend:** Node.js + Express bridge over `gt`, `bd`, `gh`, `git`, and tmux
+- **Backend:** Node.js + Express bridge over `gt`, `bd`, `gh`, `git`, tmux, and direct Dolt/Beads reads for bead-heavy views
 - **Primary frontend:** React + TypeScript + Vite + Tailwind + TanStack Router/Query (`web/`)
 - **Fallback frontend:** Legacy vanilla JS SPA (`js/`, `css/`, `index.html`) when `web/dist` is not present
 - **Communication:** HTTP API + WebSocket for real-time updates
@@ -269,7 +269,7 @@ All operations execute through the official `gt` and `bd` commands - the GUI nev
 
 ### Design Principles
 
-1. **Server-Authoritative** - All operations execute via `gt` and `bd` CLI commands
+1. **Server-Authoritative** - Mutations still execute via `gt` and `bd`, while bead-heavy reads prefer structured Dolt queries with CLI fallback
 2. **Non-Blocking UI** - Modals close immediately, operations run in background
 3. **Real-Time Updates** - WebSocket broadcasts status changes to all clients
 4. **Graceful Degradation** - UI handles missing data and command failures

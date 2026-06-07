@@ -41,6 +41,7 @@ import {
   resolveExecutable,
 } from './server/infrastructure/ExecutableResolver.js';
 import { BDGateway } from './server/gateways/BDGateway.js';
+import { BeadsReadGateway } from './server/gateways/BeadsReadGateway.js';
 import { GTGateway } from './server/gateways/GTGateway.js';
 import { GitHubGateway } from './server/gateways/GitHubGateway.js';
 import { TmuxGateway } from './server/gateways/TmuxGateway.js';
@@ -97,6 +98,9 @@ const bdGateway = new BDGateway({
   beadsDir: REPO_BEADS_DIR,
   executable: BD_EXECUTABLE,
 });
+const beadsReadGateway = new BeadsReadGateway({
+  beadsDir: REPO_BEADS_DIR,
+});
 const tmuxGateway = new TmuxGateway({ runner: commandRunner });
 const backendCache = new CacheRegistry();
 const convoyService = new ConvoyService({
@@ -108,6 +112,8 @@ const statusService = new StatusService({ gtGateway, tmuxGateway, cache: backend
 const targetService = new TargetService({ statusService });
 const beadService = new BeadService({
   bdGateway,
+  beadsReadGateway,
+  cache: backendCache,
   emit: (type, data) => emitMutationEvent(type, data),
 });
 const workService = new WorkService({
@@ -249,6 +255,10 @@ const CACHE_INVALIDATION_BY_EVENT = {
     backendPrefixes: ['convoys_'],
   },
   bead_created: {
+    backendKeys: ['status'],
+    backendPrefixes: ['convoys_'],
+  },
+  bead_updated: {
     backendKeys: ['status'],
     backendPrefixes: ['convoys_'],
   },

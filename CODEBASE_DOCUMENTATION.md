@@ -91,6 +91,10 @@ server/gateways/BDGateway.js - Wraps bd (beads) CLI commands
 ├─ list, search, create, show, close, defer, update
 └─ Maps GUI actions to current bd CLI syntax
 
+server/gateways/BeadsReadGateway.js - Direct Dolt-backed read path for beads data
+├─ Reads issues, labels, dependencies, graph nodes/edges from the Dolt server
+└─ Uses mysql2 pool + `.beads/metadata.json` / redirect resolution, with service-level CLI fallback
+
 server/gateways/GitHubGateway.js - Wraps gh CLI for PR/issue/repo queries
 server/gateways/GitGateway.js - Wraps git CLI for branch info
 server/gateways/TmuxGateway.js - Tmux session management for polecats
@@ -114,7 +118,7 @@ server/infrastructure/ExecutableResolver.js - Resolves gt/bd binaries from PATH,
 server/services/StatusService.js - Town status aggregation
 server/services/ConvoyService.js - Convoy CRUD via GTGateway
 server/services/FormulaService.js - Formula CRUD + run via GTGateway
-server/services/BeadService.js - Bead CRUD via BDGateway
+server/services/BeadService.js - Bead reads via BeadsReadGateway (cached, fallback to BDGateway), mutations via BDGateway
 server/services/WorkService.js - Work lifecycle (close, defer, reassign)
 server/services/GitHubService.js - PR/issue/repo queries via GitHubGateway
 server/services/TargetService.js - Available sling targets

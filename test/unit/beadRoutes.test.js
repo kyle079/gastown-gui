@@ -17,6 +17,10 @@ describe('Bead routes (real Express app)', () => {
         calls.push(['list', opts]);
         return [{ id: 'bead-1' }];
       },
+      graph: async () => {
+        calls.push(['graph']);
+        return { nodes: [{ id: 'bead-1' }], edges: [] };
+      },
       search: async (query) => {
         calls.push(['search', query]);
         return [{ id: 'bead-2' }];
@@ -63,6 +67,13 @@ describe('Bead routes (real Express app)', () => {
     expect(res.status).toBe(200);
     await expect(res.json()).resolves.toEqual([{ id: 'bead-2' }]);
     expect(calls[1]).toEqual(['search', 'login']);
+  });
+
+  it('GET /api/beads/graph returns graph data', async () => {
+    const res = await fetch(`${baseUrl}/api/beads/graph`);
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual({ nodes: [{ id: 'bead-1' }], edges: [] });
+    expect(calls[2]).toEqual(['graph']);
   });
 
   it('POST /api/beads returns 400 when title is missing', async () => {

@@ -87,46 +87,6 @@ describe('Formula routes (real Express app)', () => {
     expect(content).toContain('hello');
   });
 
-  it('POST /api/formula/:name/preview proxies the preview response', async () => {
-    const formulaService = {
-      list: async () => [],
-      search: async () => [],
-      get: async () => ({}),
-      create: async () => ({ ok: true, raw: '' }),
-      use: async () => ({ ok: true, raw: '' }),
-      update: async () => ({ ok: true }),
-      remove: async () => ({ ok: true }),
-      preview: async ({ name, target, args }) => ({
-        ok: true,
-        preview: `[dry-run] ${name} ${target} ${args}`,
-        vars: ['issue=GG-1'],
-      }),
-    };
-
-    const app = createApp({ allowedOrigins: ['*'] });
-    registerFormulaRoutes(app, { formulaService });
-    const previewServer = createServer(app);
-    await new Promise((resolve) => previewServer.listen(0, resolve));
-    const { port } = previewServer.address();
-
-    const res = await fetch(`http://127.0.0.1:${port}/api/formula/test/preview`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ target: 'gastown_gui', args: 'issue=GG-1' }),
-    });
-
-    expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toEqual({
-      success: true,
-      name: 'test',
-      target: 'gastown_gui',
-      vars: ['issue=GG-1'],
-      preview: '[dry-run] test gastown_gui issue=GG-1',
-    });
-
-    await new Promise((resolve) => previewServer.close(resolve));
-  });
-
   it('DELETE /api/formula/:name deletes existing TOML file', async () => {
     const name = 'delete-me';
     const filePath = path.join(formulasDir, `${name}.toml`);
@@ -138,3 +98,4 @@ describe('Formula routes (real Express app)', () => {
     await expect(fsPromises.access(filePath)).rejects.toBeTruthy();
   });
 });
+

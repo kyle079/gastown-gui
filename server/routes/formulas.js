@@ -25,16 +25,6 @@ export function registerFormulaRoutes(app, { formulaService } = {}) {
     res.json(formula);
   });
 
-  app.post('/api/formula/:name/preview', async (req, res) => {
-    const { target, args: formulaArgs } = req.body;
-    const name = req.params.name;
-
-    const result = await formulaService.preview({ name, target, args: formulaArgs });
-    if (!result.ok) return res.status(500).json({ success: false, error: result.error });
-
-    res.json({ success: true, name, target, vars: result.vars, preview: result.preview });
-  });
-
   app.post('/api/formulas', async (req, res) => {
     const { name, description, template } = req.body;
     if (!name) return res.status(400).json({ error: 'Name is required' });
@@ -84,3 +74,4 @@ export function registerFormulaRoutes(app, { formulaService } = {}) {
     }
   });
 }
+

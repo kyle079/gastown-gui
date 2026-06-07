@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-import { Badge, Button, Input, Panel, PanelBody, PanelHeader, Select } from '@/components/primitives';
-import { useFormulaDetail, useFormulaPreview, useFormulas, useTargets } from '@/lib/query/hooks';
+import { Badge, Input, Panel, PanelBody, PanelHeader } from '@/components/primitives';
+import { useFormulaDetail, useFormulas } from '@/lib/query/hooks';
 import type { Formula, FormulaStep } from '@/lib/api/types';
 
 function filterFormulas(formulas: Formula[], query: string): Formula[] {
@@ -22,11 +22,7 @@ export function FormulaExplorerPanel({
 }) {
   const [localSelectedName, setLocalSelectedName] = useState<string>('');
   const [query, setQuery] = useState('');
-  const [previewRig, setPreviewRig] = useState('');
-  const [previewArgs, setPreviewArgs] = useState('');
   const { data: formulas } = useFormulas();
-  const { data: targets } = useTargets();
-  const preview = useFormulaPreview();
 
   const rows = useMemo(
     () => filterFormulas(formulas ?? [], query).sort((a, b) => a.name.localeCompare(b.name)),
@@ -36,9 +32,6 @@ export function FormulaExplorerPanel({
   const activeName = selectedName || localSelectedName || rows[0]?.name || '';
   const { data: detail } = useFormulaDetail(activeName);
   const steps = (detail?.steps ?? []) as FormulaStep[];
-  const variableEntries = Array.isArray(detail?.variables)
-    ? detail.variables.map((item) => [item.name, item] as const)
-    : Object.entries((detail?.vars && typeof detail.vars === 'object' ? detail.vars : {}) ?? {});
 
   function setSelected(name: string) {
     if (onSelectName) onSelectName(name);
@@ -116,82 +109,9 @@ export function FormulaExplorerPanel({
                   ? detail?.vars.length
                   : typeof detail?.vars === 'number'
                     ? detail.vars
-                    : variableEntries.length}
+                    : 0}
             </div>
           </div>
-        </div>
-
-        <div className="mt-4 rounded-md border border-line bg-surface-alt p-3">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="font-mono text-xs text-fg">Dry-run Preview</div>
-              <div className="mt-1 text-sm text-muted">
-                Preview the formula expansion before dispatching or changing operator workflow.
-              </div>
-            </div>
-            <Button
-              size="sm"
-              variant="primary"
-              disabled={!activeName || preview.isPending}
-              onClick={() => preview.mutate({ name: activeName, target: previewRig || undefined, args: previewArgs || undefined })}
-            >
-              {preview.isPending ? 'Previewing…' : 'Run dry-run'}
-            </Button>
-          </div>
-
-          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="flex flex-col gap-1.5">
-              <span className="text-2xs uppercase tracking-wider text-faint">Rig</span>
-              <Select value={previewRig} onChange={(e) => setPreviewRig(e.target.value)}>
-                <option value="">Infer from context</option>
-                {(targets ?? [])
-                  .filter((item) => item.type === 'rig')
-                  .map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name}
-                    </option>
-                  ))}
-              </Select>
-            </label>
-            <label className="flex flex-col gap-1.5">
-              <span className="text-2xs uppercase tracking-wider text-faint">Vars</span>
-              <Input
-                value={previewArgs}
-                onChange={(e) => setPreviewArgs(e.target.value)}
-                className="font-mono"
-                placeholder="issue=gg-123, base_branch=master"
-              />
-            </label>
-          </div>
-
-          {variableEntries.length > 0 && (
-            <div className="mt-4 grid grid-cols-1 gap-2 md:grid-cols-2">
-              {variableEntries.map(([name, meta]) => (
-                <div key={name} className="rounded border border-line bg-surface px-3 py-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-mono text-xs text-fg">{name}</span>
-                    {'required' in meta && meta.required ? <Badge tone="warn">required</Badge> : null}
-                  </div>
-                  <div className="mt-1 text-xs text-muted">{meta.description || 'No description'}</div>
-                  {'default' in meta && meta.default ? (
-                    <div className="mt-1 font-mono text-2xs text-faint">default: {meta.default}</div>
-                  ) : null}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {preview.error && (
-            <div className="mt-4 rounded border border-danger/40 bg-danger/10 px-3 py-2 font-mono text-xs text-danger">
-              {preview.error instanceof Error ? preview.error.message : 'Dry-run failed'}
-            </div>
-          )}
-
-          {preview.data?.preview && (
-            <pre className="mt-4 overflow-x-auto rounded border border-line bg-ink px-3 py-3 font-mono text-xs text-muted">
-              {preview.data.preview}
-            </pre>
-          )}
         </div>
 
         <div className="mt-4 flex flex-col gap-3">

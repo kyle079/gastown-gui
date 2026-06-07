@@ -126,9 +126,4 @@ export class BDGateway {
     const result = await this.exec(['update', beadId, '--assignee', target], { timeoutMs: 30000 });
     return { ...result, raw: (result.stdout || '').trim() };
   }
-
-  async appendNotes({ beadId, notes } = {}) {
-    const result = await this.exec(['update', beadId, '--append-notes', notes], { timeoutMs: 30000 });
-    return { ...result, raw: (result.stdout || '').trim() };
-  }
 }

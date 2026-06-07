@@ -56,20 +56,5 @@ export function registerBeadRoutes(app, { beadService } = {}) {
       return res.status(500).json({ error: err.message });
     }
   });
-
-  app.post('/api/bead/:beadId/notes', async (req, res) => {
-    try {
-      const { beadId } = req.params;
-      const { notes } = req.body;
-      const result = await beadService.appendNotes({ beadId, notes });
-
-      if (!result.ok) {
-        return res.status(result.statusCode || 500).json({ success: false, error: result.error });
-      }
-
-      return res.json({ success: true, beadId, raw: result.raw });
-    } catch (err) {
-      return res.status(500).json({ success: false, error: err.message });
-    }
-  });
 }
+

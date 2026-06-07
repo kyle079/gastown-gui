@@ -19,7 +19,6 @@ export class BeadService {
     if (!bdGateway.search) throw new Error('BeadService requires bdGateway.search()');
     if (!bdGateway.show) throw new Error('BeadService requires bdGateway.show()');
     if (!bdGateway.create) throw new Error('BeadService requires bdGateway.create()');
-    if (!bdGateway.appendNotes) throw new Error('BeadService requires bdGateway.appendNotes()');
 
     this._bd = bdGateway;
     this._emit = emit ?? null;
@@ -97,16 +96,5 @@ export class BeadService {
     }
 
     return { ok: true, beadId, raw: result.raw };
-  }
-
-  async appendNotes({ beadId, notes } = {}) {
-    if (!beadId) return { ok: false, statusCode: 400, error: 'Bead ID is required' };
-    if (!String(notes || '').trim()) return { ok: false, statusCode: 400, error: 'Notes are required' };
-
-    const result = await this._bd.appendNotes({ beadId, notes: String(notes).trim() });
-    if (!result.ok) return { ok: false, statusCode: 500, error: result.error || 'Failed to append notes' };
-
-    this._emit?.('bead_notes_appended', { bead_id: beadId });
-    return { ok: true, raw: result.raw };
   }
 }

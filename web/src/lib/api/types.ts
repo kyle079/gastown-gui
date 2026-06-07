@@ -221,17 +221,7 @@ export interface BeadDependency {
 
 export interface BeadDetail extends Bead {
   assignee?: string | null;
-  notes?: string;
-  design?: string;
   dependencies?: BeadDependency[];
-  dependents?: BeadDependency[];
-  comments?: Array<{
-    id: string;
-    issue_id?: string;
-    author?: string;
-    text?: string;
-    created_at?: string;
-  }>;
 }
 
 /** GitHub author object (`author.login`). */
@@ -333,43 +323,6 @@ export interface Formula {
   source?: string;
   steps?: number;
   vars?: number;
-}
-
-export interface FormulaStep {
-  id?: string;
-  title?: string;
-  description?: string;
-  needs?: string[];
-  [key: string]: unknown;
-}
-
-export interface FormulaVariable {
-  default?: string;
-  description?: string;
-  required?: boolean;
-}
-
-export interface FormulaDetail {
-  formula?: string;
-  name?: string;
-  type?: string;
-  description?: string;
-  source?: string;
-  schema_version?: number;
-  version?: number;
-  steps?: FormulaStep[];
-  vars?: Record<string, FormulaVariable> | number | unknown[];
-  variables?:
-    | Array<{ name: string; description?: string; required?: boolean; default?: string }>
-    | unknown[];
-}
-
-export interface FormulaPreview {
-  success: boolean;
-  name: string;
-  target?: string;
-  vars?: string[];
-  preview: string;
 }
 
 /** A node in the bead dependency graph (`/api/beads/graph`). */

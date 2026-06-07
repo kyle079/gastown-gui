@@ -31,11 +31,6 @@ describe('Bead routes (real Express app)', () => {
         if (beadId === 'missing') return { ok: false };
         return { ok: true, bead: { id: beadId } };
       },
-      appendNotes: async ({ beadId, notes }) => {
-        calls.push(['appendNotes', beadId, notes]);
-        if (!String(notes || '').trim()) return { ok: false, statusCode: 400, error: 'Notes are required' };
-        return { ok: true, raw: 'updated' };
-      },
     };
 
     const app = createApp({ allowedOrigins: ['*'] });
@@ -80,16 +75,5 @@ describe('Bead routes (real Express app)', () => {
     const res = await fetch(`${baseUrl}/api/bead/missing`);
     expect(res.status).toBe(404);
   });
-
-  it('POST /api/bead/:beadId/notes appends notes', async () => {
-    const res = await fetch(`${baseUrl}/api/bead/gg-1/notes`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ notes: 'Need more context' }),
-    });
-
-    expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toEqual({ success: true, beadId: 'gg-1', raw: 'updated' });
-    expect(calls.at(-1)).toEqual(['appendNotes', 'gg-1', 'Need more context']);
-  });
 });
+

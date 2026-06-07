@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Dialog, Button, Input, Select, Textarea, useToast } from '@/components/primitives';
+import { Dialog, Button, Input, Select, useToast } from '@/components/primitives';
 import { useSendMail } from '@/lib/query/hooks';
 
 export interface ComposePrefill {
@@ -100,12 +100,12 @@ export function ComposeDialog({ open, onClose, prefill }: ComposeDialogProps) {
         </label>
         <label className="flex flex-col gap-1.5">
           <span className="text-2xs font-medium uppercase tracking-wider text-faint">Message</span>
-          <Textarea
+          <textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             rows={6}
             placeholder="Write your message…"
-            className="resize-y"
+            className="w-full resize-y rounded border border-line bg-ink/60 px-2.5 py-2 text-sm text-fg placeholder:text-faint transition-colors duration-100 hover:border-line-strong focus:border-accent focus-visible:ring-1 focus-visible:ring-accent"
           />
         </label>
       </form>

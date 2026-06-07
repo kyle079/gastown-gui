@@ -12,8 +12,6 @@ import type {
   DogsResponse,
   Escalation,
   Formula,
-  FormulaDetail,
-  FormulaPreview,
   MailMessage,
   MergeRequest,
   PullRequest,
@@ -123,17 +121,14 @@ export function useTargets() {
 interface SlingArgs {
   bead: string;
   target?: string;
-  molecule?: string;
-  quality?: string;
-  args?: string;
 }
 
 /** Sling a bead onto a target's hook — the primary dispatch action. */
 export function useSling() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ bead, target, molecule, quality, args }: SlingArgs) =>
-      apiClient.post<{ success: boolean }>('/api/sling', { bead, target, molecule, quality, args }),
+    mutationFn: ({ bead, target }: SlingArgs) =>
+      apiClient.post<{ success: boolean }>('/api/sling', { bead, target }),
     onSuccess: () => {
       // Dispatch changes both the convoy queue and who's-on-what.
       void qc.invalidateQueries({ queryKey: queryKeys.convoys });
@@ -187,17 +182,6 @@ export function useBeadDetail(beadId: string | undefined) {
   });
 }
 
-/** Search beads by id/title/type for dispatch flows. */
-export function useBeadSearch(query: string) {
-  const trimmed = query.trim();
-  return useQuery({
-    queryKey: queryKeys.beadSearch(trimmed),
-    queryFn: () => apiClient.get<Bead[]>(`/api/beads/search?q=${encodeURIComponent(trimmed)}`),
-    staleTime: 15_000,
-    enabled: trimmed.length >= 2,
-  });
-}
-
 /** Full PR detail from token-based REST API. */
 export function usePullRequestDetail(owner: string, repo: string, number: number) {
   return useQuery({
@@ -230,24 +214,6 @@ export function useFormulas() {
   });
 }
 
-export function useFormulaDetail(name: string | undefined) {
-  return useQuery({
-    queryKey: queryKeys.formulaDetail(name ?? ''),
-    queryFn: () => apiClient.get<FormulaDetail>(`/api/formula/${encodeURIComponent(name ?? '')}`),
-    staleTime: 60_000,
-    enabled: Boolean(name),
-  });
-}
-
-export function useFormulaPreview() {
-  return useMutation({
-    mutationFn: ({ name, target, args }: { name: string; target?: string; args?: string }) =>
-      apiClient.post<FormulaPreview>(`/api/formula/${encodeURIComponent(name)}/preview`, {
-        target,
-        args,
-      }),
-  });
-}
 /** Bead dependency graph — nodes + typed edges. Changes slowly; poll every 30s. */
 export function useBeadGraph() {
   return useQuery({
@@ -408,19 +374,5 @@ export function useReady(opts: ReadyOptions = {}) {
     queryKey: queryKeys.ready(opts),
     queryFn: () => apiClient.get<ReadyResponse | null>(`/api/ready${qs}`),
     refetchInterval: 20_000,
-  });
-}
-
-export function useAppendBeadNotes() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ beadId, notes }: { beadId: string; notes: string }) =>
-      apiClient.post<{ success: boolean }>(`/api/bead/${encodeURIComponent(beadId)}/notes`, { notes }),
-    onSuccess: (_data, variables) => {
-      void qc.invalidateQueries({ queryKey: queryKeys.beadDetail(variables.beadId) });
-      void qc.invalidateQueries({ queryKey: queryKeys.beads('open') });
-      void qc.invalidateQueries({ queryKey: queryKeys.beads('in_progress') });
-      void qc.invalidateQueries({ queryKey: queryKeys.beads('all') });
-    },
   });
 }

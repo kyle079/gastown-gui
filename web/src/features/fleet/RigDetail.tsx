@@ -1,10 +1,13 @@
+import { useState } from 'react';
+import { useNavigate } from '@tanstack/react-router';
 import { Link } from '@tanstack/react-router';
-import { Panel, PanelHeader, StatusPill, StatusDot } from '@/components/primitives';
+import { Button, Panel, PanelHeader, StatusPill, StatusDot } from '@/components/primitives';
 import type { Agent, Rig } from '@/lib/api/types';
 import { pluralize } from '@/lib/utils/format';
 import { rigHealth, groupRigAgents } from './rigHealth';
 import { AgentRow } from './AgentRow';
 import { RigInfraPanel } from './RigInfraPanel';
+import { RemoveRigDialog } from './RigActionDialogs';
 
 function AgentGroup({ title, agents }: { title: string; agents: Agent[] }) {
   if (agents.length === 0) return null;
@@ -26,8 +29,10 @@ function AgentGroup({ title, agents }: { title: string; agents: Agent[] }) {
  * services → polecats → crew.
  */
 export function RigDetail({ rig }: { rig: Rig }) {
+  const navigate = useNavigate();
   const health = rigHealth(rig);
   const groups = groupRigAgents(rig);
+  const [removing, setRemoving] = useState(false);
 
   return (
     <div className="flex flex-col gap-4">
@@ -46,11 +51,14 @@ export function RigDetail({ rig }: { rig: Rig }) {
               view PRs →
             </Link>
           </div>
-          <div className="flex shrink-0 flex-col items-end gap-1.5">
+          <div className="flex shrink-0 flex-col items-end gap-2">
             <StatusPill tone={health.tone} pulse={health.pulse} label={health.label} />
             <span className="font-mono text-xs tabular-nums text-muted">
               {health.running}/{health.total} live
             </span>
+            <Button variant="danger" size="sm" onClick={() => setRemoving(true)}>
+              Remove rig
+            </Button>
           </div>
         </div>
 
@@ -78,6 +86,13 @@ export function RigDetail({ rig }: { rig: Rig }) {
           No agents in this rig — {pluralize(rig.polecat_count, 'polecat')} configured, none running.
         </Panel>
       )}
+
+      <RemoveRigDialog
+        rigName={rig.name}
+        open={removing}
+        onClose={() => setRemoving(false)}
+        onRemoved={() => void navigate({ to: '/rigs' })}
+      />
     </div>
   );
 }

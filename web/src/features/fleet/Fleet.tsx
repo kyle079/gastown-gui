@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Outlet, useNavigate, useParams } from '@tanstack/react-router';
 import { Surface } from '@/components/Surface';
 import { Panel, Spinner, Button } from '@/components/primitives';
@@ -7,6 +7,7 @@ import { pluralize } from '@/lib/utils/format';
 import { compareRigs } from './rigHealth';
 import { RigList } from './RigList';
 import { DogsPanel } from './DogsPanel';
+import { NewRigDialog } from './RigActionDialogs';
 
 /**
  * Fleet layout — master/detail. Left column: severity-sorted rig list. Right
@@ -17,6 +18,7 @@ export function Fleet() {
   const navigate = useNavigate();
   const params = useParams({ strict: false }) as { rig?: string };
   const activeName = params.rig ?? null;
+  const [creatingRig, setCreatingRig] = useState(false);
 
   const { data, isLoading, isError, error, refetch } = useStatus();
   const rigs = useMemo(() => data?.rigs ?? [], [data]);
@@ -60,7 +62,15 @@ export function Fleet() {
   }
 
   return (
-    <Surface title="Fleet" description={pluralize(rigs.length, 'rig')}>
+    <Surface
+      title="Fleet"
+      description={pluralize(rigs.length, 'rig')}
+      actions={
+        <Button variant="primary" size="sm" onClick={() => setCreatingRig(true)}>
+          Add rig
+        </Button>
+      }
+    >
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="flex flex-col gap-4 lg:col-span-1">
           <RigList
@@ -80,6 +90,12 @@ export function Fleet() {
           )}
         </div>
       </div>
+
+      <NewRigDialog
+        open={creatingRig}
+        onClose={() => setCreatingRig(false)}
+        onCreated={(name) => void navigate({ to: '/rigs/$rig', params: { rig: name } })}
+      />
     </Surface>
   );
 }

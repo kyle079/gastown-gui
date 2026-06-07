@@ -15,6 +15,7 @@ describe('BeadService', () => {
         calls.push(opts);
         return { ok: true, beadId: 'gt-abc123', raw: 'Created bead: gt-abc123' };
       },
+      update: async () => ({ ok: true, raw: 'updated' }),
     };
 
     const service = new BeadService({
@@ -49,6 +50,7 @@ describe('BeadService', () => {
         calls.push(opts);
         return { ok: true, beadId: 'bead-1', raw: 'Created bead: bead-1' };
       },
+      update: async () => ({ ok: true, raw: 'updated' }),
     };
 
     const service = new BeadService({ bdGateway });
@@ -63,10 +65,10 @@ describe('BeadService', () => {
       search: async () => ({ ok: true, data: [] }),
       create: async () => ({ ok: true, beadId: 'bead-1', raw: '' }),
       show: async () => ({ ok: false, error: 'not found' }),
+      update: async () => ({ ok: true, raw: 'updated' }),
     };
 
     const service = new BeadService({ bdGateway });
     await expect(service.get('missing')).resolves.toEqual({ ok: false });
   });
 });
-

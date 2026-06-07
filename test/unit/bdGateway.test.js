@@ -178,4 +178,41 @@ describe('BDGateway', () => {
     await gateway.reassign({ beadId: 'bd-4', target: 'mayor' });
     expect(runner.calls[0].args).toEqual(['update', 'bd-4', '--assignee', 'mayor']);
   });
+
+  it('update() builds bd update args with labels', async () => {
+    const runner = new FakeRunner();
+    runner.queue(okResult('bd v0.44.0'));
+    runner.queue(okResult('updated'));
+    const gateway = new BDGateway({ runner, gtRoot: '/tmp/gt' });
+
+    await gateway.update({
+      beadId: 'bd-5',
+      title: 'Rename bead',
+      description: 'Expanded operator detail',
+      priority: 'P0',
+      status: 'blocked',
+      assignee: 'gastown_gui/polecats/amber',
+      labels: ['operator', 'ui'],
+    });
+
+    expect(runner.calls[0].args).toEqual(['--no-daemon', 'version']);
+    expect(runner.calls[1].args).toEqual([
+      '--no-daemon',
+      'update',
+      'bd-5',
+      '--title',
+      'Rename bead',
+      '--description',
+      'Expanded operator detail',
+      '--priority',
+      'P0',
+      '--status',
+      'blocked',
+      '--assignee',
+      'gastown_gui/polecats/amber',
+      '--set-labels',
+      'operator',
+      'ui',
+    ]);
+  });
 });

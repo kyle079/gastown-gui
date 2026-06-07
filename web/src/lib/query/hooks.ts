@@ -12,6 +12,7 @@ import type {
   DogsResponse,
   Escalation,
   Formula,
+  FormulaDetail,
   MailMessage,
   MergeRequest,
   PullRequest,
@@ -137,7 +138,7 @@ export function useSling() {
       void qc.invalidateQueries({ queryKey: queryKeys.convoys });
       void qc.invalidateQueries({ queryKey: queryKeys.status });
       void qc.invalidateQueries({ queryKey: queryKeys.activity });
-      void qc.invalidateQueries({ queryKey: queryKeys.beads('all') });
+      void qc.invalidateQueries({ queryKey: ['beads'] });
     },
   });
 }
@@ -156,7 +157,7 @@ export function useReassign() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: queryKeys.convoys });
       void qc.invalidateQueries({ queryKey: queryKeys.status });
-      void qc.invalidateQueries({ queryKey: queryKeys.beads('all') });
+      void qc.invalidateQueries({ queryKey: ['beads'] });
       void qc.invalidateQueries({ queryKey: queryKeys.activity });
     },
   });
@@ -170,7 +171,7 @@ export function useReleaseWork() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: queryKeys.convoys });
       void qc.invalidateQueries({ queryKey: queryKeys.status });
-      void qc.invalidateQueries({ queryKey: queryKeys.beads('all') });
+      void qc.invalidateQueries({ queryKey: ['beads'] });
       void qc.invalidateQueries({ queryKey: queryKeys.activity });
     },
   });
@@ -184,7 +185,7 @@ export function useParkWork() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: queryKeys.convoys });
       void qc.invalidateQueries({ queryKey: queryKeys.status });
-      void qc.invalidateQueries({ queryKey: queryKeys.beads('all') });
+      void qc.invalidateQueries({ queryKey: ['beads'] });
       void qc.invalidateQueries({ queryKey: queryKeys.activity });
     },
   });
@@ -198,7 +199,7 @@ export function useMarkWorkDone() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: queryKeys.convoys });
       void qc.invalidateQueries({ queryKey: queryKeys.status });
-      void qc.invalidateQueries({ queryKey: queryKeys.beads('all') });
+      void qc.invalidateQueries({ queryKey: ['beads'] });
       void qc.invalidateQueries({ queryKey: queryKeys.activity });
     },
   });
@@ -254,7 +255,7 @@ export function useCreateBead() {
     mutationFn: (input: SaveBeadInput) =>
       apiClient.post<{ success: boolean; bead_id?: string }>('/api/beads', input),
     onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: queryKeys.beads('all') });
+      void qc.invalidateQueries({ queryKey: ['beads'] });
       void qc.invalidateQueries({ queryKey: queryKeys.activity });
       void qc.invalidateQueries({ queryKey: queryKeys.status });
     },
@@ -273,7 +274,7 @@ export function useUpdateBead() {
     mutationFn: ({ beadId, ...body }: UpdateBeadInput) =>
       apiClient.patch<{ success: boolean }>(`/api/bead/${encodeURIComponent(beadId)}`, body),
     onSuccess: (_data, variables) => {
-      void qc.invalidateQueries({ queryKey: queryKeys.beads('all') });
+      void qc.invalidateQueries({ queryKey: ['beads'] });
       void qc.invalidateQueries({ queryKey: queryKeys.beadDetail(variables.beadId) });
       void qc.invalidateQueries({ queryKey: queryKeys.activity });
       void qc.invalidateQueries({ queryKey: queryKeys.status });
@@ -336,6 +337,15 @@ export function useFormulas() {
     queryKey: queryKeys.formulas,
     queryFn: () => apiClient.get<Formula[]>('/api/formulas'),
     refetchInterval: 60_000,
+  });
+}
+
+export function useFormulaDetail(name: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.formulaDetail(name ?? ''),
+    queryFn: () => apiClient.get<FormulaDetail>(`/api/formula/${encodeURIComponent(name ?? '')}`),
+    staleTime: 30_000,
+    enabled: Boolean(name),
   });
 }
 

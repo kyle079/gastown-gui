@@ -1,8 +1,9 @@
-import { Dialog, StatusPill, Badge, Select, useToast, type Tone } from '@/components/primitives';
+import { useState } from 'react';
+import { Badge, Button, Dialog, StatusPill, type Tone } from '@/components/primitives';
 import type { Convoy, TrackedBead } from '@/lib/api/types';
 import { relativeTime } from '@/lib/utils/format';
-import { useReassign, useTargets } from '@/lib/query/hooks';
 import { convoySignal, shortAgent } from './workState';
+import { TrackedBeadActionDialog, type TrackedBeadAction } from './TrackedBeadActionDialog';
 
 /** Map a tracked bead's status to a calm tone for its badge. */
 function beadTone(b: TrackedBead): Tone {
@@ -20,23 +21,10 @@ function beadTone(b: TrackedBead): Tone {
 }
 
 function TrackedRow({ bead }: { bead: TrackedBead }) {
-  const { data: targets } = useTargets();
-  const reassign = useReassign();
-  const { notify } = useToast();
-
-  function onReassign(target: string) {
-    if (!target) return;
-    reassign.mutate(
-      { beadId: bead.id, target },
-      {
-        onSuccess: () => notify(`Reassigned ${bead.id} → ${shortAgent(target)}`, 'accent'),
-        onError: () => notify(`Could not reassign ${bead.id}`, 'danger'),
-      },
-    );
-  }
+  const [action, setAction] = useState<TrackedBeadAction | null>(null);
 
   return (
-    <div className="flex flex-col gap-1.5 px-4 py-3">
+    <div className="flex flex-col gap-2 px-4 py-3">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="truncate text-sm text-fg">{bead.title}</div>
@@ -48,21 +36,28 @@ function TrackedRow({ bead }: { bead: TrackedBead }) {
         <span className="font-mono text-xs text-muted">
           {bead.assignee ? shortAgent(bead.assignee) : 'unassigned'}
         </span>
-        <Select
-          aria-label={`Reassign ${bead.id}`}
-          value=""
-          disabled={reassign.isPending}
-          onChange={(e) => onReassign(e.target.value)}
-          className="h-7 w-40 text-xs"
-        >
-          <option value="">Reassign…</option>
-          {(targets ?? []).map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name}
-            </option>
-          ))}
-        </Select>
       </div>
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" variant="ghost" onClick={() => setAction('reassign')}>
+          Reassign
+        </Button>
+        <Button size="sm" variant="ghost" onClick={() => setAction('park')}>
+          Park
+        </Button>
+        <Button size="sm" variant="primary" onClick={() => setAction('done')}>
+          Done
+        </Button>
+        <Button size="sm" variant="danger" onClick={() => setAction('release')}>
+          Release
+        </Button>
+      </div>
+
+      <TrackedBeadActionDialog
+        bead={bead}
+        action={action}
+        open={action != null}
+        onClose={() => setAction(null)}
+      />
     </div>
   );
 }

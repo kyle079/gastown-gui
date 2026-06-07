@@ -17,6 +17,7 @@ export const queryKeys = {
   pullRequestDetail: (owner: string, repo: string, number: number) =>
     ['pull-request-detail', owner, repo, number] as const,
   formulas: ['formulas'] as const,
+  formulaDetail: (name: string) => ['formula-detail', name] as const,
   schedulerStatus: ['scheduler-status'] as const,
   dogs: ['dogs'] as const,
   escalations: ['escalations'] as const,

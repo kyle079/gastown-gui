@@ -63,25 +63,38 @@ async function createExecutable(filePath, script) {
   await fs.writeFile(filePath, script, { mode: 0o755 });
 }
 
-async function startFixture({ gtScript, bdScript, ghScript, env = {} }) {
+async function startFixture({
+  gtScript,
+  bdScript,
+  ghScript,
+  homeLocalBdScript,
+  env = {},
+} = {}) {
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'gastown-cli-path-'));
   const binDir = path.join(tempDir, 'bin');
   const gtRoot = path.join(tempDir, 'gtroot');
+  const homeDir = env.HOME || path.join(tempDir, 'home');
 
   await fs.mkdir(binDir, { recursive: true });
   await fs.mkdir(gtRoot, { recursive: true });
+  await fs.mkdir(homeDir, { recursive: true });
 
   if (gtScript) {
     await createExecutable(path.join(binDir, 'gt'), gtScript);
   }
-  await createExecutable(
-    path.join(binDir, 'bd'),
-    bdScript ?? '#!/bin/bash\nif [[ "${1:-}" == "version" ]]; then echo "bd vtest"; exit 0; fi\nexit 0\n',
-  );
+  if (bdScript !== null) {
+    await createExecutable(
+      path.join(binDir, 'bd'),
+      bdScript ?? '#!/bin/bash\nif [[ "${1:-}" == "version" ]]; then echo "bd vtest"; exit 0; fi\nexit 0\n',
+    );
+  }
   await createExecutable(
     path.join(binDir, 'gh'),
     ghScript ?? '#!/bin/bash\necho "main"\n',
   );
+  if (homeLocalBdScript) {
+    await createExecutable(path.join(homeDir, '.local', 'bin', 'bd'), homeLocalBdScript);
+  }
 
   const port = await getFreePort();
   const baseUrl = `http://127.0.0.1:${port}`;
@@ -92,6 +105,7 @@ async function startFixture({ gtScript, bdScript, ghScript, env = {} }) {
       GASTOWN_PORT: String(port),
       HOST: '127.0.0.1',
       GT_ROOT: gtRoot,
+      HOME: homeDir,
       PATH: binDir,
       ...env,
     },
@@ -154,6 +168,54 @@ exit 0
       await stopFixture(fixture);
       if (gtOverrideDir) {
         await fs.rm(gtOverrideDir, { recursive: true, force: true });
+      }
+    }
+  });
+
+  it('detects bd from HOME/.local/bin in setup readiness when PATH is missing it', async () => {
+    let fixture;
+    let overrideDir;
+    try {
+      overrideDir = await fs.mkdtemp(path.join(os.tmpdir(), 'gastown-bd-home-local-'));
+      const gtBin = path.join(overrideDir, 'gt');
+
+      await createExecutable(gtBin, `#!/bin/bash
+set -euo pipefail
+if [[ "\${1:-}" == "version" ]]; then
+  echo "gt vhome-local-test"
+  exit 0
+fi
+if [[ "\${1:-}" == "feed" ]]; then
+  /bin/sleep 30
+  exit 0
+fi
+if [[ "\${1:-}" == "rig" && "\${2:-}" == "list" && "\${3:-}" == "--json" ]]; then
+  echo '[]'
+  exit 0
+fi
+echo "unexpected command: $*" >&2
+exit 1
+`);
+
+      fixture = await startFixture({
+        gtScript: null,
+        bdScript: null,
+        homeLocalBdScript: '#!/bin/bash\necho "bd vhome-local-test"\n',
+        env: {
+          PATH: '',
+          GT_BIN: gtBin,
+        },
+      });
+
+      const setupStatus = await fetch(`${fixture.baseUrl}/api/setup/status`).then((r) => r.json());
+
+      expect(setupStatus.gt_installed).toBe(true);
+      expect(setupStatus.bd_installed).toBe(true);
+      expect(setupStatus.bd_version).toContain('bd vhome-local-test');
+    } finally {
+      await stopFixture(fixture);
+      if (overrideDir) {
+        await fs.rm(overrideDir, { recursive: true, force: true });
       }
     }
   });

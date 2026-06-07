@@ -1315,18 +1315,28 @@ app.get('/api/setup/status', async (req, res) => {
 
   // Check gt
   try {
-    const gtResult = await execFileAsync(GT_EXECUTABLE, ['version'], { timeout: 5000 });
-    status.gt_installed = true;
-    status.gt_version = String(gtResult.stdout || '').trim().split('\n')[0];
+    const gtResult = await commandRunner.exec(GT_EXECUTABLE, ['version'], {
+      cwd: GT_ROOT,
+      timeoutMs: 5000,
+    });
+    if (gtResult.ok) {
+      status.gt_installed = true;
+      status.gt_version = String(gtResult.stdout || '').trim().split('\n')[0];
+    }
   } catch {
     status.gt_installed = false;
   }
 
   // Check bd
   try {
-    const bdResult = await execFileAsync(BD_EXECUTABLE, ['version'], { timeout: 5000 });
-    status.bd_installed = true;
-    status.bd_version = String(bdResult.stdout || '').trim().split('\n')[0];
+    const bdResult = await commandRunner.exec(BD_EXECUTABLE, ['version'], {
+      cwd: GT_ROOT,
+      timeoutMs: 5000,
+    });
+    if (bdResult.ok) {
+      status.bd_installed = true;
+      status.bd_version = String(bdResult.stdout || '').trim().split('\n')[0];
+    }
   } catch {
     status.bd_installed = false;
   }

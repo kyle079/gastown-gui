@@ -8,9 +8,8 @@ import { ComposeDialog, type ComposePrefill } from './ComposeDialog';
 import { useState } from 'react';
 
 /**
- * Full-page routed mail message view. Works for both /mail/$messageId and
- * /escalations/$messageId — the surface title and back path adapt to the
- * current location prefix.
+ * Full-page routed mail detail. Works for both /mail/$messageId and the
+ * legacy /escalations/$messageId alias.
  */
 export function MailMessagePage() {
   const { messageId } = useParams({ strict: false }) as { messageId: string };
@@ -24,7 +23,7 @@ export function MailMessagePage() {
   // Infer context from the current path prefix
   const isEscalationsContext = location.pathname.startsWith('/escalations');
   const backPath = isEscalationsContext ? '/escalations' : '/mail';
-  const surfaceTitle = isEscalationsContext ? 'Escalations' : 'Mail';
+  const surfaceTitle = isEscalationsContext ? 'Escalations' : 'Queue';
 
   const back = () => void navigate({ to: backPath });
 

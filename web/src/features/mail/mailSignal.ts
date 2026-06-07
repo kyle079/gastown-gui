@@ -2,10 +2,9 @@ import type { Tone } from '@/components/primitives';
 import type { MailMessage } from '@/lib/api/types';
 
 /**
- * Mail classification. Gas Town has no dedicated escalation feed — escalations,
- * crashes, and recovery requests all arrive as mail and are identified by their
- * subject line. This is the typed port of the old UI's `getMailSignal`, kept as
- * one small module so the mail surface and tests share one source of truth.
+ * Mail classification. Structured escalations now have their own feed, but the
+ * inbox still needs lightweight subject-based triage for crashes, recovery, and
+ * fallback escalation-shaped mail.
  */
 
 export type MailSignalKey =

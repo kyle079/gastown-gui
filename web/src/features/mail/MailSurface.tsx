@@ -4,17 +4,17 @@ import { Surface } from '@/components/Surface';
 import { Button } from '@/components/primitives';
 import { useMail, useEscalations, useAckEscalation, useCloseEscalation } from '@/lib/query/hooks';
 import type { MailMessage } from '@/lib/api/types';
-import { EscalationsPanel } from './EscalationsPanel';
-import { InboxPanel } from './InboxPanel';
 import { MailLoading, MailError } from './MailStates';
 import { ComposeDialog, type ComposePrefill } from './ComposeDialog';
 import { consumePendingCompose, subscribeCompose } from './composeBus';
+import { MailQueuePanel } from './MailQueuePanel';
+import type { QueueFilter } from './queueModel';
 
 /**
- * Mail surface — one job: triage the inbox. Escalations lead (signal over noise),
- * then the full inbox. Clicking a message navigates to /mail/$messageId.
+ * Unified queue surface. Structured escalations and ordinary mail share one
+ * triage list, with explicit action states instead of separate panels.
  */
-export function MailSurface() {
+export function MailSurface({ defaultFilter = 'all' }: { defaultFilter?: QueueFilter } = {}) {
   const navigate = useNavigate();
   const { data, isLoading, isError, error, refetch } = useMail();
   const { data: escalations } = useEscalations();
@@ -44,15 +44,15 @@ export function MailSurface() {
 
   if (isLoading) {
     return (
-      <Surface title="Mail" actions={actions}>
-        <MailLoading label="Loading inbox…" />
+      <Surface title="Queue" actions={actions}>
+        <MailLoading label="Loading queue…" />
       </Surface>
     );
   }
 
   if (isError || !data) {
     return (
-      <Surface title="Mail" actions={actions}>
+      <Surface title="Queue" actions={actions}>
         <MailError error={error} onRetry={() => void refetch()} />
       </Surface>
     );
@@ -61,19 +61,18 @@ export function MailSurface() {
   return (
     <>
       <Surface
-        title="Mail"
-        description="Agent mail and escalations — what needs you, first."
+        title="Queue"
+        description="One triage queue for mail and escalations, ranked by what needs action now."
         actions={actions}
       >
-        <div className="flex flex-col gap-4">
-          <EscalationsPanel
-            escalations={escalations ?? []}
-            onAck={(id) => void ackMutation.mutate(id)}
-            onClose={(id) => void closeMutation.mutate({ id })}
-            hideWhenEmpty
-          />
-          <InboxPanel mail={data} onOpen={openMessage} />
-        </div>
+        <MailQueuePanel
+          mail={data}
+          escalations={escalations ?? []}
+          defaultFilter={defaultFilter}
+          onOpenMail={openMessage}
+          onAckEscalation={(id) => void ackMutation.mutate(id)}
+          onCloseEscalation={(id) => void closeMutation.mutate({ id })}
+        />
       </Surface>
 
       <ComposeDialog open={compose.open} onClose={closeCompose} prefill={compose.prefill} />

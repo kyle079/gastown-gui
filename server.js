@@ -35,6 +35,7 @@ import { AgentPath } from './server/domain/values/AgentPath.js';
 import { CommandRunner } from './server/infrastructure/CommandRunner.js';
 import { CacheRegistry } from './server/infrastructure/CacheRegistry.js';
 import {
+  buildAugmentedPathEnv,
   DEFAULT_BD_FALLBACK_PATHS,
   DEFAULT_GT_FALLBACK_PATHS,
   resolveExecutable,
@@ -81,7 +82,12 @@ const BD_EXECUTABLE = resolveExecutable({
   fallbackPaths: DEFAULT_BD_FALLBACK_PATHS,
 });
 
-const commandRunner = new CommandRunner();
+const commandRunner = new CommandRunner({
+  baseEnv: buildAugmentedPathEnv({
+    env: process.env,
+    executablePaths: [GT_EXECUTABLE, BD_EXECUTABLE],
+  }),
+});
 const gtGateway = new GTGateway({ runner: commandRunner, gtRoot: GT_ROOT, executable: GT_EXECUTABLE });
 const bdGateway = new BDGateway({ runner: commandRunner, gtRoot: GT_ROOT, executable: BD_EXECUTABLE });
 const tmuxGateway = new TmuxGateway({ runner: commandRunner });
@@ -539,6 +545,36 @@ async function executeBD(args, options = {}) {
     return { success: true, data: String(stdout || '').trim() };
   } catch (error) {
     return { success: false, error: error.message };
+  }
+}
+
+async function listPullRequestsForRepo(repo, { state = 'all', limit = 20 } = {}) {
+  const gatewayResult = await gitHubGateway.listPullRequests({ repo, state, limit });
+  if (!gatewayResult.notConfigured) {
+    return gatewayResult.ok && Array.isArray(gatewayResult.data) ? gatewayResult.data : [];
+  }
+
+  try {
+    const { stdout } = await execFileAsync('gh', [
+      'pr',
+      'list',
+      '--repo',
+      repo,
+      '--state',
+      state,
+      '--limit',
+      String(limit),
+      '--json',
+      'number,title,url,state,headRefName,body,createdAt,updatedAt',
+    ], {
+      cwd: GT_ROOT,
+      timeout: 15000,
+      env: commandRunner._baseEnv,
+    });
+    const parsed = JSON.parse(String(stdout || '').trim());
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
   }
 }
 

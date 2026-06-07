@@ -36,6 +36,25 @@ function executableFromPath(command, env) {
   return null;
 }
 
+function unique(values) {
+  return [...new Set(values.filter(Boolean))];
+}
+
+export function buildAugmentedPathEnv({
+  env = process.env,
+  executablePaths = [],
+} = {}) {
+  const currentPath = env.PATH || '';
+  const inferredDirs = executablePaths
+    .filter((value) => hasPathSeparator(value))
+    .map((value) => path.dirname(value));
+  const pathEntries = unique([...inferredDirs, ...currentPath.split(path.delimiter).filter(Boolean)]);
+  return {
+    ...env,
+    PATH: pathEntries.join(path.delimiter),
+  };
+}
+
 export function resolveExecutable({
   command,
   envVarName,

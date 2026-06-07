@@ -175,4 +175,55 @@ exit 0
       await stopFixture(fixture);
     }
   });
+
+  it('augments child PATH so gt subprocesses can find bd via resolved executable dirs', async () => {
+    let fixture;
+    let overrideDir;
+    try {
+      overrideDir = await fs.mkdtemp(path.join(os.tmpdir(), 'gastown-convoy-path-'));
+      const gtBin = path.join(overrideDir, 'gt');
+      const bdBin = path.join(overrideDir, 'bd');
+
+      await createExecutable(gtBin, `#!/bin/bash
+set -euo pipefail
+if [[ "\${1:-}" == "version" ]]; then
+  echo "gt vpath-test"
+  exit 0
+fi
+if [[ "\${1:-}" == "feed" ]]; then
+  /bin/sleep 30
+  exit 0
+fi
+if [[ "\${1:-}" == "convoy" && "\${2:-}" == "list" ]]; then
+  bd version >/dev/null
+  echo '[]'
+  exit 0
+fi
+echo "unexpected command: $*" >&2
+exit 1
+`);
+      await createExecutable(bdBin, '#!/bin/bash\necho "bd vpath-test"\n');
+
+      fixture = await startFixture({
+        gtScript: null,
+        bdScript: null,
+        env: {
+          PATH: '',
+          GT_BIN: gtBin,
+          BD_BIN: bdBin,
+        },
+      });
+
+      const response = await fetch(`${fixture.baseUrl}/api/convoys`);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data).toEqual([]);
+    } finally {
+      await stopFixture(fixture);
+      if (overrideDir) {
+        await fs.rm(overrideDir, { recursive: true, force: true });
+      }
+    }
+  });
 });

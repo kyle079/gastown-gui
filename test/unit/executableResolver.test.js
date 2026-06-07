@@ -4,6 +4,7 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import {
+  buildAugmentedPathEnv,
   DEFAULT_GT_FALLBACK_PATHS,
   resolveExecutable,
 } from '../../server/infrastructure/ExecutableResolver.js';
@@ -78,5 +79,14 @@ describe('ExecutableResolver', () => {
 
   it('documents homebrew fallback path for gt', () => {
     expect(DEFAULT_GT_FALLBACK_PATHS).toContain('/opt/homebrew/bin/gt');
+  });
+
+  it('augments PATH with executable directories ahead of the inherited PATH', () => {
+    const env = buildAugmentedPathEnv({
+      env: { PATH: '/usr/bin:/bin' },
+      executablePaths: ['/opt/tools/gt', '/opt/tools/bd', 'bd'],
+    });
+
+    expect(env.PATH).toBe('/opt/tools:/usr/bin:/bin');
   });
 });

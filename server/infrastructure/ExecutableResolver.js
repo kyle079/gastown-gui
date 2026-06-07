@@ -40,6 +40,13 @@ function unique(values) {
   return [...new Set(values.filter(Boolean))];
 }
 
+function homeLocalExecutablePath(command, env) {
+  const homeDir = String(env?.HOME || '').trim();
+  if (!homeDir || hasPathSeparator(command)) return null;
+
+  return path.join(homeDir, '.local', 'bin', command);
+}
+
 export function buildAugmentedPathEnv({
   env = process.env,
   executablePaths = [],
@@ -75,6 +82,9 @@ export function resolveExecutable({
 
   const fromPath = executableFromPath(command, env);
   if (fromPath) return fromPath;
+
+  const fromHomeLocal = homeLocalExecutablePath(command, env);
+  if (fromHomeLocal && canExecute(fromHomeLocal)) return fromHomeLocal;
 
   for (const candidate of fallbackPaths) {
     if (canExecute(candidate)) return candidate;

@@ -7,8 +7,8 @@
 ```
 ENTRY:    server.js - Express bridge server (gt/bd CLI → HTTP/WS)
 CLI:      bin/cli.js - npx gastown-gui entry point
-FRONTEND: js/ - Legacy browser SPA (vanilla JS, no framework) — being rewritten
-WEB:      web/ - NEW React/TS/Vite/Tailwind/TanStack frontend (Phase 0 foundation)
+FRONTEND: js/ - Legacy browser SPA kept as fallback when the modern build is absent
+WEB:      web/ - React/TS/Vite/Tailwind/TanStack frontend (primary app target)
 BACKEND:  server/ - Refactored backend modules (services, gateways, routes)
 STYLES:   css/ - CSS custom properties + component styles (legacy SPA)
 TESTS:    test/ - Vitest unit + integration, Puppeteer E2E
@@ -19,15 +19,16 @@ DOCS:     docs/, refactoring-analysis/, CLI-COMPATIBILITY.md, PRODUCT.md, DESIGN
 
 ## Frontend — React Rewrite (web/)
 
-The GUI is being rewritten from the vanilla `js/` SPA to a modern React stack.
-The Express bridge server is unchanged and remains the backend.
+The GUI is moving from the vanilla `js/` SPA to a modern React stack. The
+Express bridge server remains the backend and now prefers the built React app,
+falling back to the legacy SPA only when `web/dist` is unavailable.
 
 ```
 web/ - React + TS + Vite + Tailwind + TanStack Router/Query app
 ├─ src/app/          App shell, sidebar, top bar, navigation config
 ├─ src/components/primitives/   TS+Tailwind component library (tokens-driven)
 ├─ src/components/command-palette/  Command palette + mod+k / `g _` keyboard layer
-├─ src/features/dashboard/      Phase 0 reference surface (fed by TanStack Query)
+├─ src/features/dashboard/      Reference surface (fed by TanStack Query)
 ├─ src/lib/api/      Typed fetch client + gt API types
 ├─ src/lib/query/    QueryClient, keys, data hooks (useStatus, useMail)
 ├─ src/lib/keyboard/ Hotkey + key-sequence primitives
@@ -35,7 +36,8 @@ web/ - React + TS + Vite + Tailwind + TanStack Router/Query app
 └─ src/router.tsx    Code-based route tree
 ```
 
-Dev: `cd web && npm run dev` (proxies `/api` + `/ws` to the Express bridge on :7667).
+Dev: `cd web && npm run dev` (proxies `/api` + `/ws` to the Express bridge on :8080).
+Root build/lint/typecheck scripts forward to the `web/` app for the new frontend lifecycle.
 Design direction + tokens are documented in `DESIGN.md`; product brief in `PRODUCT.md`.
 
 ## Backend — Entry & App

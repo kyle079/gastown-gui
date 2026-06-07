@@ -10,7 +10,12 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js --dev",
+    "build": "npm --prefix web run build",
+    "build:web": "npm --prefix web run build",
+    "lint": "npm --prefix web run lint",
+    "typecheck": "npm --prefix web run typecheck",
     "test": "vitest run",
+    "test:web": "npm --prefix web run test",
     "test:unit": "vitest run --config vitest.unit.config.js",
     "test:e2e": "vitest run test/e2e.test.js",
     "test:watch": "vitest watch",

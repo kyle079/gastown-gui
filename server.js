@@ -61,6 +61,8 @@ import { registerStatusRoutes } from './server/routes/status.js';
 import { registerTargetRoutes } from './server/routes/targets.js';
 import { registerTerminalRoutes } from './server/routes/terminal.js';
 import { registerWorkRoutes } from './server/routes/work.js';
+import { buildLocalStore } from './server/auth/localAuth.js';
+import { requireAuth, isWsAuthenticated } from './server/auth/protect.js';
 
 const execFileAsync = promisify(execFile);
 const __filename = fileURLToPath(import.meta.url);
@@ -114,9 +116,39 @@ const allowedOrigins = process.env.CORS_ORIGINS
   : defaultOrigins;
 const allowNullOrigin = process.env.ALLOW_NULL_ORIGIN === 'true';
 
-const app = createApp({ allowedOrigins, allowNullOrigin });
+// ─── Auth setup ─────────────────────────────────────────────────────────────
+// Validate required env vars before starting
+if (!process.env.SESSION_SECRET) {
+  console.error('[Security] SESSION_SECRET is not set. This is required. Exiting.');
+  process.exit(1);
+}
+const AUTH_USERNAME = process.env.AUTH_USERNAME;
+const AUTH_PASSWORD = process.env.AUTH_PASSWORD;
+if (!AUTH_USERNAME || !AUTH_PASSWORD) {
+  console.error('[Security] AUTH_USERNAME and AUTH_PASSWORD must be set. Exiting.');
+  process.exit(1);
+}
+
+const userStore = await buildLocalStore({ adminUser: AUTH_USERNAME, adminPass: AUTH_PASSWORD });
+
+const { app, sessionParser } = createApp({ allowedOrigins, allowNullOrigin });
 const server = createServer(app);
-const wss = new WebSocketServer({ server });
+
+// WebSocket server in noServer mode so we can gate upgrades with auth
+const wss = new WebSocketServer({ noServer: true });
+
+// Gate WebSocket upgrades — reject unauthenticated connections
+server.on('upgrade', async (req, socket, head) => {
+  const authenticated = await isWsAuthenticated(req, sessionParser);
+  if (!authenticated) {
+    socket.write('HTTP/1.1 401 Unauthorized\r\nContent-Length: 0\r\n\r\n');
+    socket.destroy();
+    return;
+  }
+  wss.handleUpgrade(req, socket, head, (ws) => {
+    wss.emit('connection', ws, req);
+  });
+});
 
 // Simple in-memory cache with TTL
 const cache = new Map();
@@ -338,13 +370,25 @@ setInterval(() => {
   }
 }, CACHE_CLEANUP_INTERVAL);
 
-// Middleware
+// ─── Static assets (served before auth gate — needed for login page) ────────
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
 app.use('/css', express.static(path.join(__dirname, 'css'), {
   setHeaders: (res) => {
     res.setHeader('Cache-Control', 'no-store, must-revalidate');
   }
 }));
+app.get('/favicon.ico', (req, res) => {
+  res.sendFile(path.join(__dirname, 'assets', 'favicon.ico'));
+});
+app.get('/login', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store, must-revalidate');
+  res.sendFile(path.join(__dirname, 'login.html'));
+});
+
+// ─── Auth gate — all routes below require a valid session ────────────────────
+app.use(requireAuth({ loginPath: '/login' }));
+
+// ─── Protected static and app routes ────────────────────────────────────────
 app.use('/js', express.static(path.join(__dirname, 'js'), {
   setHeaders: (res, filePath) => {
     if (filePath.endsWith('.js')) {
@@ -355,9 +399,6 @@ app.use('/js', express.static(path.join(__dirname, 'js'), {
 app.get('/', (req, res) => {
   res.setHeader('Cache-Control', 'no-store, must-revalidate');
   res.sendFile(path.join(__dirname, 'index.html'));
-});
-app.get('/favicon.ico', (req, res) => {
-  res.sendFile(path.join(__dirname, 'assets', 'favicon.ico'));
 });
 
 // Store connected WebSocket clients
@@ -1830,15 +1871,18 @@ const formulaService = new FormulaService({
 
 registerFormulaRoutes(app, { formulaService });
 
-// ============= Auth (GitHub OAuth) =============
-registerAuthRoutes(app);
+// ============= Auth (local password + GitHub OAuth) =============
+// Note: /auth/* routes are allow-listed in the protect middleware above.
+// registerAuthRoutes must be called BEFORE the protect gate so login itself is reachable.
+// It was registered before requireAuth in route ordering; the protect middleware's
+// pass-through for /auth/* handles this correctly.
+registerAuthRoutes(app, { userStore });
 
 // ============= GitHub Integration =============
 registerGitHubRoutes(app, { gitHubService, gitHubGatewayFactory, statusService });
 
 // ============= Terminal (PTY-over-WebSocket) =============
-// Registered after wss is created; terminal WS handler is added to the shared wss.
-// SECURITY: app binds to 127.0.0.1 by default. No auth — LAN-only (see gg-2wt).
+// WS auth is gated at the server 'upgrade' event above. No separate per-route auth needed.
 registerTerminalRoutes(app, { wss });
 
 // ============= WebSocket for Real-time Events =============

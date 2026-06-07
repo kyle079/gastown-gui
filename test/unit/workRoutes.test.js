@@ -40,7 +40,7 @@ describe('Work routes (real Express app)', () => {
       },
     };
 
-    const app = createApp({ allowedOrigins: ['*'] });
+    const { app } = createApp({ allowedOrigins: ['*'] });
     registerWorkRoutes(app, { workService });
 
     server = createServer(app);

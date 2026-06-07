@@ -30,7 +30,7 @@ describe('Infrastructure routes', () => {
   let cache;
 
   beforeAll(async () => {
-    const app = createApp({ allowedOrigins: ['*'] });
+    const { app } = createApp({ allowedOrigins: ['*'] });
     cache = new CacheRegistry();
     registerInfrastructureRoutes(app, { gtGateway: makeGateway(), cache });
 
@@ -140,7 +140,7 @@ describe('Infrastructure routes', () => {
 
   it('?refresh=true bypasses cache', async () => {
     const calls = [];
-    const app2 = createApp({ allowedOrigins: ['*'] });
+    const { app: app2 } = createApp({ allowedOrigins: ['*'] });
     const c2 = new CacheRegistry();
     const gw = makeGateway({
       schedulerStatus: async () => {
@@ -178,7 +178,7 @@ describe('Infrastructure routes', () => {
 
   it('GET /api/trail?type=hooks passes subcommand to gateway', async () => {
     let capturedSub;
-    const app4 = createApp({ allowedOrigins: ['*'] });
+    const { app: app4 } = createApp({ allowedOrigins: ['*'] });
     const c4 = new CacheRegistry();
     const gw4 = makeGateway({
       trail: async ({ subcommand }) => { capturedSub = subcommand; return { ok: true, data: [] }; },
@@ -204,7 +204,7 @@ describe('Infrastructure routes', () => {
 
   it('GET /api/ready?rig=foo passes rig filter to gateway', async () => {
     let capturedRig;
-    const app5 = createApp({ allowedOrigins: ['*'] });
+    const { app: app5 } = createApp({ allowedOrigins: ['*'] });
     const c5 = new CacheRegistry();
     const gw5 = makeGateway({
       ready: async ({ rig }) => { capturedRig = rig; return { ok: true, data: { sources: [], summary: {} } }; },
@@ -221,7 +221,7 @@ describe('Infrastructure routes', () => {
   });
 
   it('returns 500 on gateway error', async () => {
-    const app3 = createApp({ allowedOrigins: ['*'] });
+    const { app: app3 } = createApp({ allowedOrigins: ['*'] });
     const c3 = new CacheRegistry();
     const errGw = makeGateway({
       doltHealth: async () => { throw new Error('Dolt is down'); },

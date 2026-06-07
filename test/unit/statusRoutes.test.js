@@ -18,7 +18,7 @@ describe('Status routes (real Express app)', () => {
       },
     };
 
-    const app = createApp({ allowedOrigins: ['*'] });
+    const { app } = createApp({ allowedOrigins: ['*'] });
     registerStatusRoutes(app, { statusService });
 
     server = createServer(app);

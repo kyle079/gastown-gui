@@ -29,7 +29,7 @@ describe('Formula routes (real Express app)', () => {
       emit: (type, data) => events.push({ type, data }),
     });
 
-    const app = createApp({ allowedOrigins: ['*'] });
+    const { app } = createApp({ allowedOrigins: ['*'] });
     registerFormulaRoutes(app, { formulaService });
 
     server = createServer(app);

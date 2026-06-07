@@ -18,7 +18,7 @@ describe('Target routes (real Express app)', () => {
       },
     };
 
-    const app = createApp({ allowedOrigins: ['*'] });
+    const { app } = createApp({ allowedOrigins: ['*'] });
     registerTargetRoutes(app, { targetService });
 
     server = createServer(app);

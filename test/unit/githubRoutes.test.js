@@ -39,7 +39,7 @@ describe('GitHub routes (real Express app)', () => {
       },
     };
 
-    const app = createApp({ allowedOrigins: ['*'] });
+    const { app } = createApp({ allowedOrigins: ['*'] });
     registerGitHubRoutes(app, { gitHubService });
 
     server = createServer(app);

@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import https from 'https';
+import { buildLocalStore, verifyPassword } from '../auth/localAuth.js';
 
 const GITHUB_AUTHORIZE_URL = 'https://github.com/login/oauth/authorize';
 const GITHUB_TOKEN_URL = 'https://github.com/login/oauth/access_token';
@@ -73,7 +74,50 @@ function httpsGet(url, token) {
   });
 }
 
-export function registerAuthRoutes(app) {
+/**
+ * @param {import('express').Application} app
+ * @param {{ userStore: import('../auth/localAuth.js').MemoryStore }} opts
+ */
+export function registerAuthRoutes(app, { userStore }) {
+  // ─── Local password auth ────────────────────────────────────────────────
+
+  // POST /auth/login — username/password login (JSON body)
+  app.post('/auth/login', async (req, res) => {
+    const { username, password } = req.body ?? {};
+    if (!username || !password) {
+      return res.status(400).json({ error: 'username and password required' });
+    }
+
+    const storedUser = await userStore.findByUsername(username);
+    if (!storedUser || !storedUser.passwordHash) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    const valid = await verifyPassword(password, storedUser.passwordHash);
+    if (!valid) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    const user = { id: storedUser.id, username: storedUser.username, roles: storedUser.roles, provider: 'local' };
+    req.session.user = user;
+    req.session.save((err) => {
+      if (err) return res.status(500).json({ error: 'Session error' });
+      const returnTo = req.session.returnTo ?? '/';
+      delete req.session.returnTo;
+      console.log(`[Auth] Login: ${username}`);
+      res.json({ user, redirectTo: returnTo });
+    });
+  });
+
+  // GET /auth/me — current local auth user
+  app.get('/auth/me', (req, res) => {
+    const user = req.session?.user;
+    if (!user) return res.status(401).json({ error: 'Not authenticated' });
+    res.json({ user });
+  });
+
+  // ─── GitHub OAuth (in-app data enrichment, gg-8te) ──────────────────────
+
   // Status — returns current GitHub auth state for the session
   app.get('/api/auth/status', (req, res) => {
     const { clientId } = getConfig();
@@ -119,7 +163,6 @@ export function registerAuthRoutes(app) {
     }
 
     try {
-      // Exchange code for access token
       const tokenData = await httpsPost(GITHUB_TOKEN_URL, {
         client_id: clientId,
         client_secret: clientSecret,
@@ -134,7 +177,6 @@ export function registerAuthRoutes(app) {
 
       const accessToken = tokenData.access_token;
 
-      // Fetch authenticated user to check allowlist
       const user = await httpsGet(GITHUB_API_USER_URL, accessToken);
       if (!user.login) {
         return res.status(500).send('Could not retrieve GitHub user info.');
@@ -145,7 +187,6 @@ export function registerAuthRoutes(app) {
         return res.status(403).send(`Access denied. GitHub user '${user.login}' is not authorized.`);
       }
 
-      // Store token + identity in session
       req.session.githubToken = accessToken;
       req.session.githubLogin = user.login;
 
@@ -157,12 +198,12 @@ export function registerAuthRoutes(app) {
     }
   });
 
-  // Logout — clears GitHub token from session (not full app logout)
+  // Logout — clears both local session user and GitHub token
   app.post('/auth/logout', (req, res) => {
-    if (req.session) {
-      delete req.session.githubToken;
-      delete req.session.githubLogin;
-    }
-    res.json({ ok: true });
+    req.session.destroy((err) => {
+      if (err) return res.status(500).json({ error: 'Logout failed' });
+      res.clearCookie('connect.sid');
+      res.json({ ok: true });
+    });
   });
 }

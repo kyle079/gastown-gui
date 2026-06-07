@@ -27,7 +27,7 @@ describe('Convoy routes (real Express app)', () => {
       },
     };
 
-    const app = createApp({ allowedOrigins: ['*'] });
+    const { app } = createApp({ allowedOrigins: ['*'] });
     registerConvoyRoutes(app, { convoyService });
 
     server = createServer(app);

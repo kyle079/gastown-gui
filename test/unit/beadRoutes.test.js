@@ -33,7 +33,7 @@ describe('Bead routes (real Express app)', () => {
       },
     };
 
-    const app = createApp({ allowedOrigins: ['*'] });
+    const { app } = createApp({ allowedOrigins: ['*'] });
     registerBeadRoutes(app, { beadService });
 
     server = createServer(app);

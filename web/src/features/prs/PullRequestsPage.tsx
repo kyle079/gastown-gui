@@ -64,8 +64,8 @@ function PrTitle({ pr }: { pr: PullRequest }) {
           <span className="font-mono text-2xs text-faint">{pr.headRefName}</span>
           {beadId && (
             <Link
-              to="/catalog"
-              search={{ tab: 'issues', id: beadId }}
+              to="/issues"
+              search={{ id: beadId }}
               onClick={(e) => e.stopPropagation()}
               className="font-mono text-2xs text-accent underline-offset-2 hover:underline"
             >
@@ -140,7 +140,7 @@ const columns: Column<PullRequest>[] = [
 /**
  * Pull requests — own top-level page at /prs. Shows Open / Merged / Closed / All
  * states (tab = URL search param). Clicking a PR navigates to the in-app detail
- * view; rig name links to /rigs/$rig; bead ID links to the issue in Catalog.
+ * view; rig name links to /rigs/$rig; bead ID links to the Issues surface.
  */
 export function PullRequestsPage() {
   const navigate = useNavigate();

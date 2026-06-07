@@ -206,6 +206,24 @@ export interface Bead {
   comment_count?: number;
 }
 
+export interface BeadDependency {
+  id: string;
+  title: string;
+  description?: string;
+  status?: string;
+  priority?: number;
+  issue_type?: string;
+  created_at?: string;
+  updated_at?: string;
+  ephemeral?: boolean;
+  dependency_type?: string;
+}
+
+export interface BeadDetail extends Bead {
+  assignee?: string | null;
+  dependencies?: BeadDependency[];
+}
+
 /** GitHub author object (`author.login`). */
 export interface GitHubUser {
   login?: string;

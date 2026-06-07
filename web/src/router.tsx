@@ -16,7 +16,9 @@ import { MailMessagePage } from '@/features/mail/MailMessagePage';
 import { EscalationsSurface } from '@/features/mail/EscalationsSurface';
 import { WorkSurface } from '@/features/work/WorkSurface';
 import { ConvoyDetailPage } from '@/features/work/ConvoyDetailPage';
-import { Catalog, validateCatalogSearch } from '@/features/catalog/Catalog';
+import { CatalogRedirect } from '@/features/catalog/CatalogRedirect';
+import { FormulasView, validateFormulasSearch } from '@/features/catalog/FormulasView';
+import { IssuesView, validateIssuesSearch } from '@/features/catalog/IssuesView';
 import { PullRequestsPage, validatePrsSearch } from '@/features/prs/PullRequestsPage';
 import { PullRequestDetailPage } from '@/features/prs/PullRequestDetailPage';
 import { TerminalSurface } from '@/features/terminal/TerminalSurface';
@@ -49,13 +51,25 @@ const activityRoute = createRoute({
   component: ActivityFeed,
 });
 
-// Catalog — issues, PRs, and formulas. Tab, issue selection, and issue filters
-// are all URL search params so every view deep-links and survives reload.
+// Legacy Catalog route kept as a redirect so old deep links still resolve.
 const catalogRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/catalog',
-  validateSearch: validateCatalogSearch,
-  component: Catalog,
+  component: CatalogRedirect,
+});
+
+const issuesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/issues',
+  validateSearch: validateIssuesSearch,
+  component: IssuesView,
+});
+
+const formulasRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/formulas',
+  validateSearch: validateFormulasSearch,
+  component: FormulasView,
 });
 
 // Fleet — master/detail. /rigs renders the layout (list + outlet); /rigs/$rig
@@ -150,6 +164,8 @@ const routeTree = rootRoute.addChildren([
   indexRoute,
   activityRoute,
   catalogRoute,
+  issuesRoute,
+  formulasRoute,
   rigsRoute.addChildren([rigDetailRoute]),
   workRoute,
   workDetailRoute,

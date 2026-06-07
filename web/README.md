@@ -1,8 +1,8 @@
-# Gas Town — Web Console (React rewrite)
+# Gas Town — Web Console
 
-The modern React frontend for the Gas Town control console. This is the Phase 0
-foundation of a full rewrite of the GUI from vanilla JS to a React stack. The
-existing Express bridge server (`../server.js`) remains the backend, unchanged.
+The React frontend for the Gas Town control console. This app defines the
+current information architecture and ships through the existing Express bridge
+server (`../server.js`) when `web/dist` is present.
 
 **Stack:** React + TypeScript + Vite + Tailwind + TanStack Router + TanStack Query.
 
@@ -42,8 +42,16 @@ src/
     command-palette/    Command palette + provider (mod+k, g _ sequences)
     Surface.tsx         Page-level container
   features/
-    dashboard/          The Phase 0 reference surface
-    placeholder/        Stand-ins for Phase 1 surfaces
+    activity/           Live event stream
+    catalog/            Issues and formulas
+    dashboard/          Town overview
+    fleet/              Rigs master/detail
+    graph/              Bead dependency graph
+    help/               Concepts, workflow, readiness
+    mail/               Inbox, escalations, compose/detail dialogs
+    prs/                Pull request list and detail
+    terminal/           Browser terminal sessions
+    work/               Convoys, dispatch, convoy detail
   lib/
     api/                Typed fetch client + gt API types
     query/              QueryClient, keys, data hooks
@@ -57,10 +65,25 @@ src/
 
 Design tokens and the visual direction are documented in `../DESIGN.md`.
 
-## Phase boundary
+## Routes
 
-Phase 0 ships the scaffold, design system, primitives, keyboard layer, app shell,
-data layer, and **one** fully built surface (Dashboard) to prove the pattern.
-The other nav entries are route stubs that Phase 1 fills in. Production serving of
-`dist/` from the Express server (replacing the legacy SPA) is also a Phase 1 step;
-until then, develop via the Vite proxy.
+The shipped top-level route tree is:
+
+- `/` dashboard
+- `/activity`
+- `/rigs` and `/rigs/$rig`
+- `/work` and `/work/$convoyId`
+- `/catalog`
+- `/prs` and `/prs/$owner/$repo/$prNumber`
+- `/mail` and `/mail/$messageId`
+- `/escalations` and `/escalations/$messageId`
+- `/terminal`
+- `/graph`
+- `/help`
+
+## Delivery
+
+The Express bridge prefers `web/dist/index.html` and serves this React app when
+that build artifact exists. If the dist output is absent, the server falls back
+to the legacy root-level SPA. Develop the React app through the Vite proxy; ship
+it by building `dist/`.

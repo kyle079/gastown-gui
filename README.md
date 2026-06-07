@@ -126,13 +126,17 @@ Service hardening defaults are enabled in the module (for example `NoNewPrivileg
 
 ## Features
 
-- **Rig Management** - Add, view, and organize project repositories
-- **Work Tracking** - Create and manage work items (beads)
-- **Task Assignment** - Sling work to rigs and agents
-- **Real-Time Updates** - Live WebSocket updates for all operations
-- **PR Tracking** - View GitHub pull requests across projects
-- **Mail Inbox** - Read messages from agents and polecats
-- **Health Monitoring** - Run doctor checks and view system status
+- **Dashboard** - Attention-first town overview with metrics, rig health, services, and scheduler status
+- **Activity** - Live event stream for recent system activity
+- **Fleet** - Severity-sorted rig list with rig detail drill-down
+- **Work** - Convoy queue, dispatch flow, and convoy detail views
+- **Catalog** - Browse issues and formulas with deep-linkable filters
+- **Pull Requests** - Review repository PR lists and drill into PR details
+- **Mail & Escalations** - Read inbox traffic, triage escalations, and compose responses
+- **Terminal** - Attach to agent sessions from the browser
+- **Graph** - Inspect bead dependency relationships visually
+- **Help** - Built-in Gas Town glossary, workflow, and readiness guidance
+- **Real-Time Updates** - Live HTTP/WebSocket-backed status and activity refresh
 
 ---
 
@@ -232,10 +236,11 @@ All operations execute through the official `gt` and `bd` commands - the GUI nev
 
 ### Tech Stack
 
-- **Backend:** Node.js + Express
-- **Frontend:** Vanilla JavaScript (no framework)
-- **Communication:** WebSocket for real-time updates
-- **Testing:** Vitest + Puppeteer E2E tests
+- **Backend:** Node.js + Express bridge over `gt`, `bd`, `gh`, `git`, and tmux
+- **Primary frontend:** React + TypeScript + Vite + Tailwind + TanStack Router/Query (`web/`)
+- **Fallback frontend:** Legacy vanilla JS SPA (`js/`, `css/`, `index.html`) when `web/dist` is not present
+- **Communication:** HTTP API + WebSocket for real-time updates
+- **Testing:** Vitest unit/integration tests, Vitest browser coverage for the React app, and Puppeteer E2E tests
 
 ### Design Principles
 
@@ -268,29 +273,20 @@ All operations execute through the official `gt` and `bd` commands - the GUI nev
 ```
 gastown-gui/
 ├── bin/cli.js           # CLI entry point
-├── server.js            # Express + WebSocket server
-├── index.html           # Main HTML (single page)
-├── css/                 # Stylesheets
-│   ├── variables.css
-│   ├── reset.css
-│   ├── layout.css
-│   ├── components.css
-│   └── animations.css
-├── js/
-│   ├── app.js           # Main app entry
-│   ├── api.js           # API client
-│   ├── state.js         # State management
-│   └── components/      # UI components
-│       ├── dashboard.js
-│       ├── rig-list.js
-│       ├── work-list.js
-│       ├── pr-list.js
-│       ├── mail-list.js
-│       └── ...
-├── test/
-│   ├── unit/            # Unit tests
-│   └── e2e.test.js      # E2E tests
-└── assets/              # Favicons, icons
+├── server.js            # Express + WebSocket bridge server
+├── server/              # Routes, services, gateways, infrastructure
+├── web/                 # React + TS + Vite frontend
+│   └── src/
+│       ├── app/         # Shell, top bar, sidebar, navigation
+│       ├── components/  # Primitives + command palette
+│       ├── features/    # Dashboard, fleet, work, mail, PRs, graph, help, terminal
+│       ├── lib/         # API client, query hooks, keyboard, utils
+│       └── styles/      # Design tokens + global styles
+├── js/                  # Legacy SPA fallback
+├── css/                 # Legacy SPA styles
+├── test/                # Unit, integration, and E2E coverage
+├── assets/              # Favicons, screenshots, loading art
+└── docs/                # Audits, architecture notes, and reviews
 ```
 
 ---
@@ -313,26 +309,11 @@ npm run test:watch
 
 ---
 
-## Known Limitations
+## Delivery Notes
 
-### Remaining Features (Use CLI)
-
-| Feature | Status |
-|---------|--------|
-| Agent configuration UI | ❌ Not implemented |
-
-### Implemented Features
-
-| Feature | Status |
-|---------|--------|
-| Polecat spawn/stop/restart | ✅ UI in Rig list |
-| Rig deletion | ✅ Remove button in Rig list |
-| Crew management | ✅ Create/list/view |
-| Formula operations | ✅ Create/list/use |
-| Test coverage | ✅ 206 tests passing |
-
-**Known Issues:**
-- GT CLI sling may fail with "mol bond requires direct database access" (upstream issue)
+- The Express server prefers the built React frontend at `web/dist` when present.
+- If `web/dist/index.html` is missing, the server falls back to the legacy SPA in the repo root.
+- The React app is the current information architecture and active product surface; the legacy SPA remains as a compatibility fallback while the bridge server still serves both asset trees.
 
 ---
 

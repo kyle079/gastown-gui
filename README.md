@@ -184,7 +184,7 @@ gastown-gui help
 | `GT_BIN` | Override `gt` executable path | auto-detect (`PATH`, `/opt/homebrew/bin/gt`, `/usr/local/bin/gt`) |
 | `BD_BIN` | Override `bd` executable path | auto-detect (`PATH`, `/opt/homebrew/bin/bd`, `/usr/local/bin/bd`) |
 
-When `GT_BIN` or `BD_BIN` resolve outside the server's inherited `PATH`, the backend prepends those executable directories to subprocess `PATH` so `gt` subcommands that shell out to `bd` still work. If you install either tool in a non-standard location, set the matching override env var to the absolute executable path.
+When `GT_BIN` or `BD_BIN` resolve outside the server's inherited `PATH`, the backend prepends those executable directories to subprocess `PATH` so `gt` subcommands that shell out to `bd` still work, including bridge-driven mail inbox requests. If you install either tool in a non-standard location, set the matching override env var to the absolute executable path. Changes to `PATH`, `GT_BIN`, or `BD_BIN` are picked up at bridge startup, so restart/redeploy the bridge after changing them.
 
 ### GitHub OAuth (for PR/issue data enrichment)
 

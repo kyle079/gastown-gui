@@ -226,4 +226,55 @@ exit 1
       }
     }
   });
+
+  it('augments child PATH for mail inbox commands that shell out through gt', async () => {
+    let fixture;
+    let overrideDir;
+    try {
+      overrideDir = await fs.mkdtemp(path.join(os.tmpdir(), 'gastown-mail-path-'));
+      const gtBin = path.join(overrideDir, 'gt');
+      const bdBin = path.join(overrideDir, 'bd');
+
+      await createExecutable(gtBin, `#!/bin/bash
+set -euo pipefail
+if [[ "\${1:-}" == "version" ]]; then
+  echo "gt vmail-test"
+  exit 0
+fi
+if [[ "\${1:-}" == "feed" ]]; then
+  /bin/sleep 30
+  exit 0
+fi
+if [[ "\${1:-}" == "mail" && "\${2:-}" == "inbox" && "\${3:-}" == "--json" ]]; then
+  bd version >/dev/null
+  echo '[]'
+  exit 0
+fi
+echo "unexpected command: $*" >&2
+exit 1
+`);
+      await createExecutable(bdBin, '#!/bin/bash\necho "bd vmail-test"\n');
+
+      fixture = await startFixture({
+        gtScript: null,
+        bdScript: null,
+        env: {
+          PATH: '',
+          GT_BIN: gtBin,
+          BD_BIN: bdBin,
+        },
+      });
+
+      const response = await fetch(`${fixture.baseUrl}/api/mail`);
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data).toEqual([]);
+    } finally {
+      await stopFixture(fixture);
+      if (overrideDir) {
+        await fs.rm(overrideDir, { recursive: true, force: true });
+      }
+    }
+  });
 });

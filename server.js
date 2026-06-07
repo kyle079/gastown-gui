@@ -497,7 +497,7 @@ async function executeGT(args, options = {}) {
     const { stdout, stderr } = await execFileAsync(GT_EXECUTABLE, args, {
       cwd: options.cwd || GT_ROOT,
       timeout: options.timeout || 30000,
-      env: { ...process.env, ...options.env }
+      env: { ...commandRunner._baseEnv, ...options.env }
     });
 
     if (stderr && !options.ignoreStderr) {
@@ -539,7 +539,7 @@ async function executeBD(args, options = {}) {
     const { stdout } = await execFileAsync(BD_EXECUTABLE, args, {
       cwd: options.cwd || GT_ROOT,
       timeout: options.timeout || 30000,
-      env: { ...process.env, BEADS_DIR: beadsDir }
+      env: { ...commandRunner._baseEnv, BEADS_DIR: beadsDir, ...options.env }
     });
 
     return { success: true, data: String(stdout || '').trim() };

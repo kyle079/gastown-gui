@@ -206,6 +206,26 @@ export interface Bead {
   comment_count?: number;
 }
 
+export interface BeadDependency extends Bead {
+  dependency_type?: string;
+  assignee?: string | null;
+  blocked?: boolean;
+  closed_at?: string;
+  close_reason?: string;
+  ephemeral?: boolean;
+}
+
+export interface BeadDetail extends Bead {
+  notes?: string;
+  assignee?: string | null;
+  labels?: string[];
+  dependencies?: BeadDependency[];
+  created_by?: string;
+  closed_at?: string;
+  close_reason?: string;
+  ephemeral?: boolean;
+}
+
 /** GitHub author object (`author.login`). */
 export interface GitHubUser {
   login?: string;
@@ -305,6 +325,32 @@ export interface Formula {
   source?: string;
   steps?: number;
   vars?: number;
+}
+
+export interface FormulaStep {
+  title?: string;
+  description?: string;
+  command?: string;
+  [key: string]: unknown;
+}
+
+export interface FormulaVariable {
+  name?: string;
+  source?: string;
+  description?: string;
+  default?: string;
+  [key: string]: unknown;
+}
+
+export interface FormulaDetail {
+  formula?: string;
+  description?: string;
+  source?: string;
+  schema_version?: number;
+  steps?: FormulaStep[];
+  variables?: FormulaVariable[];
+  vars?: FormulaVariable[] | number;
+  [key: string]: unknown;
 }
 
 /** A node in the bead dependency graph (`/api/beads/graph`). */

@@ -4,6 +4,7 @@ import { queryKeys } from './keys';
 import type {
   ActivityResponse,
   Bead,
+  BeadDetail,
   BeadGraphData,
   ChangelogEntry,
   Convoy,
@@ -11,6 +12,7 @@ import type {
   DogsResponse,
   Escalation,
   Formula,
+  FormulaDetail,
   MailMessage,
   MergeRequest,
   PullRequest,
@@ -120,14 +122,17 @@ export function useTargets() {
 interface SlingArgs {
   bead: string;
   target?: string;
+  molecule?: string;
+  quality?: string;
+  args?: string;
 }
 
 /** Sling a bead onto a target's hook — the primary dispatch action. */
 export function useSling() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ bead, target }: SlingArgs) =>
-      apiClient.post<{ success: boolean }>('/api/sling', { bead, target }),
+    mutationFn: ({ bead, target, molecule, quality, args }: SlingArgs) =>
+      apiClient.post<{ success: boolean }>('/api/sling', { bead, target, molecule, quality, args }),
     onSuccess: () => {
       // Dispatch changes both the convoy queue and who's-on-what.
       void qc.invalidateQueries({ queryKey: queryKeys.convoys });
@@ -171,6 +176,26 @@ export function useBeads(status: string) {
   });
 }
 
+export function useBeadSearch(query: string) {
+  const needle = query.trim();
+  return useQuery({
+    queryKey: queryKeys.beadSearch(needle),
+    queryFn: () => apiClient.get<Bead[]>(`/api/beads/search?q=${encodeURIComponent(needle)}`),
+    staleTime: 15_000,
+    enabled: needle.length > 1,
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useBeadDetail(id: string) {
+  return useQuery({
+    queryKey: queryKeys.beadDetail(id),
+    queryFn: () => apiClient.get<BeadDetail>(`/api/bead/${encodeURIComponent(id)}`),
+    staleTime: 15_000,
+    enabled: Boolean(id),
+  });
+}
+
 /** Full PR detail from token-based REST API. */
 export function usePullRequestDetail(owner: string, repo: string, number: number) {
   return useQuery({
@@ -200,6 +225,15 @@ export function useFormulas() {
     queryKey: queryKeys.formulas,
     queryFn: () => apiClient.get<Formula[]>('/api/formulas'),
     refetchInterval: 60_000,
+  });
+}
+
+export function useFormulaDetail(name: string) {
+  return useQuery({
+    queryKey: queryKeys.formulaDetail(name),
+    queryFn: () => apiClient.get<FormulaDetail>(`/api/formula/${encodeURIComponent(name)}`),
+    staleTime: 60_000,
+    enabled: Boolean(name),
   });
 }
 

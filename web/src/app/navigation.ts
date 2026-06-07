@@ -27,6 +27,7 @@ export const NAV_ITEMS: NavItem[] = [
   { path: '/escalations', label: 'Unblock', objectLabel: 'Escalations', glyph: '!', section: 'Run', seq: 'e', ready: true },
   { path: '/rigs', label: 'Direct', objectLabel: 'Rigs and agents', glyph: '▤', section: 'Coordinate', seq: 'r', ready: true },
   { path: '/work', label: 'Track', objectLabel: 'Convoys and work', glyph: '◷', section: 'Coordinate', seq: 'w', ready: true },
+  { path: '/ops', label: 'Operate', objectLabel: 'Operator cockpit', glyph: '⌘', section: 'Coordinate', seq: 'o', ready: true },
   { path: '/mail', label: 'Message', objectLabel: 'Mail', glyph: '✉', section: 'Coordinate', seq: 'm', ready: true },
   { path: '/prs', label: 'Review', objectLabel: 'Pull requests', glyph: '⌥', section: 'Inspect', seq: 'p', ready: true },
   { path: '/catalog', label: 'Browse', objectLabel: 'Issues, PRs, formulas', glyph: '⊟', section: 'Inspect', seq: 'c', ready: true },

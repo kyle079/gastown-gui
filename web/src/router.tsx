@@ -16,6 +16,7 @@ import { MailMessagePage } from '@/features/mail/MailMessagePage';
 import { EscalationsSurface } from '@/features/mail/EscalationsSurface';
 import { WorkSurface } from '@/features/work/WorkSurface';
 import { ConvoyDetailPage } from '@/features/work/ConvoyDetailPage';
+import { OpsSurface } from '@/features/ops/OpsSurface';
 import { Catalog, validateCatalogSearch } from '@/features/catalog/Catalog';
 import { PullRequestsPage, validatePrsSearch } from '@/features/prs/PullRequestsPage';
 import { PullRequestDetailPage } from '@/features/prs/PullRequestDetailPage';
@@ -77,6 +78,12 @@ const workRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/work',
   component: WorkSurface,
+});
+
+const opsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/ops',
+  component: OpsSurface,
 });
 
 const workDetailRoute = createRoute({
@@ -152,6 +159,7 @@ const routeTree = rootRoute.addChildren([
   catalogRoute,
   rigsRoute.addChildren([rigDetailRoute]),
   workRoute,
+  opsRoute,
   workDetailRoute,
   prsRoute,
   prDetailRoute,

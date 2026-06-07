@@ -39,7 +39,8 @@ export class BeadService {
   async get(beadId) {
     const result = await this._bd.show(beadId);
     if (!result.ok) return { ok: false };
-    return { ok: true, bead: result.data || { id: beadId } };
+    const bead = Array.isArray(result.data) ? result.data[0] : result.data;
+    return { ok: true, bead: bead || { id: beadId } };
   }
 
   async graph() {
@@ -97,4 +98,3 @@ export class BeadService {
     return { ok: true, beadId, raw: result.raw };
   }
 }
-

@@ -1849,6 +1849,7 @@ const formulaCache = {
 const formulaService = new FormulaService({
   gtGateway,
   bdGateway,
+  gtRoot: GT_ROOT,
   cache: formulaCache,
   emit: (type, data) => emitMutationEvent(type, data),
 });

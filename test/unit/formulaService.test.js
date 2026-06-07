@@ -1,4 +1,7 @@
 import { describe, it, expect } from 'vitest';
+import path from 'node:path';
+import os from 'node:os';
+import fsPromises from 'node:fs/promises';
 
 import { FormulaService } from '../../server/services/FormulaService.js';
 
@@ -17,6 +20,64 @@ function createStubGateways() {
 }
 
 describe('FormulaService', () => {
+  it('list() falls back to formula files when CLI discovery is empty or unavailable', async () => {
+    const formulasDir = await fsPromises.mkdtemp(path.join(os.tmpdir(), 'gastown-formulas-list-'));
+
+    try {
+      await fsPromises.writeFile(
+        path.join(formulasDir, 'sample.formula.toml'),
+        `description = """
+Sample workflow used for fallback testing.
+"""
+formula = "sample"
+type = "workflow"
+
+[vars.issue]
+description = "Issue ID"
+
+[[steps]]
+id = "one"
+title = "One"
+`,
+        'utf8',
+      );
+
+      const service = new FormulaService({
+        gtGateway: {
+          exec: async (args) => {
+            if (args.includes('--json')) return { ok: true, stdout: '[]', stderr: '', error: null };
+            return { ok: false, stdout: '', stderr: '', error: 'gt unavailable' };
+          },
+        },
+        bdGateway: { exec: async () => ({ ok: false, stdout: '', stderr: '', error: 'bd unavailable' }) },
+        formulasDir,
+      });
+
+      await expect(service.list()).resolves.toEqual([
+        {
+          name: 'sample',
+          type: 'workflow',
+          description: 'Sample workflow used for fallback testing.',
+          source: path.join(formulasDir, 'sample.formula.toml'),
+          steps: 1,
+          vars: 1,
+        },
+      ]);
+    } finally {
+      await fsPromises.rm(formulasDir, { recursive: true, force: true });
+    }
+  });
+
+  it('list() throws when every discovery path fails', async () => {
+    const service = new FormulaService({
+      gtGateway: { exec: async () => ({ ok: false, stdout: '', stderr: '', error: 'gt unavailable' }) },
+      bdGateway: { exec: async () => ({ ok: false, stdout: '', stderr: '', error: 'bd unavailable' }) },
+      formulasDir: path.join(os.tmpdir(), `missing-formulas-${Date.now()}`),
+    });
+
+    await expect(service.list()).rejects.toThrow(/Unable to load formulas|gt unavailable/);
+  });
+
   it('use() calls "formula run" with --rig flag', async () => {
     const { calls, gtGateway, bdGateway } = createStubGateways();
     const emitted = [];

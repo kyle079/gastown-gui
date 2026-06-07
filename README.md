@@ -60,6 +60,31 @@ Opens `http://localhost:7667` in your browser.
 gastown-gui doctor
 ```
 
+## Mayor Preview Auto-Refresh
+
+The LAN preview at `http://192.168.2.40:8080/` is expected to run from the
+dedicated checkout at `/home/kyle/gt/gastown_gui/mayor/rig`. To keep that preview
+current after refinery merges land:
+
+```bash
+# Manual trigger from the preview checkout
+bash /home/kyle/gt/gastown_gui/mayor/rig/scripts/refresh-preview.sh --force
+
+# Install the polling loop on the mayor box
+cp scripts/gastown-gui-autodeploy.service /etc/systemd/system/
+cp scripts/gastown-gui-autodeploy.timer /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable --now gastown-gui-autodeploy.timer
+```
+
+What the refresh script does:
+
+- Fast-forwards the `mayor/rig` checkout to `origin/master` only when the checkout is clean
+- Refuses to overwrite dirty or diverged local state
+- Runs `npm ci` in the repo root and `web/` when the relevant lockfiles change or `node_modules` is missing
+- Restarts `server.js` on `:7667` and the Vite dev server on `:8080`
+- Writes operator logs to `.runtime/logs/preview-refresh.log`, `.runtime/logs/preview-backend.log`, and `.runtime/logs/preview-vite.log`
+
 ---
 
 ## Nix / NixOS

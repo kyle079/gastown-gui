@@ -1,4 +1,5 @@
-# Timer: poll origin/master every 5 minutes and auto-deploy if HEAD advanced.
+# Timer: poll origin/master every minute and auto-refresh the mayor preview if
+# HEAD advanced or the preview processes died.
 #
 # One-time install (run as root):
 #   cp scripts/gastown-gui-autodeploy.timer /etc/systemd/system/
@@ -10,7 +11,7 @@ Description=Gastown GUI auto-deploy timer
 
 [Timer]
 OnBootSec=2min
-OnUnitActiveSec=5min
+OnUnitActiveSec=1min
 Persistent=true
 
 [Install]

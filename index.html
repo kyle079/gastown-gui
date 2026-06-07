@@ -119,6 +119,22 @@
         </div>
       </div>
       <div class="header-right">
+        <!-- GitHub Auth -->
+        <div id="auth-area" class="auth-area" style="display:none;">
+          <!-- Shown when logged in -->
+          <div id="auth-user" class="auth-user" style="display:none;">
+            <img id="auth-avatar" class="auth-avatar" src="" alt="" width="24" height="24">
+            <span id="auth-login" class="auth-login"></span>
+            <button id="auth-logout-btn" class="icon-btn" title="Sign out">
+              <span class="material-icons" style="font-size:18px;">logout</span>
+            </button>
+          </div>
+          <!-- Shown when not logged in -->
+          <a id="auth-login-btn" href="/auth/github" class="btn-github-login" style="display:none;">
+            <span class="material-icons" style="font-size:16px;vertical-align:middle;">login</span>
+            Sign in with GitHub
+          </a>
+        </div>
         <button class="icon-btn" id="help-btn" title="Help & Guide" data-modal-open="help">
           <span class="material-icons">help_outline</span>
         </button>

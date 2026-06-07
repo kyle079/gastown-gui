@@ -76,6 +76,10 @@ export class GitHubGateway {
     this._octokit = this._token ? new Octokit({ auth: this._token }) : null;
   }
 
+  withToken(token) {
+    return new GitHubGateway({ token });
+  }
+
   get configured() {
     return !!this._token;
   }

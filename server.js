@@ -21,6 +21,9 @@ import { fileURLToPath } from 'url';
 
 import { createApp } from './server/app/createApp.js';
 import { buildDefaultOrigins } from './server/app/corsOrigins.js';
+import { SessionStore } from './server/auth/SessionStore.js';
+import { GitHubOAuth } from './server/auth/GitHubOAuth.js';
+import { registerAuthRoutes } from './server/routes/auth.js';
 import { normalizeRigAgents } from './server/domain/agents/normalizeRigAgents.js';
 import {
   buildSessionRegistryFromTown,
@@ -103,6 +106,26 @@ const workService = new WorkService({
 });
 const gitHubGateway = new GitHubGateway({ token: process.env.GITHUB_TOKEN });
 const gitHubService = new GitHubService({ gitHubGateway, statusService, cache: backendCache });
+
+// GitHub OAuth + session store
+const allowlistEnv = process.env.GITHUB_ALLOWLIST || 'kyle079';
+const githubOAuth = new GitHubOAuth({
+  clientId: process.env.GITHUB_CLIENT_ID,
+  clientSecret: process.env.GITHUB_CLIENT_SECRET,
+  callbackUrl: process.env.GITHUB_CALLBACK_URL,
+  allowlist: allowlistEnv.split(','),
+});
+
+const sessionSecret = process.env.SESSION_SECRET;
+if (!sessionSecret) {
+  console.warn('[Auth] SESSION_SECRET not set — GitHub OAuth login will be unavailable');
+}
+const sessionStore = sessionSecret
+  ? new SessionStore({ secret: sessionSecret })
+  : null;
+
+const isSecureContext = process.env.HTTPS === 'true' ||
+  String(process.env.GITHUB_CALLBACK_URL || '').startsWith('https://');
 
 const defaultOrigins = buildDefaultOrigins({ host: HOST, port: PORT });
 const allowedOrigins = process.env.CORS_ORIGINS
@@ -669,6 +692,14 @@ async function loadActivityEvents(feedPath) {
 }
 
 // ============= REST API Endpoints =============
+
+// Auth (session middleware + OAuth routes) — must come before all other routes
+if (sessionStore) {
+  registerAuthRoutes(app, { oauth: githubOAuth, sessionStore, isSecure: isSecureContext });
+} else {
+  // No session store — attach null session so req.session is always defined
+  app.use((req, _res, next) => { req.session = null; req.sessionId = null; next(); });
+}
 
 // Town status overview
 registerStatusRoutes(app, { statusService });
@@ -1827,7 +1858,7 @@ const formulaService = new FormulaService({
 registerFormulaRoutes(app, { formulaService });
 
 // ============= GitHub Integration =============
-registerGitHubRoutes(app, { gitHubService });
+registerGitHubRoutes(app, { gitHubService, gitHubGateway, statusService, cache: backendCache });
 
 // ============= Terminal (PTY-over-WebSocket) =============
 // Registered after wss is created; terminal WS handler is added to the shared wss.

@@ -12,6 +12,7 @@ import type {
   DogsResponse,
   Escalation,
   Formula,
+  FormulaDetail,
   MailMessage,
   MergeRequest,
   PullRequest,
@@ -121,6 +122,9 @@ export function useTargets() {
 interface SlingArgs {
   bead: string;
   target?: string;
+  molecule?: string;
+  quality?: string;
+  args?: string;
 }
 
 /** Sling a bead onto a target's hook — the primary dispatch action. */
@@ -182,6 +186,18 @@ export function useBeadDetail(beadId: string | undefined) {
   });
 }
 
+/** Search beads by id/title/type for dispatch flows. */
+export function useBeadSearch(query: string) {
+  const trimmed = query.trim();
+  return useQuery({
+    queryKey: queryKeys.beads(`search:${trimmed}`),
+    queryFn: () =>
+      apiClient.get<Bead[]>(`/api/beads/search?q=${encodeURIComponent(trimmed)}`),
+    staleTime: 15_000,
+    enabled: trimmed.length > 1,
+  });
+}
+
 /** Full PR detail from token-based REST API. */
 export function usePullRequestDetail(owner: string, repo: string, number: number) {
   return useQuery({
@@ -211,6 +227,15 @@ export function useFormulas() {
     queryKey: queryKeys.formulas,
     queryFn: () => apiClient.get<Formula[]>('/api/formulas'),
     refetchInterval: 60_000,
+  });
+}
+
+export function useFormulaDetail(name: string | undefined) {
+  return useQuery({
+    queryKey: [...queryKeys.formulas, 'detail', name ?? ''],
+    queryFn: () => apiClient.get<FormulaDetail>(`/api/formula/${encodeURIComponent(name ?? '')}`),
+    staleTime: 60_000,
+    enabled: Boolean(name),
   });
 }
 

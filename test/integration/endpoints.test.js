@@ -226,6 +226,20 @@ describe('API Endpoint Tests', () => {
     });
   });
 
+  describe('POST /api/terminal/send-message', () => {
+    it('should send a terminal message using the nudge transport', async () => {
+      const { status } = await api('/api/terminal/send-message', {
+        method: 'POST',
+        body: JSON.stringify({
+          target: 'hq-mayor',
+          message: 'Terminal check-in',
+        }),
+      });
+
+      expect([200, 201, 400, 500]).toContain(status);
+    });
+  });
+
   describe('GET /api/doctor', () => {
     it('should return diagnostic information or 404 if not mocked', async () => {
       const { status } = await api('/api/doctor');

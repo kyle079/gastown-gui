@@ -29,6 +29,7 @@ import {
   mayorSessionName,
   parseTmuxSessions,
   runningAddressesFromTmux,
+  parseSessionName,
   sessionNameForAgentAddress,
   sessionNameForService,
 } from './server/domain/session/SessionNames.js';
@@ -446,6 +447,104 @@ function addMayorMessage(target, message, status, response = null) {
   // Broadcast to connected clients
   broadcast({ type: 'mayor_message', data: entry });
   return entry;
+}
+
+function resolveMessageTarget(rawTarget, registry) {
+  const trimmed = String(rawTarget || '').trim();
+  if (!trimmed) return '';
+
+  const parsed = parseSessionName(trimmed, registry);
+  return parsed?.address || parsed?.legacyAddress || trimmed;
+}
+
+function resolveMessageSession(target, registry) {
+  const parsedFromTarget = parseSessionName(target, registry);
+  return (
+    sessionNameForAgentAddress(parsedFromTarget?.address ?? target, registry) ||
+    parsedFromTarget?.session ||
+    target
+  );
+}
+
+async function sendNudgeLikeMessage({ target, message, autoStart = true, defaultTarget = 'mayor' }) {
+  if (!message) {
+    return { status: 400, body: { error: 'Message is required' } };
+  }
+
+  const registry = await getSessionRegistry();
+  const resolvedTarget = resolveMessageTarget(target || defaultTarget, registry);
+  if (!resolvedTarget) {
+    return { status: 400, body: { error: 'Target is required' } };
+  }
+
+  const sessionName = resolveMessageSession(resolvedTarget, registry);
+  let wasAutoStarted = false;
+
+  try {
+    const isRunning = await isSessionRunning(sessionName);
+    if (!isRunning) {
+      console.log(`[Nudge] Session ${sessionName} not running`);
+
+      if (resolvedTarget === 'mayor' && autoStart) {
+        console.log('[Nudge] Auto-starting Mayor...');
+        const startResult = await executeGT(['mayor', 'start'], { timeout: 30000 });
+        if (!startResult.success) {
+          const entry = addMayorMessage(
+            resolvedTarget,
+            message,
+            'failed',
+            'Failed to auto-start Mayor',
+          );
+          return {
+            status: 500,
+            body: {
+              error: 'Mayor not running and failed to auto-start',
+              details: startResult.error,
+              messageId: entry.id,
+            },
+          };
+        }
+
+        wasAutoStarted = true;
+        console.log('[Nudge] Mayor auto-started successfully');
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        emitMutationEvent('service_started', { service: 'mayor', autoStarted: true });
+      } else {
+        const entry = addMayorMessage(
+          resolvedTarget,
+          message,
+          'failed',
+          `Session ${sessionName} not running`,
+        );
+        return {
+          status: 400,
+          body: {
+            error: `${resolvedTarget} is not running`,
+            hint: resolvedTarget === 'mayor'
+              ? 'Set autoStart: true to start Mayor automatically'
+              : `Start the ${resolvedTarget} service first`,
+            messageId: entry.id,
+          },
+        };
+      }
+    }
+
+    const result = await executeGT(['nudge', resolvedTarget, message], { timeout: 10000 });
+    if (result.success) {
+      const status = wasAutoStarted ? 'auto-started' : 'sent';
+      const entry = addMayorMessage(resolvedTarget, message, status);
+      return {
+        status: 200,
+        body: { success: true, target: resolvedTarget, message, wasAutoStarted, messageId: entry.id },
+      };
+    }
+
+    const entry = addMayorMessage(resolvedTarget, message, 'failed', result.error);
+    return { status: 500, body: { error: result.error || 'Failed to send message', messageId: entry.id } };
+  } catch (err) {
+    const entry = addMayorMessage(resolvedTarget, message, 'failed', err.message);
+    return { status: 500, body: { error: err.message, messageId: entry.id } };
+  }
 }
 
 async function getSessionRegistry() {
@@ -888,80 +987,16 @@ app.post('/api/mail/:id/unread', async (req, res) => {
 // Send a message to Mayor (or other agent)
 app.post('/api/nudge', async (req, res) => {
   const { target, message, autoStart = true } = req.body;
+  const result = await sendNudgeLikeMessage({ target, message, autoStart });
+  res.status(result.status).json(result.body);
+});
 
-  if (!message) {
-    return res.status(400).json({ error: 'Message is required' });
-  }
-
-  // Default to mayor if no target specified
-  const nudgeTarget = target || 'mayor';
-  const registry = await getSessionRegistry();
-  const sessionName = sessionNameForAgentAddress(nudgeTarget, registry) || `gt-${nudgeTarget}`;
-
-  try {
-    // Check if target session is running
-    const isRunning = await isSessionRunning(sessionName);
-    let wasAutoStarted = false;
-
-    if (!isRunning) {
-      console.log(`[Nudge] Session ${sessionName} not running`);
-
-      // Auto-start Mayor if requested
-      if (nudgeTarget === 'mayor' && autoStart) {
-        console.log(`[Nudge] Auto-starting Mayor...`);
-        const startResult = await executeGT(['mayor', 'start'], { timeout: 30000 });
-
-        if (!startResult.success) {
-          const entry = addMayorMessage(nudgeTarget, message, 'failed', 'Failed to auto-start Mayor');
-          return res.status(500).json({
-            error: 'Mayor not running and failed to auto-start',
-            details: startResult.error,
-            messageId: entry.id
-          });
-        }
-
-        wasAutoStarted = true;
-        console.log(`[Nudge] Mayor auto-started successfully`);
-
-        // Wait a moment for Mayor to initialize
-        await new Promise(resolve => setTimeout(resolve, 2000));
-
-        // Broadcast that Mayor was started
-        emitMutationEvent('service_started', { service: 'mayor', autoStarted: true });
-      } else if (!isRunning) {
-        const entry = addMayorMessage(nudgeTarget, message, 'failed', `Session ${sessionName} not running`);
-        return res.status(400).json({
-          error: `${nudgeTarget} is not running`,
-          hint: nudgeTarget === 'mayor' ? 'Set autoStart: true to start Mayor automatically' : `Start the ${nudgeTarget} service first`,
-          messageId: entry.id
-        });
-      }
-    }
-
-    // Send the nudge
-    const result = await executeGT(['nudge', nudgeTarget, message], { timeout: 10000 });
-
-    if (result.success) {
-      const status = wasAutoStarted ? 'auto-started' : 'sent';
-      const entry = addMayorMessage(nudgeTarget, message, status);
-      res.json({
-        success: true,
-        target: nudgeTarget,
-        message,
-        wasAutoStarted,
-        messageId: entry.id
-      });
-    } else {
-      const entry = addMayorMessage(nudgeTarget, message, 'failed', result.error);
-      res.status(500).json({
-        error: result.error || 'Failed to send message',
-        messageId: entry.id
-      });
-    }
-  } catch (err) {
-    const entry = addMayorMessage(nudgeTarget, message, 'failed', err.message);
-    res.status(500).json({ error: err.message, messageId: entry.id });
-  }
+// Send a message to an agent by terminal session identifier.
+app.post('/api/terminal/send-message', async (req, res) => {
+  const { target, session, to, message, autoStart = true } = req.body;
+  const resolvedTarget = target || session || to || 'mayor';
+  const result = await sendNudgeLikeMessage({ target: resolvedTarget, message, autoStart });
+  res.status(result.status).json(result.body);
 });
 
 // Get Mayor message history

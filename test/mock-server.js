@@ -267,6 +267,21 @@ app.post('/api/nudge', (req, res) => {
   });
 });
 
+app.post('/api/terminal/send-message', (req, res) => {
+  const { target, session, to, message } = req.body;
+  const resolvedTarget = target || session || to;
+  res.json({ success: true, target: resolvedTarget || 'mayor', message });
+
+  broadcastEvent({
+    type: 'activity',
+    data: {
+      type: 'system',
+      message: `Terminal message sent to ${resolvedTarget || 'mayor'}: ${message}`,
+      timestamp: new Date().toISOString(),
+    },
+  });
+});
+
 // Search endpoints
 app.get('/api/beads/search', (req, res) => {
   const query = (req.query.q || '').toLowerCase();

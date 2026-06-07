@@ -987,37 +987,33 @@ app.get('/api/bead/:beadId/links', async (req, res) => {
 
         // Search for PRs (title, body, branch containing bead ID, or polecat PRs near close time)
         try {
-          const prResult = await gitHubGateway.listPullRequests({ repo, state: 'all', limit: 20 });
-          if (prResult.notConfigured) {
-            console.log('[Links] GitHub token not configured — skipping PR search');
-          } else if (prResult.ok && Array.isArray(prResult.data)) {
-            for (const pr of prResult.data) {
-              // Check if PR is related to this bead
-              let isRelated =
-                (pr.title && pr.title.includes(beadId)) ||
-                (pr.headRefName && pr.headRefName.includes(beadId)) ||
-                (pr.body && pr.body.includes(beadId));
+          const prs = await listPullRequestsForRepo(repo, { state: 'all', limit: 20 });
+          for (const pr of prs) {
+            // Check if PR is related to this bead
+            let isRelated =
+              (pr.title && pr.title.includes(beadId)) ||
+              (pr.headRefName && pr.headRefName.includes(beadId)) ||
+              (pr.body && pr.body.includes(beadId));
 
-              // Also match polecat PRs created/updated within 1 hour of bead close time
-              if (!isRelated && beadClosedAt && pr.headRefName && pr.headRefName.startsWith('polecat/')) {
-                const prUpdated = new Date(pr.updatedAt || pr.createdAt);
-                const timeDiff = Math.abs(beadClosedAt - prUpdated);
-                const oneHour = 60 * 60 * 1000;
-                if (timeDiff < oneHour) {
-                  isRelated = true;
-                }
+            // Also match polecat PRs created/updated within 1 hour of bead close time
+            if (!isRelated && beadClosedAt && pr.headRefName && pr.headRefName.startsWith('polecat/')) {
+              const prUpdated = new Date(pr.updatedAt || pr.createdAt);
+              const timeDiff = Math.abs(beadClosedAt - prUpdated);
+              const oneHour = 60 * 60 * 1000;
+              if (timeDiff < oneHour) {
+                isRelated = true;
               }
+            }
 
-              if (isRelated) {
-                links.prs.push({
-                  repo,
-                  number: pr.number,
-                  title: pr.title,
-                  url: pr.url,
-                  state: pr.state,
-                  branch: pr.headRefName,
-                });
-              }
+            if (isRelated) {
+              links.prs.push({
+                repo,
+                number: pr.number,
+                title: pr.title,
+                url: pr.url,
+                state: pr.state,
+                branch: pr.headRefName,
+              });
             }
           }
         } catch (prErr) {

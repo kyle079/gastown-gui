@@ -2,6 +2,7 @@ import { useState } from 'react';
 import {
   Badge,
   Button,
+  Input,
   Panel,
   PanelBody,
   PanelHeader,
@@ -33,11 +34,15 @@ function toneForStatus(status: MayorRequestResponse['status']) {
 }
 
 export function AskMayorPanel({
-  selectedFormula,
-  formulaArgs,
+  selectedFormula: controlledFormula,
+  onSelectedFormula,
+  formulaArgs: controlledFormulaArgs,
+  onFormulaArgs,
 }: {
-  selectedFormula: string;
-  formulaArgs: string;
+  selectedFormula?: string;
+  onSelectedFormula?: (value: string) => void;
+  formulaArgs?: string;
+  onFormulaArgs?: (value: string) => void;
 }) {
   const { notify } = useToast();
   const { data: targets } = useTargets();
@@ -45,15 +50,29 @@ export function AskMayorPanel({
   const [prompt, setPrompt] = useState('');
   const [target, setTarget] = useState('');
   const [lastResult, setLastResult] = useState<MayorRequestResponse | null>(null);
+  const [localFormula, setLocalFormula] = useState('mol-polecat-work');
+  const [localFormulaArgs, setLocalFormulaArgs] = useState('');
 
   const sortedTargets = rankTargets(targets ?? []);
   const canSubmit = prompt.trim().length > 0 && !mayorRequest.isPending;
+  const selectedFormula = controlledFormula ?? localFormula;
+  const formulaArgs = controlledFormulaArgs ?? localFormulaArgs;
   const error =
     mayorRequest.error instanceof ApiError
       ? mayorRequest.error.message
       : mayorRequest.error
         ? 'Mayor request failed'
         : null;
+
+  function updateFormula(value: string) {
+    if (onSelectedFormula) onSelectedFormula(value);
+    else setLocalFormula(value);
+  }
+
+  function updateFormulaArgs(value: string) {
+    if (onFormulaArgs) onFormulaArgs(value);
+    else setLocalFormulaArgs(value);
+  }
 
   function submit() {
     const trimmed = prompt.trim();
@@ -108,6 +127,21 @@ export function AskMayorPanel({
                   </option>
                 ))}
               </Select>
+            </label>
+
+            <label className="flex flex-col gap-1.5">
+              <span className="text-2xs uppercase tracking-wider text-faint">Formula / Molecule</span>
+              <Input value={selectedFormula} onChange={(e) => updateFormula(e.target.value)} className="font-mono" />
+            </label>
+
+            <label className="flex flex-col gap-1.5">
+              <span className="text-2xs uppercase tracking-wider text-faint">Args</span>
+              <Input
+                value={formulaArgs}
+                onChange={(e) => updateFormulaArgs(e.target.value)}
+                className="font-mono"
+                placeholder="base_branch=master"
+              />
             </label>
 
             <div className="rounded-md border border-line bg-surface-alt p-3">

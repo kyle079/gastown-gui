@@ -67,7 +67,6 @@ export function DispatchCommandCenter({
           setBeadId('');
           setSelectedBeadId('');
           setTarget('');
-          setFormulaArgs('');
         },
       },
     );

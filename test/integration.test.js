@@ -113,9 +113,7 @@ describe('Comprehensive Integration Tests', () => {
   });
 
   it('submits ask-mayor requests from the operator dispatch surface', async () => {
-    await goto(page, '/ops');
-
-    await page.click('button[role="tab"]:nth-of-type(2)');
+    await goto(page, '/work');
     await page.waitForFunction(() => document.body.innerText.includes('Ask Mayor'), { timeout: 5000 });
 
     const requestCapture = page.evaluate(() => {
@@ -137,7 +135,11 @@ describe('Comprehensive Integration Tests', () => {
       setter?.call(input, 'Add a mayor workflow for operator-created dispatch.');
       input.dispatchEvent(new Event('input', { bubbles: true }));
     });
-    await page.click('main button');
+    await page.evaluate(() => {
+      const button = Array.from(document.querySelectorAll('button')).find((node) => node.textContent?.includes('Create And Sling'));
+      if (!(button instanceof HTMLButtonElement)) throw new Error('Ask Mayor submit button not found');
+      button.click();
+    });
 
     const request = await requestCapture;
     expect(request).toMatchObject({

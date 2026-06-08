@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { Surface } from '@/components/Surface';
 import { Panel, Spinner, Button } from '@/components/primitives';
+import { AskMayorPanel } from '@/features/ops/AskMayorPanel';
 import { useBeads, useConvoys, useSchedulerStatus } from '@/lib/query/hooks';
 import type { Convoy } from '@/lib/api/types';
 import { workTotals } from './workState';
@@ -87,6 +88,7 @@ export function WorkSurface() {
     >
       <div className="flex flex-col gap-4">
         <WorkSummary totals={workTotals(convoys)} />
+        <AskMayorPanel />
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-[0.95fr_1.45fr]">
           <div className="flex flex-col gap-4">
             <WorkAttentionPanel items={attentionItems} />

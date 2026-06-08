@@ -5,7 +5,7 @@ import { useStatus } from '@/lib/query/hooks';
 import { NAV_ITEMS } from './navigation';
 
 /** Top bar: current surface title, live status, command-palette launcher. */
-export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
+export function TopBar({ onMenuClick, onNewWork }: { onMenuClick?: () => void; onNewWork?: () => void }) {
   const { open } = useCommandPalette();
   const { location } = useRouterState();
   const { data, isFetching } = useStatus();
@@ -47,6 +47,14 @@ export function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
             {data.overseer.name}
           </span>
         )}
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={onNewWork}
+          aria-label="New work"
+        >
+          + New
+        </Button>
         <Button
           variant="default"
           size="sm"

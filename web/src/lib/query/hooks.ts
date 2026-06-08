@@ -464,6 +464,32 @@ export function useTrail(opts: TrailOptions = {}) {
   });
 }
 
+export interface CreateBeadInput {
+  title: string;
+  description?: string;
+  priority?: number;
+  labels?: string[];
+}
+
+export interface CreateBeadResponse {
+  success: boolean;
+  bead_id: string;
+  raw?: string;
+}
+
+/** Create a plain bead without dispatching it. Backs the "File it" path in NewWorkDialog. */
+export function useCreateBead() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateBeadInput) =>
+      apiClient.post<CreateBeadResponse>('/api/beads', input),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['beads'] });
+      void qc.invalidateQueries({ queryKey: queryKeys.beadGraph });
+    },
+  });
+}
+
 export interface ReadyOptions {
   rig?: string;
 }

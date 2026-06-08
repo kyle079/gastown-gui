@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useRouterState } from '@tanstack/react-router';
 import { cn } from '@/lib/utils/cn';
+import { NewWorkDialog } from '@/features/work/NewWorkDialog';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 
@@ -13,6 +14,7 @@ import { TopBar } from './TopBar';
  */
 export function AppShell({ children }: { children: ReactNode }) {
   const [navOpen, setNavOpen] = useState(false);
+  const [newWorkOpen, setNewWorkOpen] = useState(false);
   const { location } = useRouterState();
 
   // Close the drawer whenever the destination changes.
@@ -63,9 +65,11 @@ export function AppShell({ children }: { children: ReactNode }) {
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <TopBar onMenuClick={() => setNavOpen(true)} />
+        <TopBar onMenuClick={() => setNavOpen(true)} onNewWork={() => setNewWorkOpen(true)} />
         <main className="flex-1 overflow-y-auto">{children}</main>
       </div>
+
+      <NewWorkDialog open={newWorkOpen} onClose={() => setNewWorkOpen(false)} />
     </div>
   );
 }

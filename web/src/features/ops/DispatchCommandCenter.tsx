@@ -86,7 +86,7 @@ export function DispatchCommandCenter({
 
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <label className="flex flex-col gap-1.5">
-            <span className="text-2xs uppercase tracking-wider text-faint">Target</span>
+            <span className="text-xs text-muted">Target</span>
             <Select value={target} onChange={(e) => setTarget(e.target.value)}>
               <option value="">Auto (let gt choose)</option>
               {sortedTargets.map((item) => (
@@ -97,7 +97,7 @@ export function DispatchCommandCenter({
             </Select>
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-2xs uppercase tracking-wider text-faint">Formula / Molecule</span>
+            <span className="text-xs text-muted">Formula / molecule</span>
             <Input
               value={selectedFormula}
               onChange={(e) => onSelectedFormula(e.target.value)}
@@ -108,7 +108,7 @@ export function DispatchCommandCenter({
         </div>
 
         <label className="mt-4 flex flex-col gap-1.5">
-          <span className="text-2xs uppercase tracking-wider text-faint">Args</span>
+          <span className="text-xs text-muted">Args</span>
           <Input
             value={formulaArgs}
             onChange={(e) => onFormulaArgs(e.target.value)}
@@ -119,7 +119,7 @@ export function DispatchCommandCenter({
 
         {suggestions.length > 0 && (
           <div className="mt-4">
-            <div className="mb-2 font-mono text-2xs uppercase tracking-wider text-faint">Suggested Targets</div>
+            <div className="mb-2 text-xs text-faint">Suggested targets</div>
             <div className="flex flex-wrap gap-2">
               {suggestions.map((item) => (
                 <Button key={item.id} size="sm" variant="ghost" onClick={() => setTarget(item.id)}>
@@ -151,7 +151,7 @@ export function DispatchCommandCenter({
           )}
 
           <div className="mt-4">
-            <div className="mb-2 font-mono text-2xs uppercase tracking-wider text-faint">Dependency Preview</div>
+            <div className="mb-2 text-xs text-faint">Dependencies</div>
             {!bead?.dependencies || bead.dependencies.length === 0 ? (
               <div className="text-sm text-faint">No dependencies recorded.</div>
             ) : (

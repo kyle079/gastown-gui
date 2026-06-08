@@ -25,6 +25,7 @@ export default {
       ink: channel('--c-ink'), // deepest background
       base: channel('--c-base'), // app background
       surface: channel('--c-surface'), // panels, cards
+      'surface-alt': channel('--c-ink'), // inset wells inside panels (code blocks, previews)
       raised: channel('--c-raised'), // hover / lifted rows
       overlay: channel('--c-overlay'), // dialogs, popovers
 

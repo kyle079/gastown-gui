@@ -106,7 +106,7 @@ export function AskMayorPanel({
       <PanelBody className="flex flex-col gap-4 border-b border-line">
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px]">
           <label className="flex flex-col gap-1.5">
-            <span className="text-2xs uppercase tracking-wider text-faint">Operator Request</span>
+            <span className="text-xs text-muted">Operator request</span>
             <Textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
@@ -118,7 +118,7 @@ export function AskMayorPanel({
           </label>
           <div className="flex flex-col gap-4">
             <label className="flex flex-col gap-1.5">
-              <span className="text-2xs uppercase tracking-wider text-faint">Default Target</span>
+              <span className="text-xs text-muted">Default target</span>
               <Select value={target} onChange={(e) => setTarget(e.target.value)}>
                 <option value="">Auto (let gt choose)</option>
                 {sortedTargets.map((item) => (
@@ -130,12 +130,12 @@ export function AskMayorPanel({
             </label>
 
             <label className="flex flex-col gap-1.5">
-              <span className="text-2xs uppercase tracking-wider text-faint">Formula / Molecule</span>
+              <span className="text-xs text-muted">Formula / molecule</span>
               <Input value={selectedFormula} onChange={(e) => updateFormula(e.target.value)} className="font-mono" />
             </label>
 
             <label className="flex flex-col gap-1.5">
-              <span className="text-2xs uppercase tracking-wider text-faint">Args</span>
+              <span className="text-xs text-muted">Args</span>
               <Input
                 value={formulaArgs}
                 onChange={(e) => updateFormulaArgs(e.target.value)}
@@ -145,7 +145,7 @@ export function AskMayorPanel({
             </label>
 
             <div className="rounded-md border border-line bg-surface-alt p-3">
-              <div className="font-mono text-2xs uppercase tracking-wider text-faint">Dispatch Defaults</div>
+              <div className="text-xs font-medium text-faint">Dispatch defaults</div>
               <div className="mt-2 text-sm text-muted">
                 Formula: <span className="font-mono text-fg">{selectedFormula || 'auto'}</span>
               </div>
@@ -185,19 +185,21 @@ export function AskMayorPanel({
           </div>
         ) : (
           <>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-md border border-line bg-surface-alt px-3 py-2">
-                <div className="font-mono text-2xs uppercase tracking-wider text-faint">Created</div>
-                <div className="mt-1 text-lg text-fg">{lastResult.summary.created}</div>
-              </div>
-              <div className="rounded-md border border-line bg-surface-alt px-3 py-2">
-                <div className="font-mono text-2xs uppercase tracking-wider text-faint">Dispatched</div>
-                <div className="mt-1 text-lg text-fg">{lastResult.summary.dispatched}</div>
-              </div>
-              <div className="rounded-md border border-line bg-surface-alt px-3 py-2">
-                <div className="font-mono text-2xs uppercase tracking-wider text-faint">Needs Follow-Up</div>
-                <div className="mt-1 text-lg text-fg">{lastResult.summary.failed}</div>
-              </div>
+            <div className="flex items-center gap-5 font-mono text-sm">
+              <span>
+                <span className="text-fg">{lastResult.summary.created}</span>{' '}
+                <span className="text-faint">created</span>
+              </span>
+              <span>
+                <span className="text-fg">{lastResult.summary.dispatched}</span>{' '}
+                <span className="text-faint">dispatched</span>
+              </span>
+              <span>
+                <span className={lastResult.summary.failed > 0 ? 'text-warn' : 'text-fg'}>
+                  {lastResult.summary.failed}
+                </span>{' '}
+                <span className="text-faint">follow-up</span>
+              </span>
             </div>
 
             <div className="flex flex-col gap-2">

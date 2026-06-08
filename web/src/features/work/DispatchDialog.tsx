@@ -82,7 +82,7 @@ export function DispatchDialog({ open, onClose }: { open: boolean; onClose: () =
         </label>
 
         <label className="flex flex-col gap-1.5">
-          <span className="text-2xs uppercase tracking-wider text-faint">Target</span>
+          <span className="text-xs text-muted">Target</span>
           <Select value={target} onChange={(e) => setTarget(e.target.value)}>
             <option value="">Auto (let gt choose)</option>
             {sortedTargets.map((t) => (

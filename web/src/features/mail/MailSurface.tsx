@@ -28,7 +28,7 @@ export function MailSurface({ defaultFilter = 'all' }: { defaultFilter?: QueueFi
   const closeCompose = () => setCompose({ open: false });
 
   const openMessage = (m: MailMessage) =>
-    void navigate({ to: '/mail/$messageId', params: { messageId: m.id } });
+    void navigate({ to: '/attention/$messageId', params: { messageId: m.id } });
 
   // Let the command palette's "Compose" open the dialog here.
   useEffect(() => {
@@ -44,7 +44,7 @@ export function MailSurface({ defaultFilter = 'all' }: { defaultFilter?: QueueFi
 
   if (isLoading) {
     return (
-      <Surface title="Queue" actions={actions}>
+      <Surface title="Needs Attention" actions={actions}>
         <MailLoading label="Loading queue…" />
       </Surface>
     );
@@ -52,7 +52,7 @@ export function MailSurface({ defaultFilter = 'all' }: { defaultFilter?: QueueFi
 
   if (isError || !data) {
     return (
-      <Surface title="Queue" actions={actions}>
+      <Surface title="Needs Attention" actions={actions}>
         <MailError error={error} onRetry={() => void refetch()} />
       </Surface>
     );
@@ -61,8 +61,8 @@ export function MailSurface({ defaultFilter = 'all' }: { defaultFilter?: QueueFi
   return (
     <>
       <Surface
-        title="Queue"
-        description="One triage queue for mail and escalations, ranked by what needs action now."
+        title="Needs Attention"
+        description="Unified queue for mail, escalations, and blocked work — ranked by what needs action now."
         actions={actions}
       >
         <MailQueuePanel

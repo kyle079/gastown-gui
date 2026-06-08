@@ -74,15 +74,15 @@ function TrackedRow({ bead }: { bead: TrackedBead }) {
       </div>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-2xs">
         <Link
-          to="/issues"
-          search={{ id: bead.id, status: 'all' }}
+          to="/investigate"
+          search={{ mode: 'issues' as const, id: bead.id, status: 'all' }}
           className="font-mono text-accent underline-offset-2 hover:underline"
         >
           Open bead
         </Link>
         {rig && (
           <Link
-            to="/rigs/$rig"
+            to="/fleet/$rig"
             params={{ rig }}
             className="font-mono text-accent underline-offset-2 hover:underline"
           >
@@ -150,7 +150,7 @@ function ConvoyDetail({ convoy }: { convoy: Convoy }) {
                     <div className="flex items-center justify-between gap-3">
                       {rig ? (
                         <Link
-                          to="/rigs/$rig"
+                          to="/fleet/$rig"
                           params={{ rig }}
                           className="font-mono text-xs text-accent underline-offset-2 hover:underline"
                         >
@@ -206,7 +206,7 @@ export function ConvoyDetailPage() {
   const navigate = useNavigate();
   const { data, isLoading, isError } = useConvoys();
 
-  const back = () => void navigate({ to: '/work' });
+  const back = () => void navigate({ to: '/dispatch' });
 
   if (isLoading) {
     return (

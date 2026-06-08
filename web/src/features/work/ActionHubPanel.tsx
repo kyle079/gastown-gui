@@ -10,20 +10,20 @@ function ActionLink({ action }: { action: TaskAction }) {
   switch (action.target.kind) {
     case 'work':
       return (
-        <Link to="/work" className={linkClassName}>
+        <Link to="/dispatch" className={linkClassName}>
           {action.cta}
         </Link>
       );
     case 'issue':
       return (
-        <Link to="/issues" search={{ id: action.target.issueId, status: 'all' }} className={linkClassName}>
+        <Link to="/investigate" search={{ mode: 'issues' as const, id: action.target.issueId, status: 'all' }} className={linkClassName}>
           {action.cta}
         </Link>
       );
     case 'convoy':
       return (
         <Link
-          to="/work/$convoyId"
+          to="/dispatch/$convoyId"
           params={{ convoyId: action.target.convoyId }}
           className={linkClassName}
         >
@@ -32,14 +32,14 @@ function ActionLink({ action }: { action: TaskAction }) {
       );
     case 'rig':
       return (
-        <Link to="/rigs/$rig" params={{ rig: action.target.rig }} className={linkClassName}>
+        <Link to="/fleet/$rig" params={{ rig: action.target.rig }} className={linkClassName}>
           {action.cta}
         </Link>
       );
     case 'pr':
       return (
         <Link
-          to="/prs/$owner/$repo/$prNumber"
+          to="/landing/$owner/$repo/$prNumber"
           params={{
             owner: action.target.owner,
             repo: action.target.repo,
@@ -52,7 +52,7 @@ function ActionLink({ action }: { action: TaskAction }) {
       );
     case 'prs':
       return (
-        <Link to="/prs" search={{ state: 'open', q: action.target.q }} className={linkClassName}>
+        <Link to="/landing" search={{ state: 'open', q: action.target.q }} className={linkClassName}>
           {action.cta}
         </Link>
       );

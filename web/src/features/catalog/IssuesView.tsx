@@ -138,11 +138,11 @@ export function IssuesView() {
   const selectedId = search.id;
 
   const setStatus = (val: string) =>
-    void navigate({ to: '/issues', search: (prev) => ({ ...prev, status: val, id: undefined }) });
+    void navigate({ to: '/investigate', search: (prev) => ({ ...prev, mode: 'issues' as const, status: val, id: undefined }) });
   const setQuery = (val: string) =>
-    void navigate({ to: '/issues', search: (prev) => ({ ...prev, q: val || undefined }) });
+    void navigate({ to: '/investigate', search: (prev) => ({ ...prev, mode: 'issues' as const, q: val || undefined }) });
   const setSelectedId = (id: string | undefined) =>
-    void navigate({ to: '/issues', search: (prev) => ({ ...prev, id }) });
+    void navigate({ to: '/investigate', search: (prev) => ({ ...prev, mode: 'issues' as const, id }) });
 
   const { data, isLoading, isError, error, refetch } = useBeads(status);
   const {
@@ -323,7 +323,7 @@ function BeadDetailBody({
             <ListRow
               title={
                 <Link
-                  to="/work/$convoyId"
+                  to="/dispatch/$convoyId"
                   params={{ convoyId: convoy.id }}
                   className="hover:text-accent"
                 >
@@ -343,7 +343,7 @@ function BeadDetailBody({
             <ListRow
               title={
                 fallbackRig ? (
-                  <Link to="/rigs/$rig" params={{ rig: fallbackRig }} className="font-mono hover:text-accent">
+                  <Link to="/fleet/$rig" params={{ rig: fallbackRig }} className="font-mono hover:text-accent">
                     {agent.address}
                   </Link>
                 ) : (
@@ -362,7 +362,7 @@ function BeadDetailBody({
             <ListRow
               title={
                 fallbackRig ? (
-                  <Link to="/rigs/$rig" params={{ rig: fallbackRig }} className="font-mono hover:text-accent">
+                  <Link to="/fleet/$rig" params={{ rig: fallbackRig }} className="font-mono hover:text-accent">
                     {bead.assignee}
                   </Link>
                 ) : (
@@ -378,7 +378,7 @@ function BeadDetailBody({
               key={`${pr.repoFullName}#${pr.number}`}
               title={
                 <Link
-                  to="/prs/$owner/$repo/$prNumber"
+                  to="/landing/$owner/$repo/$prNumber"
                   params={{ owner: pr.owner, repo: pr.repo, prNumber: String(pr.number) }}
                   className="hover:text-accent"
                 >
@@ -412,8 +412,8 @@ function BeadDetailBody({
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     <Link
-                      to="/issues"
-                      search={{ id: dependency.id, status: 'all' }}
+                      to="/investigate"
+                      search={{ mode: 'issues' as const, id: dependency.id, status: 'all' }}
                       className="font-mono text-xs text-accent underline-offset-2 hover:underline"
                     >
                       {dependency.id}

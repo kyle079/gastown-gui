@@ -56,7 +56,7 @@ export function collectAttentionItems(
         title: agent.address || agent.name,
         detail: agent.hook_bead ? `${agent.state} on ${agent.hook_bead}` : agent.state,
         nextAction: 'Inspect agent',
-        route: '/ops',
+        route: '/attention',
         agentAddress: agent.address,
       });
     }
@@ -70,7 +70,7 @@ export function collectAttentionItems(
         title: rig.name,
         detail: 'Witness missing',
         nextAction: 'Open rig',
-        route: '/rigs',
+        route: '/fleet',
       });
     }
     if (!rig.has_refinery) {
@@ -80,7 +80,7 @@ export function collectAttentionItems(
         title: rig.name,
         detail: 'Refinery missing',
         nextAction: 'Open rig',
-        route: '/rigs',
+        route: '/fleet',
       });
     }
   }
@@ -92,7 +92,7 @@ export function collectAttentionItems(
       title: 'Overseer mail',
       detail: `${status.overseer.unread_mail} unread`,
       nextAction: 'Open mail',
-      route: '/mail',
+      route: '/attention',
     });
   }
 
@@ -103,7 +103,7 @@ export function collectAttentionItems(
       title: escalation.title,
       detail: escalation.id,
       nextAction: 'Open escalations',
-      route: '/escalations',
+      route: '/attention',
     });
   }
 
@@ -115,7 +115,7 @@ export function collectAttentionItems(
       title: source.name,
       detail: `${source.issues.length} ready issue${source.issues.length === 1 ? '' : 's'}`,
       nextAction: 'Open review queue',
-      route: '/ops',
+      route: '/attention',
     });
   }
 

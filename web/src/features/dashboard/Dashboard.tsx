@@ -21,7 +21,7 @@ export function Dashboard() {
 
   if (isLoading) {
     return (
-      <Surface title="Dashboard">
+      <Surface title="Overview">
         <Panel className="flex items-center justify-center gap-3 py-20 text-sm text-muted">
           <Spinner />
           Loading town status…
@@ -32,7 +32,7 @@ export function Dashboard() {
 
   if (isError || !data) {
     return (
-      <Surface title="Dashboard">
+      <Surface title="Overview">
         <Panel className="flex flex-col items-center gap-4 py-16 text-center">
           <div>
             <p className="text-sm text-fg">Could not reach the gt bridge.</p>
@@ -50,7 +50,7 @@ export function Dashboard() {
 
   return (
     <Surface
-      title={data.name || 'Dashboard'}
+      title="Overview"
       description="System health at a glance — attention signals, rig status, and service health."
     >
       <div className="flex flex-col gap-4">

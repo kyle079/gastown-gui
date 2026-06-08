@@ -25,7 +25,7 @@ function collect(status: TownStatus): AttentionItem[] {
 
   for (const a of everyAgent) {
     const rig = a.address?.split('/')[0] ?? '';
-    const route = rig ? `/rigs/${rig}` : '/rigs';
+    const route = rig ? `/fleet/${rig}` : '/fleet';
     if (a.state === 'stalled') {
       items.push({ id: `stall:${a.address}`, tone: 'danger', title: a.address || a.name, detail: 'stalled', route });
     } else if (a.state === 'blocked') {
@@ -35,10 +35,10 @@ function collect(status: TownStatus): AttentionItem[] {
 
   for (const rig of status.rigs ?? []) {
     if (!rig.has_witness) {
-      items.push({ id: `nowit:${rig.name}`, tone: 'warn', title: rig.name, detail: 'no witness', route: `/rigs/${rig.name}` });
+      items.push({ id: `nowit:${rig.name}`, tone: 'warn', title: rig.name, detail: 'no witness', route: `/fleet/${rig.name}` });
     }
     if (!rig.has_refinery) {
-      items.push({ id: `noref:${rig.name}`, tone: 'warn', title: rig.name, detail: 'no refinery', route: `/rigs/${rig.name}` });
+      items.push({ id: `noref:${rig.name}`, tone: 'warn', title: rig.name, detail: 'no refinery', route: `/fleet/${rig.name}` });
     }
   }
 
@@ -48,7 +48,7 @@ function collect(status: TownStatus): AttentionItem[] {
       tone: 'info',
       title: 'Overseer mail',
       detail: `${status.overseer.unread_mail} unread`,
-      route: '/mail',
+      route: '/attention',
     });
   }
 

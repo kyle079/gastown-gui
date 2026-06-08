@@ -169,9 +169,9 @@ export function AgentDetailDialog({
             variant="primary"
             onClick={() => {
               if (rig) {
-                void navigate({ to: '/rigs/$rig', params: { rig } });
+                void navigate({ to: '/fleet/$rig', params: { rig } });
               } else {
-                void navigate({ to: '/rigs' });
+                void navigate({ to: '/fleet' });
               }
               onClose();
             }}

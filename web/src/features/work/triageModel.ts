@@ -72,7 +72,7 @@ export function collectWorkAttention(
       tone: 'warn',
       title: pluralize(blockedConvoys.length, 'blocked convoy'),
       detail: `Operator follow-up needed on ${convoyTitle(blockedConvoys[0].title)}.`,
-      route: '/work',
+      route: '/dispatch',
     });
   }
 
@@ -82,7 +82,7 @@ export function collectWorkAttention(
       tone: 'danger',
       title: 'Scheduler paused',
       detail: 'No new polecat work will dispatch until capacity is resumed.',
-      route: '/ops',
+      route: '/attention',
     });
   } else if (scheduler && scheduler.queued_ready > 0 && scheduler.capacity.free === 0) {
     items.push({
@@ -90,7 +90,7 @@ export function collectWorkAttention(
       tone: 'warn',
       title: 'Dispatch queue waiting on capacity',
       detail: `${pluralize(scheduler.queued_ready, 'ready bead')} waiting; no free slots.`,
-      route: '/ops',
+      route: '/attention',
     });
   }
 
@@ -100,7 +100,7 @@ export function collectWorkAttention(
       tone: urgent[0].priority === 0 ? 'danger' : 'info',
       title: pluralize(urgent.length, 'urgent bead'),
       detail: `${urgent[0].id} is the highest-priority unhooked work item.`,
-      route: '/issues',
+      route: '/investigate',
     });
   }
 

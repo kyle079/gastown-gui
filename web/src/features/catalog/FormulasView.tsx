@@ -101,7 +101,7 @@ export function FormulasView() {
             placeholder="Filter by name, type, or description…"
             value={query}
             onChange={(e) =>
-              void navigate({ to: '/formulas', search: { q: e.target.value || undefined } })
+              void navigate({ to: '/investigate', search: { mode: 'formulas' as const, q: e.target.value || undefined } })
             }
             className="sm:max-w-xs"
           />

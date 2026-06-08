@@ -26,11 +26,11 @@ export function WorkSurface() {
   const [dispatching, setDispatching] = useState(false);
 
   const onInspect = (convoy: Convoy) =>
-    void navigate({ to: '/work/$convoyId', params: { convoyId: convoy.id } });
+    void navigate({ to: '/dispatch/$convoyId', params: { convoyId: convoy.id } });
 
   if (isLoading) {
     return (
-      <Surface title="Work">
+      <Surface title="Dispatch">
         <Panel className="flex items-center justify-center gap-3 py-20 text-sm text-muted">
           <Spinner />
           Loading work queue…
@@ -41,7 +41,7 @@ export function WorkSurface() {
 
   if (isError || !data) {
     return (
-      <Surface title="Work">
+      <Surface title="Dispatch">
         <Panel className="flex flex-col items-center gap-4 py-16 text-center">
           <div>
             <p className="text-sm text-fg">Could not reach the gt bridge.</p>
@@ -78,8 +78,8 @@ export function WorkSurface() {
 
   return (
     <Surface
-      title="Work"
-      description="Operator triage board for convoys, queued beads, and the next move."
+      title="Dispatch"
+      description="Create, route, and confirm new work — ask the mayor, pick a target, choose a formula."
       actions={
         <Button variant="primary" size="sm" onClick={() => setDispatching(true)}>
           Dispatch

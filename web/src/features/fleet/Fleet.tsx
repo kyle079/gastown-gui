@@ -20,12 +20,12 @@ export function Fleet() {
   const { data, isLoading, isError, error, refetch } = useStatus();
   const rigs = useMemo(() => data?.rigs ?? [], [data]);
 
-  // Auto-select the most critical rig when landing on /rigs with no selection.
+  // Auto-select the most critical rig when landing on /fleet with no selection.
   useEffect(() => {
     if (activeName || isLoading || rigs.length === 0) return;
     const top = [...rigs].sort(compareRigs)[0];
     if (top) {
-      void navigate({ to: '/rigs/$rig', params: { rig: top.name }, replace: true });
+      void navigate({ to: '/fleet/$rig', params: { rig: top.name }, replace: true });
     }
   }, [activeName, isLoading, rigs, navigate]);
 
@@ -65,7 +65,7 @@ export function Fleet() {
           <RigList
             rigs={rigs}
             selected={activeName}
-            onSelect={(name) => void navigate({ to: '/rigs/$rig', params: { rig: name } })}
+            onSelect={(name) => void navigate({ to: '/fleet/$rig', params: { rig: name } })}
           />
           <DogsPanel />
         </div>

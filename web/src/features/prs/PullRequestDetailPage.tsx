@@ -283,7 +283,7 @@ export function PullRequestDetailPage() {
 
   const { data, isLoading, isError, error, refetch } = usePullRequestDetail(owner, repo, number);
 
-  const back = () => void navigate({ to: '/prs', search: { state: 'open' } });
+  const back = () => void navigate({ to: '/landing', search: { state: 'open' } });
 
   const title = data ? `#${data.number} ${data.title}` : `PR #${prNumber}`;
   const description = data ? `${owner}/${repo}` : `${owner}/${repo}`;

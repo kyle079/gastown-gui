@@ -53,7 +53,7 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
         glyph: '✉',
         keywords: ['mail', 'message', 'send', 'reply', 'new'],
         run: () => {
-          void navigate({ to: '/mail' });
+          void navigate({ to: '/attention' });
           requestCompose();
         },
       },

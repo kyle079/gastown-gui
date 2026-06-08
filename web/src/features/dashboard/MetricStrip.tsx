@@ -18,12 +18,12 @@ export function MetricStrip({ summary }: { summary: StatusSummary }) {
   const navigate = useNavigate();
 
   const metrics: Metric[] = [
-    { label: 'Rigs', value: summary.rig_count, route: '/rigs' },
-    { label: 'Polecats', value: summary.polecat_count, route: '/rigs' },
-    { label: 'Active hooks', value: summary.active_hooks, accent: summary.active_hooks > 0, route: '/work' },
-    { label: 'Crews', value: summary.crew_count, route: '/rigs' },
-    { label: 'Witnesses', value: summary.witness_count, route: '/rigs' },
-    { label: 'Refineries', value: summary.refinery_count, route: '/rigs' },
+    { label: 'Rigs', value: summary.rig_count, route: '/fleet' },
+    { label: 'Polecats', value: summary.polecat_count, route: '/fleet' },
+    { label: 'Active hooks', value: summary.active_hooks, accent: summary.active_hooks > 0, route: '/dispatch' },
+    { label: 'Crews', value: summary.crew_count, route: '/fleet' },
+    { label: 'Witnesses', value: summary.witness_count, route: '/fleet' },
+    { label: 'Refineries', value: summary.refinery_count, route: '/fleet' },
   ];
 
   // gap-px over a `line`-colored track draws uniform hairlines in BOTH axes,

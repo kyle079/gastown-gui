@@ -169,7 +169,7 @@ const workDetailRoute = createRoute({
 const prsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/prs',
-  beforeLoad: () => { throw redirect({ to: '/landing' }); },
+  beforeLoad: () => { throw redirect({ to: '/landing', search: { state: 'open' as const } }); },
 });
 
 const prDetailRoute = createRoute({

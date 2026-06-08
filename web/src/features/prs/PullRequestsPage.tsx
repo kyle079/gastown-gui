@@ -64,8 +64,8 @@ function PrTitle({ pr }: { pr: PullRequest }) {
           <span className="font-mono text-2xs text-faint">{pr.headRefName}</span>
           {beadId && (
             <Link
-              to="/issues"
-              search={{ id: beadId }}
+              to="/investigate"
+              search={{ mode: 'issues' as const, id: beadId }}
               onClick={(e) => e.stopPropagation()}
               className="font-mono text-2xs text-accent underline-offset-2 hover:underline"
             >
@@ -82,7 +82,7 @@ function RigLink({ rig }: { rig?: string }) {
   if (!rig) return <span className="text-faint">—</span>;
   return (
     <Link
-      to="/rigs/$rig"
+      to="/fleet/$rig"
       params={{ rig }}
       onClick={(e) => e.stopPropagation()}
       className="font-mono text-xs text-accent underline-offset-2 hover:underline"
@@ -150,7 +150,7 @@ export function PullRequestsPage() {
   const query = search.q ?? '';
 
   const setSearch = (updates: Partial<PrsSearch>) =>
-    void navigate({ to: '/prs', search: (prev) => ({ ...prev, state: prev.state ?? 'open', ...updates }) });
+    void navigate({ to: '/landing', search: { state, q: query || undefined, ...updates } });
 
   const { data, isLoading, isError, error, refetch } = usePullRequests(state);
   const rows = useMemo(() => (data ?? []).filter((pr) => matches(pr, query)), [data, query]);
@@ -162,7 +162,7 @@ export function PullRequestsPage() {
     if (!pr.repo) return;
     const [owner, repo] = pr.repo.split('/');
     if (owner && repo) {
-      void navigate({ to: '/prs/$owner/$repo/$prNumber', params: { owner, repo, prNumber: String(pr.number) } });
+      void navigate({ to: '/landing/$owner/$repo/$prNumber', params: { owner, repo, prNumber: String(pr.number) } });
     } else if (pr.url) {
       // Fallback for repos without owner/repo format: plain anchor navigation
       window.location.href = pr.url;
@@ -171,8 +171,8 @@ export function PullRequestsPage() {
 
   return (
     <Surface
-      title="Pull requests"
-      description="Open code review across every rig. Filter by state, search by title or branch."
+      title="Landing"
+      description="Pull requests and merge queue — review code, watch merge progress, and clear landing blockers."
     >
       <div className="flex flex-col gap-4">
         {/* State tabs */}

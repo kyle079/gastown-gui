@@ -39,7 +39,7 @@ export function RigDetail({ rig }: { rig: Rig }) {
               <p className="mt-1 break-all font-mono text-xs text-faint">{rig.git_url}</p>
             )}
             <Link
-              to="/prs"
+              to="/landing"
               search={{ state: 'open', q: rig.name }}
               className="mt-1 inline-block font-mono text-xs text-accent underline-offset-2 hover:underline"
             >

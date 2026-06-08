@@ -11,12 +11,13 @@ export interface InvestigateSearch {
   mode?: InvestigateMode;
 }
 
-export function validateInvestigateSearch(search: Record<string, unknown>): InvestigateSearch {
+export function validateInvestigateSearch(search: Record<string, unknown>): InvestigateSearch & Record<string, unknown> {
   const valid: InvestigateMode[] = ['timeline', 'issues', 'formulas', 'graph'];
   const mode = valid.includes(search.mode as InvestigateMode)
     ? (search.mode as InvestigateMode)
     : undefined;
-  return { mode };
+  // Pass all params through so sub-components can read their own search state via strict:false.
+  return { ...search, mode };
 }
 
 const TABS: { mode: InvestigateMode; label: string; description: string }[] = [

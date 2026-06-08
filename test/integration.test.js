@@ -125,11 +125,16 @@ describe('Comprehensive Integration Tests', () => {
     await page.waitForFunction(() => document.body.innerText.includes('Ask Mayor'), { timeout: 5000 });
 
     const requestCapture = page.evaluate(() => {
-      return new Promise((resolve) => {
+      return new Promise((resolve, reject) => {
+        const timeoutId = window.setTimeout(() => {
+          window.fetch = originalFetch;
+          reject(new Error('Timed out waiting for /api/mayor/requests'));
+        }, 5000);
         const originalFetch = window.fetch;
         window.fetch = async (url, opts) => {
           if (typeof url === 'string' && url === '/api/mayor/requests') {
             window.fetch = originalFetch;
+            window.clearTimeout(timeoutId);
             const body = opts?.body ? JSON.parse(String(opts.body)) : null;
             resolve({ url, method: opts?.method, body });
           }
@@ -138,11 +143,19 @@ describe('Comprehensive Integration Tests', () => {
       });
     });
 
-    await page.$eval('textarea', (input) => {
+    await page.evaluate(() => {
+      const labels = Array.from(document.querySelectorAll('span'));
+      const promptLabel = labels.find((node) => node.textContent?.trim() === 'Operator Request');
+      const textarea = promptLabel?.parentElement?.querySelector('textarea');
+      if (!(textarea instanceof HTMLTextAreaElement)) throw new Error('Ask Mayor textarea not found');
       const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
-      setter?.call(input, 'Add a mayor workflow for operator-created dispatch.');
-      input.dispatchEvent(new Event('input', { bubbles: true }));
+      setter?.call(textarea, 'Add a mayor workflow for operator-created dispatch.');
+      textarea.dispatchEvent(new Event('input', { bubbles: true }));
     });
+    await page.waitForFunction(() => {
+      const button = Array.from(document.querySelectorAll('button')).find((node) => node.textContent?.includes('Create And Sling'));
+      return button instanceof HTMLButtonElement && !button.disabled;
+    }, { timeout: 5000 });
     await page.evaluate(() => {
       const button = Array.from(document.querySelectorAll('button')).find((node) => node.textContent?.includes('Create And Sling'));
       if (!(button instanceof HTMLButtonElement)) throw new Error('Ask Mayor submit button not found');

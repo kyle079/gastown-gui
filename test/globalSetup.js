@@ -7,10 +7,16 @@
  */
 
 import { startMockServer, stopMockServer } from './mock-server.js';
+import { execFileSync } from 'child_process';
 
 let server;
 
 export async function setup() {
+  console.log('[Test Setup] Building React frontend...');
+  execFileSync('npm', ['--prefix', 'web', 'run', 'build'], {
+    stdio: 'inherit',
+  });
+
   console.log('[Test Setup] Starting mock server...');
 
   const requestedPort = process.env.PORT ? Number(process.env.PORT) : 0;

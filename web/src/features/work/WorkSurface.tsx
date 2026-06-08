@@ -9,6 +9,7 @@ import { workTotals } from './workState';
 import { WorkSummary } from './WorkSummary';
 import { ConvoysPanel } from './ConvoysPanel';
 import { DispatchDialog } from './DispatchDialog';
+import { CreateWorkDialog } from './CreateWorkDialog';
 import { WorkAttentionPanel } from './WorkAttentionPanel';
 import { NextActionsPanel } from './NextActionsPanel';
 import { BeadQueuePanel } from './BeadQueuePanel';
@@ -24,6 +25,7 @@ export function WorkSurface() {
   const beadsQuery = useBeads('all');
   const schedulerQuery = useSchedulerStatus();
   const [dispatching, setDispatching] = useState(false);
+  const [creating, setCreating] = useState(false);
 
   const onInspect = (convoy: Convoy) =>
     void navigate({ to: '/work/$convoyId', params: { convoyId: convoy.id } });
@@ -81,9 +83,14 @@ export function WorkSurface() {
       title="Work"
       description="Operator triage board for convoys, queued beads, and the next move."
       actions={
-        <Button variant="primary" size="sm" onClick={() => setDispatching(true)}>
-          Dispatch
-        </Button>
+        <>
+          <Button variant="default" size="sm" onClick={() => setDispatching(true)}>
+            Dispatch
+          </Button>
+          <Button variant="primary" size="sm" onClick={() => setCreating(true)}>
+            Create workflow
+          </Button>
+        </>
       }
     >
       <div className="flex flex-col gap-4">
@@ -104,6 +111,7 @@ export function WorkSurface() {
       </div>
 
       <DispatchDialog open={dispatching} onClose={() => setDispatching(false)} />
+      <CreateWorkDialog open={creating} onClose={() => setCreating(false)} />
     </Surface>
   );
 }

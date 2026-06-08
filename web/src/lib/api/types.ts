@@ -202,6 +202,39 @@ export interface Target {
   has_work?: boolean;
 }
 
+export interface CreateWorkDispatchResult {
+  ok: boolean;
+  target?: string | null;
+  error?: string | null;
+}
+
+export interface CreateWorkBead {
+  id: string;
+  title: string;
+  description?: string;
+  priority?: number;
+  status?: string;
+  issue_type?: string;
+  workflow_state: 'created' | 'slung' | 'dispatch_failed' | string;
+  dispatch?: CreateWorkDispatchResult | null;
+}
+
+export interface CreateWorkConvoy {
+  id: string;
+  title: string;
+  notify?: string;
+  total?: number;
+  completed?: number;
+}
+
+export interface CreateWorkResult {
+  mode: 'single' | 'convoy';
+  outcome: 'created' | 'slung' | 'partial' | string;
+  bead: CreateWorkBead | null;
+  beads: CreateWorkBead[];
+  convoy: CreateWorkConvoy | null;
+}
+
 /**
  * A beads issue, as returned by `bd list --json` / `/api/beads`. Numeric
  * `priority` is the beads convention (0 = P0/urgent … 4 = P4/backlog).

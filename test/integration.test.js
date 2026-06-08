@@ -32,6 +32,26 @@ async function goto(page, route) {
   );
 }
 
+async function clickButtonByText(page, text) {
+  await page.waitForFunction(
+    (label) =>
+      Array.from(document.querySelectorAll('button')).some(
+        (button) => button.textContent?.trim() === label,
+      ),
+    { timeout: 5000 },
+    text,
+  );
+  await page.evaluate((label) => {
+    const button = Array.from(document.querySelectorAll('button')).find(
+      (node) => node.textContent?.trim() === label,
+    );
+    if (!(button instanceof HTMLButtonElement)) {
+      throw new Error(`No button found for ${label}`);
+    }
+    button.click();
+  }, text);
+}
+
 describe('Comprehensive Integration Tests', () => {
   let browser;
   let page;
@@ -67,7 +87,7 @@ describe('Comprehensive Integration Tests', () => {
   it('opens the dispatch dialog from the work surface', async () => {
     await goto(page, '/work');
 
-    await page.click('main button');
+    await clickButtonByText(page, 'Dispatch');
     await page.waitForFunction(() => document.querySelector('[role="dialog"] h2')?.textContent === 'Dispatch work', { timeout: 5000 });
 
     const dialogTitle = await page.$eval('[role="dialog"] h2', (el) => el.textContent?.trim());
@@ -76,7 +96,7 @@ describe('Comprehensive Integration Tests', () => {
 
   it('submits dispatch requests with the bead id the operator entered', async () => {
     await goto(page, '/work');
-    await page.click('main button');
+    await clickButtonByText(page, 'Dispatch');
     await page.waitForSelector('[role="dialog"] input', { timeout: 5000 });
 
     const requestCapture = page.evaluate(() => {

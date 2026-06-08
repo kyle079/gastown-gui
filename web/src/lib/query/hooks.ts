@@ -9,6 +9,7 @@ import type {
   BeadDetail,
   BeadGraphData,
   ChangelogEntry,
+  CreateWorkResult,
   Convoy,
   DoltHealth,
   DogsResponse,
@@ -189,6 +190,14 @@ interface SlingArgs {
   args?: string;
 }
 
+interface CreateWorkWorkflowArgs {
+  mode: 'single' | 'convoy';
+  bead?: Record<string, unknown>;
+  beads?: Array<Record<string, unknown>>;
+  convoy?: Record<string, unknown>;
+  dispatch?: Record<string, unknown>;
+}
+
 /** Sling a bead onto a target's hook — the primary dispatch action. */
 export function useSling() {
   const qc = useQueryClient();
@@ -221,6 +230,21 @@ export function useMayorRequest() {
       void qc.invalidateQueries({ queryKey: queryKeys.activity });
       void qc.invalidateQueries({ queryKey: ['beads'] });
       void qc.invalidateQueries({ queryKey: queryKeys.beadGraph });
+    },
+  });
+}
+
+/** Create a bead or convoy workflow, then return the follow-through state the UI should present. */
+export function useCreateWorkWorkflow() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: CreateWorkWorkflowArgs) =>
+      apiClient.post<{ success: boolean; data: CreateWorkResult }>('/api/workflows/create', payload),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: queryKeys.beadsRoot });
+      void qc.invalidateQueries({ queryKey: queryKeys.convoys });
+      void qc.invalidateQueries({ queryKey: queryKeys.status });
+      void qc.invalidateQueries({ queryKey: queryKeys.activity });
     },
   });
 }

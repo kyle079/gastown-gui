@@ -11,7 +11,8 @@ import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
 import { Surface } from '@/components/Surface';
-import { Panel, Button, Spinner, Badge } from '@/components/primitives';
+import { Panel, Button, Spinner, Badge, Input, useToast } from '@/components/primitives';
+import { useSendMail, useSendNudge } from '@/lib/query/hooks';
 import { cn } from '@/lib/utils/cn';
 import { useTerminalSessions, type TerminalSession } from './useTerminalSessions';
 
@@ -94,6 +95,8 @@ interface XtermPaneProps {
   onDetach: () => void;
 }
 
+type MsgMode = 'nudge' | 'mail';
+
 function XtermPane({ session, onDetach }: XtermPaneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
@@ -104,6 +107,42 @@ function XtermPane({ session, onDetach }: XtermPaneProps) {
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   // Separate unmount flag for the terminal init effect (distinct from the WS effect's local closed var)
   const termUnmountedRef = useRef(false);
+
+  // Inline messaging
+  const [msgMode, setMsgMode] = useState<MsgMode>('nudge');
+  const [msgText, setMsgText] = useState('');
+  const [mailSubject, setMailSubject] = useState('');
+  const sendNudge = useSendNudge();
+  const sendMail = useSendMail();
+  const { notify } = useToast();
+
+  function handleSend() {
+    if (!msgText.trim()) return;
+    if (msgMode === 'nudge') {
+      sendNudge.mutate(
+        { target: session.name, message: msgText.trim() },
+        {
+          onSuccess: () => { notify(`Nudged ${session.name}`, 'ok'); setMsgText(''); },
+          onError: (err) => notify(err instanceof Error ? err.message : 'Nudge failed', 'danger'),
+        },
+      );
+    } else {
+      if (!mailSubject.trim()) return;
+      sendMail.mutate(
+        { to: session.name, subject: mailSubject.trim(), message: msgText.trim() },
+        {
+          onSuccess: () => { notify(`Sent mail to ${session.name}`, 'ok'); setMsgText(''); setMailSubject(''); },
+          onError: (err) => notify(err instanceof Error ? err.message : 'Mail failed', 'danger'),
+        },
+      );
+    }
+  }
+
+  function switchMode(mode: MsgMode) {
+    setMsgMode(mode);
+    setMsgText('');
+    setMailSubject(mode === 'mail' ? `Operator: ${session.name}` : '');
+  }
 
   const sendResize = useCallback((cols: number, rows: number) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -283,6 +322,65 @@ function XtermPane({ session, onDetach }: XtermPaneProps) {
         className="min-h-0 flex-1 overflow-hidden bg-ink p-1.5 sm:p-2"
         style={{ fontFamily: 'monospace' }}
       />
+
+      {/* Inline messaging bar */}
+      <div className="border-t border-line bg-surface px-3 py-2 sm:px-4">
+        <div className="flex items-center gap-1.5 pb-1.5">
+          <span className="font-mono text-2xs uppercase tracking-wider text-faint">Send to agent</span>
+          <div className="flex gap-1">
+            <button
+              type="button"
+              onClick={() => switchMode('nudge')}
+              className={cn(
+                'rounded px-1.5 py-0.5 font-mono text-2xs transition-colors',
+                msgMode === 'nudge' ? 'bg-raised text-fg' : 'text-faint hover:text-muted',
+              )}
+            >
+              nudge
+            </button>
+            <button
+              type="button"
+              onClick={() => switchMode('mail')}
+              className={cn(
+                'rounded px-1.5 py-0.5 font-mono text-2xs transition-colors',
+                msgMode === 'mail' ? 'bg-raised text-fg' : 'text-faint hover:text-muted',
+              )}
+            >
+              mail
+            </button>
+          </div>
+          {msgMode === 'mail' && (
+            <span className="font-mono text-2xs text-warn">survives session death</span>
+          )}
+        </div>
+        <div className="flex flex-col gap-1.5">
+          {msgMode === 'mail' && (
+            <Input
+              value={mailSubject}
+              onChange={(e) => setMailSubject(e.target.value)}
+              placeholder="Subject"
+              className="text-xs"
+            />
+          )}
+          <div className="flex gap-2">
+            <Input
+              value={msgText}
+              onChange={(e) => setMsgText(e.target.value)}
+              placeholder={msgMode === 'nudge' ? 'Nudge this agent…' : 'Message body…'}
+              className="flex-1 text-xs"
+              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+            />
+            <Button
+              size="sm"
+              variant="primary"
+              disabled={!msgText.trim() || (msgMode === 'mail' && !mailSubject.trim()) || sendNudge.isPending || sendMail.isPending}
+              onClick={handleSend}
+            >
+              {sendNudge.isPending || sendMail.isPending ? '…' : msgMode === 'nudge' ? 'Nudge' : 'Mail'}
+            </Button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

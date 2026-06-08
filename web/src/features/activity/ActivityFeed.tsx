@@ -10,8 +10,9 @@ import {
   Spinner,
   Button,
   Badge,
+  useToast,
 } from '@/components/primitives';
-import { useActivity, useChangelog } from '@/lib/query/hooks';
+import { useActivity, useChangelog, useSendNudge, useSendMail } from '@/lib/query/hooks';
 import type { ChangelogEntry } from '@/lib/api/types';
 import { useActivityStream } from '@/lib/realtime/useActivityStream';
 import { relativeTime } from '@/lib/utils/format';
@@ -89,9 +90,17 @@ function PayloadLink({ label, value }: { label: string; value: string }) {
   );
 }
 
+type FeedMsgMode = 'nudge' | 'mail';
+
 /** Expanded detail for an activity event — full content, no truncation. */
 function ActivityExpanded({ view }: { view: ActivityView }) {
   const ts = view.ts ? new Date(view.ts).toLocaleString() : null;
+  const [msgMode, setMsgMode] = useState<FeedMsgMode>('nudge');
+  const [msgText, setMsgText] = useState('');
+  const [mailSubject, setMailSubject] = useState('');
+  const sendNudge = useSendNudge();
+  const sendMail = useSendMail();
+  const { notify } = useToast();
 
   // Collect meaningful payload fields (strings/numbers, non-empty)
   const fields = Object.entries(view.payload).filter(([, v]) => {
@@ -100,6 +109,34 @@ function ActivityExpanded({ view }: { view: ActivityView }) {
     if (typeof v === 'number') return true;
     return false;
   }) as [string, string | number][];
+
+  function handleSend() {
+    if (!msgText.trim()) return;
+    if (msgMode === 'nudge') {
+      sendNudge.mutate(
+        { target: view.actor, message: msgText.trim() },
+        {
+          onSuccess: () => { notify(`Nudged ${view.actor}`, 'ok'); setMsgText(''); },
+          onError: (err) => notify(err instanceof Error ? err.message : 'Nudge failed', 'danger'),
+        },
+      );
+    } else {
+      if (!mailSubject.trim()) return;
+      sendMail.mutate(
+        { to: view.actor, subject: mailSubject.trim(), message: msgText.trim() },
+        {
+          onSuccess: () => { notify(`Sent mail to ${view.actor}`, 'ok'); setMsgText(''); setMailSubject(''); },
+          onError: (err) => notify(err instanceof Error ? err.message : 'Mail failed', 'danger'),
+        },
+      );
+    }
+  }
+
+  function switchMode(mode: FeedMsgMode) {
+    setMsgMode(mode);
+    setMsgText('');
+    setMailSubject(mode === 'mail' ? `Operator: re ${view.eventType}` : '');
+  }
 
   return (
     <div className="border-t border-line/60 bg-raised/40 px-4 py-3">
@@ -127,6 +164,62 @@ function ActivityExpanded({ view }: { view: ActivityView }) {
         {fields.map(([k, v]) => (
           <PayloadLink key={k} label={k} value={String(v)} />
         ))}
+      </div>
+
+      {/* Inline reply to actor */}
+      <div className="mt-3 border-t border-line/40 pt-3">
+        <div className="flex items-center gap-1.5 pb-1.5">
+          <span className="font-mono text-2xs uppercase tracking-wider text-faint">Reply</span>
+          <div className="flex gap-1">
+            <button
+              type="button"
+              onClick={() => switchMode('nudge')}
+              className={cn(
+                'rounded px-1.5 py-0.5 font-mono text-2xs transition-colors',
+                msgMode === 'nudge' ? 'bg-surface-alt text-fg' : 'text-faint hover:text-muted',
+              )}
+            >
+              nudge
+            </button>
+            <button
+              type="button"
+              onClick={() => switchMode('mail')}
+              className={cn(
+                'rounded px-1.5 py-0.5 font-mono text-2xs transition-colors',
+                msgMode === 'mail' ? 'bg-surface-alt text-fg' : 'text-faint hover:text-muted',
+              )}
+            >
+              mail
+            </button>
+          </div>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          {msgMode === 'mail' && (
+            <Input
+              value={mailSubject}
+              onChange={(e) => setMailSubject(e.target.value)}
+              placeholder="Subject"
+              className="text-xs"
+            />
+          )}
+          <div className="flex gap-2">
+            <Input
+              value={msgText}
+              onChange={(e) => setMsgText(e.target.value)}
+              placeholder={msgMode === 'nudge' ? `Nudge ${view.actor}…` : 'Message body…'}
+              className="flex-1 text-xs"
+              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+            />
+            <Button
+              size="sm"
+              variant="primary"
+              disabled={!msgText.trim() || (msgMode === 'mail' && !mailSubject.trim()) || sendNudge.isPending || sendMail.isPending}
+              onClick={handleSend}
+            >
+              {sendNudge.isPending || sendMail.isPending ? '…' : msgMode === 'nudge' ? 'Nudge' : 'Mail'}
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );

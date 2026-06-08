@@ -17,10 +17,6 @@ describe('Bead routes (real Express app)', () => {
         calls.push(['list', opts]);
         return [{ id: 'bead-1' }];
       },
-      graph: async () => {
-        calls.push(['graph']);
-        return { nodes: [{ id: 'bead-1' }], edges: [] };
-      },
       search: async (query) => {
         calls.push(['search', query]);
         return [{ id: 'bead-2' }];
@@ -34,11 +30,6 @@ describe('Bead routes (real Express app)', () => {
         calls.push(['get', beadId]);
         if (beadId === 'missing') return { ok: false };
         return { ok: true, bead: { id: beadId } };
-      },
-      update: async (opts) => {
-        calls.push(['update', opts]);
-        if (!opts.beadId) return { ok: false, statusCode: 400, error: 'Bead ID is required' };
-        return { ok: true, raw: 'Updated bead: bead-xyz' };
       },
     };
 
@@ -69,13 +60,6 @@ describe('Bead routes (real Express app)', () => {
     expect(calls[1]).toEqual(['search', 'login']);
   });
 
-  it('GET /api/beads/graph returns graph data', async () => {
-    const res = await fetch(`${baseUrl}/api/beads/graph`);
-    expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toEqual({ nodes: [{ id: 'bead-1' }], edges: [] });
-    expect(calls[2]).toEqual(['graph']);
-  });
-
   it('POST /api/beads returns 400 when title is missing', async () => {
     const res = await fetch(`${baseUrl}/api/beads`, {
       method: 'POST',
@@ -91,38 +75,5 @@ describe('Bead routes (real Express app)', () => {
     const res = await fetch(`${baseUrl}/api/bead/missing`);
     expect(res.status).toBe(404);
   });
-
-  it('PATCH /api/bead/:beadId forwards body and returns success', async () => {
-    const res = await fetch(`${baseUrl}/api/bead/bead-xyz`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        title: 'Renamed',
-        description: 'Updated description',
-        priority: 1,
-        status: 'in_progress',
-        assignee: 'rig/polecat',
-        labels: ['operator', 'ui'],
-      }),
-    });
-
-    expect(res.status).toBe(200);
-    await expect(res.json()).resolves.toEqual({
-      success: true,
-      bead_id: 'bead-xyz',
-      raw: 'Updated bead: bead-xyz',
-    });
-    expect(calls.at(-1)).toEqual([
-      'update',
-      {
-        beadId: 'bead-xyz',
-        title: 'Renamed',
-        description: 'Updated description',
-        priority: 1,
-        status: 'in_progress',
-        assignee: 'rig/polecat',
-        labels: ['operator', 'ui'],
-      },
-    ]);
-  });
 });
+

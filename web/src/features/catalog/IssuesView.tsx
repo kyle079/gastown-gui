@@ -1,8 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import {
   Badge,
-  Button,
   Dialog,
   Input,
   Select,
@@ -15,7 +14,6 @@ import type { Bead, BeadDetail } from '@/lib/api/types';
 import { useBeadDetail, useBeads } from '@/lib/query/hooks';
 import { relativeTime } from '@/lib/utils/format';
 import { CatalogPanel } from './CatalogPanel';
-import { CreateBeadDialog, EditBeadDialog } from './BeadActionDialogs';
 import { DetailField } from './DetailField';
 import { byUrgency, priorityLabel, priorityTone, statusLabel, statusTone } from './catalogMeta';
 
@@ -107,8 +105,6 @@ const columns: Column<Bead>[] = [
 export function IssuesView() {
   const navigate = useNavigate();
   const search = useSearch({ strict: false }) as IssuesSearch;
-  const [creating, setCreating] = useState(false);
-  const [editing, setEditing] = useState(false);
 
   const status = search.status ?? 'open';
   const query = search.q ?? '';
@@ -141,11 +137,6 @@ export function IssuesView() {
     <Surface
       title="Issues"
       description="Town beads in one place. Filter by workflow state, then open a bead for deeper context."
-      actions={
-        <Button variant="primary" size="sm" onClick={() => setCreating(true)}>
-          New bead
-        </Button>
-      }
     >
       <CatalogPanel
         title="Beads"
@@ -192,16 +183,6 @@ export function IssuesView() {
         onClose={() => setSelectedId(undefined)}
         title={selectedId ? <span className="font-mono text-xs text-muted">{selectedId}</span> : undefined}
         description={selected?.title}
-        footer={
-          <>
-            <Button size="sm" variant="ghost" onClick={() => setSelectedId(undefined)}>
-              Close
-            </Button>
-            <Button size="sm" variant="primary" onClick={() => setEditing(true)} disabled={!selected}>
-              Edit bead
-            </Button>
-          </>
-        }
       >
         {isDetailLoading && (
           <div className="flex items-center justify-center gap-3 py-12 text-sm text-muted">
@@ -216,22 +197,6 @@ export function IssuesView() {
         )}
         {selected && <BeadDetailBody bead={selected} />}
       </Dialog>
-
-      <CreateBeadDialog
-        open={creating}
-        onClose={() => setCreating(false)}
-        onCreated={(id) =>
-          void navigate({
-            to: '/issues',
-            search: (prev) => ({ ...prev, status: 'all', id }),
-          })
-        }
-      />
-      <EditBeadDialog
-        bead={selected}
-        open={editing && selected != null}
-        onClose={() => setEditing(false)}
-      />
     </Surface>
   );
 }
@@ -261,19 +226,6 @@ function BeadDetailBody({ bead }: { bead: BeadDetail }) {
         <DetailField label="Dependencies">{bead.dependency_count ?? bead.dependencies?.length ?? 0}</DetailField>
         <DetailField label="Dependents">{bead.dependent_count ?? 0}</DetailField>
         <DetailField label="Comments">{bead.comment_count ?? 0}</DetailField>
-        <DetailField label="Labels">
-          {bead.labels && bead.labels.length > 0 ? (
-            <div className="flex flex-wrap gap-1.5">
-              {bead.labels.map((label) => (
-                <Badge key={label} tone="info">
-                  {label}
-                </Badge>
-              ))}
-            </div>
-          ) : (
-            '—'
-          )}
-        </DetailField>
       </div>
 
       {Array.isArray(bead.dependencies) && bead.dependencies.length > 0 && (

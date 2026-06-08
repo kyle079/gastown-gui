@@ -6,12 +6,6 @@ export interface TerminalSession {
   role: string;
   rig: string;
   label: string;
-  cwd: string | null;
-  cwdExists: boolean;
-  attached: boolean;
-  stale: boolean;
-  staleReason: string | null;
-  cleanupSafe: boolean;
 }
 
 export interface TerminalSessionGroup {

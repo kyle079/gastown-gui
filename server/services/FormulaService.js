@@ -10,72 +10,13 @@ function parseJsonOrNull(text) {
   }
 }
 
-function normalizeFormulaListPayload(payload) {
-  if (Array.isArray(payload)) return payload;
-  if (Array.isArray(payload?.formulas)) return payload.formulas;
-  return null;
-}
-
-function countMatches(text, pattern) {
-  return [...text.matchAll(pattern)].length;
-}
-
-function extractTomlString(text, key) {
-  const tripleQuoted = text.match(new RegExp(`^${key}\\s*=\\s*"""([\\s\\S]*?)"""`, 'm'));
-  if (tripleQuoted) return tripleQuoted[1].trim();
-
-  const quoted = text.match(new RegExp(`^${key}\\s*=\\s*["']([^"']*)["']`, 'm'));
-  return quoted?.[1]?.trim() ?? null;
-}
-
-function formulaNameFromPath(formulaPath) {
-  return path.basename(formulaPath).replace(/(?:\.formula)?\.toml$/i, '');
-}
-
 export class FormulaService {
-  constructor({ gtGateway, bdGateway, cache, emit, formulasDir, formulasDirs, gtRoot } = {}) {
+  constructor({ gtGateway, bdGateway, cache, emit, formulasDir } = {}) {
     this._gt = gtGateway;
     this._bd = bdGateway;
     this._cache = cache ?? null;
     this._emit = emit ?? null;
-    this._formulasDir = formulasDir ?? (gtRoot
-      ? path.join(gtRoot, '.beads', 'formulas')
-      : path.join(os.homedir(), '.beads', 'formulas'));
-    this._formulasDirs = Array.from(new Set([
-      ...(Array.isArray(formulasDirs) ? formulasDirs : []),
-      this._formulasDir,
-    ].filter(Boolean)));
-  }
-
-  async _listFromFilesystem() {
-    const formulas = [];
-
-    for (const formulasDir of this._formulasDirs) {
-      let entries = [];
-      try {
-        entries = await fsPromises.readdir(formulasDir, { withFileTypes: true });
-      } catch {
-        continue;
-      }
-
-      const files = entries
-        .filter((entry) => entry.isFile() && /\.(?:formula\.)?toml$/i.test(entry.name))
-        .map((entry) => path.join(formulasDir, entry.name));
-
-      for (const filePath of files) {
-        const raw = await fsPromises.readFile(filePath, 'utf8');
-        formulas.push({
-          name: extractTomlString(raw, 'formula') ?? formulaNameFromPath(filePath),
-          type: extractTomlString(raw, 'type') ?? (/\[\[steps\]\]/.test(raw) ? 'workflow' : undefined),
-          description: extractTomlString(raw, 'description') ?? '',
-          source: filePath,
-          steps: countMatches(raw, /^\[\[steps\]\]\s*$/gm),
-          vars: countMatches(raw, /^\[(?:vars|inputs)\.[^\]]+\]\s*$/gm),
-        });
-      }
-    }
-
-    return formulas.sort((a, b) => a.name.localeCompare(b.name));
+    this._formulasDir = formulasDir ?? path.join(os.homedir(), '.beads', 'formulas');
   }
 
   async list({ refresh = false, ttlMs = 60_000 } = {}) {
@@ -84,26 +25,19 @@ export class FormulaService {
       if (cached) return cached;
     }
 
-    const errors = [];
-    let sawSuccessfulSource = false;
-
     // Try gt formula list --json first
     let result = await this._gt.exec(['formula', 'list', '--json'], { timeoutMs: 30000 });
     if (result.ok) {
-      sawSuccessfulSource = true;
-      const parsed = normalizeFormulaListPayload(parseJsonOrNull((result.stdout || '').trim()));
-      if (parsed?.length) {
+      const parsed = parseJsonOrNull((result.stdout || '').trim());
+      if (parsed) {
         this._cache?.set?.('formulas', parsed, ttlMs);
         return parsed;
       }
-    } else if (result.error) {
-      errors.push(`gt formula list --json: ${result.error}`);
     }
 
     // Try gt formula list without --json
     result = await this._gt.exec(['formula', 'list'], { timeoutMs: 30000 });
     if (result.ok && result.stdout) {
-      sawSuccessfulSource = true;
       const lines = result.stdout.split('\n');
       const formulas = [];
       for (const line of lines) {
@@ -116,35 +50,13 @@ export class FormulaService {
         this._cache?.set?.('formulas', formulas, ttlMs);
         return formulas;
       }
-    } else if (result.error) {
-      errors.push(`gt formula list: ${result.error}`);
     }
 
     // Fallback: try bd formula list
     const bdResult = await this._bd.exec(['formula', 'list', '--json'], { timeoutMs: 10000 });
-    if (bdResult.ok) {
-      sawSuccessfulSource = true;
-      const parsed = normalizeFormulaListPayload(parseJsonOrNull((bdResult.stdout || '').trim()));
-      if (parsed?.length) {
-        this._cache?.set?.('formulas', parsed, ttlMs);
-        return parsed;
-      }
-    } else if (bdResult.error) {
-      errors.push(`bd formula list --json: ${bdResult.error}`);
-    }
-
-    const filesystemFormulas = await this._listFromFilesystem();
-    if (filesystemFormulas.length > 0) {
-      this._cache?.set?.('formulas', filesystemFormulas, ttlMs);
-      return filesystemFormulas;
-    }
-
-    if (sawSuccessfulSource) {
-      this._cache?.set?.('formulas', [], ttlMs);
-      return [];
-    }
-
-    throw new Error(errors.join(' | ') || 'Unable to load formulas');
+    const parsed = parseJsonOrNull((bdResult.stdout || '').trim()) || [];
+    this._cache?.set?.('formulas', parsed, ttlMs);
+    return parsed;
   }
 
   async search(query) {

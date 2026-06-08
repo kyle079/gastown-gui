@@ -9,12 +9,10 @@
 import { useEffect, useRef, useState, useCallback, type CSSProperties } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import '@xterm/xterm/css/xterm.css';
 import { Surface } from '@/components/Surface';
 import { Panel, Button, Spinner, Badge } from '@/components/primitives';
 import { cn } from '@/lib/utils/cn';
-import { apiClient } from '@/lib/api/client';
 import { useTerminalSessions, type TerminalSession } from './useTerminalSessions';
 
 function wsUrl(session: string): string {
@@ -36,21 +34,6 @@ const ROLE_GLYPHS: Record<string, string> = {
 
 function roleGlyph(role: string) {
   return ROLE_GLYPHS[role] ?? '·';
-}
-
-function staleSessionLabel(reason: string | null) {
-  switch (reason) {
-    case 'missing_worktree_cwd':
-      return 'missing worktree cwd';
-    case 'missing_cwd':
-      return 'missing cwd';
-    case 'missing_cwd_metadata':
-      return 'missing cwd metadata';
-    case 'dead_pane':
-      return 'dead pane';
-    default:
-      return 'stale session';
-  }
 }
 
 function getViewportHeight() {
@@ -203,7 +186,6 @@ function XtermPane({ session, onDetach }: XtermPaneProps) {
             message?: string;
             code?: number;
             session?: string;
-            errorType?: string;
           };
 
           if (msg.type === 'ready') {
@@ -312,64 +294,10 @@ function roleSortKey(role: string) {
   return i === -1 ? 999 : i;
 }
 
-interface StaleSessionPaneProps {
-  session: TerminalSession;
-  isCleaningUp: boolean;
-  cleanupError: string;
-  onCleanup: () => void;
-  onRefresh: () => void;
-}
-
-function StaleSessionPane({
-  session,
-  isCleaningUp,
-  cleanupError,
-  onCleanup,
-  onRefresh,
-}: StaleSessionPaneProps) {
-  return (
-    <div className="flex min-h-0 flex-1 flex-col justify-center gap-4 bg-ink px-5 py-10">
-      <div className="mx-auto flex max-w-[34rem] flex-col gap-3 rounded border border-danger/40 bg-danger/10 p-5">
-        <div className="flex items-center gap-2">
-          <Badge tone="danger">stale</Badge>
-          <span className="font-mono text-xs text-danger">{session.name}</span>
-        </div>
-        <div className="space-y-1">
-          <p className="font-mono text-sm text-fg">
-            This tmux session points at a missing or dead working directory.
-          </p>
-          <p className="font-mono text-xs text-faint">
-            Reason: {staleSessionLabel(session.staleReason)}
-          </p>
-          <p className="break-all font-mono text-xs text-faint">
-            cwd: {session.cwd ?? '(unknown)'}
-          </p>
-        </div>
-        <p className="font-mono text-xs text-faint">
-          The bridge will not attach with a stale cwd. Refresh after the agent recreates its
-          worktree, or clean up the dead tmux session if it is no longer needed.
-        </p>
-        {cleanupError ? (
-          <p className="font-mono text-xs text-danger">{cleanupError}</p>
-        ) : null}
-        <div className="flex flex-wrap gap-2">
-          <Button size="sm" onClick={onRefresh}>refresh</Button>
-          {session.cleanupSafe ? (
-            <Button variant="danger" size="sm" onClick={onCleanup} disabled={isCleaningUp}>
-              {isCleaningUp ? 'cleaning…' : 'cleanup stale session'}
-            </Button>
-          ) : null}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export function TerminalSurface() {
-  const { data, isLoading, isError, error, refetch, isFetching } = useTerminalSessions();
+  const { data, isLoading, isError, error } = useTerminalSessions();
   const [active, setActive] = useState<TerminalSession | null>(null);
   const viewportHeight = useViewportHeight();
-  const queryClient = useQueryClient();
 
   const groups = data?.groups ?? [];
   const sortedGroups = [...groups].sort(
@@ -379,19 +307,6 @@ export function TerminalSurface() {
   const shellStyle: CSSProperties = {
     ['--terminal-vh' as string]: `${Math.max(viewportHeight, 1) * 0.01}px`,
   };
-  const activeSession = active
-    ? data?.sessions.find((session) => session.name === active.name) ?? active
-    : null;
-
-  const cleanupMutation = useMutation({
-    mutationFn: async (sessionName: string) => apiClient.del(`/api/terminal/sessions/${encodeURIComponent(sessionName)}`),
-    onSuccess: async (_, sessionName) => {
-      if (active?.name === sessionName) {
-        setActive(null);
-      }
-      await queryClient.invalidateQueries({ queryKey: ['terminal-sessions'] });
-    },
-  });
 
   const handleSelect = useCallback((s: TerminalSession) => {
     setActive(s);
@@ -405,12 +320,9 @@ export function TerminalSurface() {
     <Surface
       className="max-w-none px-3 py-3 sm:px-6 sm:py-5"
       title="Terminal"
-      description={activeSession ? `attached: ${activeSession.name}` : 'select a session to attach'}
+      description={active ? `attached: ${active.name}` : 'select a session to attach'}
       actions={
         <div className="flex items-center gap-1.5">
-          <Button variant="ghost" size="sm" onClick={() => refetch()} disabled={isFetching}>
-            {isFetching ? 'refreshing…' : 'refresh'}
-          </Button>
           <Badge tone="warn">LAN only</Badge>
         </div>
       }
@@ -470,7 +382,7 @@ export function TerminalSurface() {
                         onClick={() => handleSelect(s)}
                         className={cn(
                           'flex min-h-12 w-full items-start gap-2 rounded border px-3 py-2 text-left transition-colors',
-                          activeSession?.name === s.name
+                          active?.name === s.name
                             ? 'border-accent/40 bg-accent/10 text-fg'
                             : 'border-line bg-surface text-muted hover:bg-raised hover:text-fg',
                         )}
@@ -480,9 +392,8 @@ export function TerminalSurface() {
                         </span>
                         <span className="min-w-0 flex-1">
                           <span className="block truncate font-mono text-xs">{s.name}</span>
-                          <span className="flex flex-wrap items-center gap-1 text-[11px]">
-                            <span className="truncate font-mono text-faint">{s.rig}</span>
-                            {s.stale ? <Badge tone="danger">stale</Badge> : null}
+                          <span className="block truncate font-mono text-[11px] text-faint">
+                            {s.rig}
                           </span>
                         </span>
                       </button>
@@ -496,18 +407,8 @@ export function TerminalSurface() {
 
         {/* Terminal pane */}
         <Panel flush className="flex min-h-[28rem] flex-col overflow-hidden lg:min-h-0">
-          {activeSession ? (
-            activeSession.stale ? (
-              <StaleSessionPane
-                session={activeSession}
-                isCleaningUp={cleanupMutation.isPending}
-                cleanupError={cleanupMutation.error instanceof Error ? cleanupMutation.error.message : ''}
-                onCleanup={() => cleanupMutation.mutate(activeSession.name)}
-                onRefresh={() => refetch()}
-              />
-            ) : (
-              <XtermPane key={activeSession.name} session={activeSession} onDetach={handleDetach} />
-            )
+          {active ? (
+            <XtermPane key={active.name} session={active} onDetach={handleDetach} />
           ) : (
             <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 bg-ink px-4 py-12 text-center">
               <span className="font-mono text-2xl text-faint">⌗</span>

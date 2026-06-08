@@ -12,7 +12,6 @@ import type {
   DogsResponse,
   Escalation,
   Formula,
-  FormulaDetail,
   MailMessage,
   MergeRequest,
   PullRequest,
@@ -122,23 +121,18 @@ export function useTargets() {
 interface SlingArgs {
   bead: string;
   target?: string;
-  molecule?: string;
-  quality?: string;
-  args?: string;
 }
 
 /** Sling a bead onto a target's hook — the primary dispatch action. */
 export function useSling() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ bead, target, molecule, quality, args }: SlingArgs) =>
-      apiClient.post<{ success: boolean }>('/api/sling', { bead, target, molecule, quality, args }),
+    mutationFn: ({ bead, target }: SlingArgs) =>
+      apiClient.post<{ success: boolean }>('/api/sling', { bead, target }),
     onSuccess: () => {
       // Dispatch changes both the convoy queue and who's-on-what.
       void qc.invalidateQueries({ queryKey: queryKeys.convoys });
       void qc.invalidateQueries({ queryKey: queryKeys.status });
-      void qc.invalidateQueries({ queryKey: queryKeys.activity });
-      void qc.invalidateQueries({ queryKey: ['beads'] });
     },
   });
 }
@@ -157,50 +151,6 @@ export function useReassign() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: queryKeys.convoys });
       void qc.invalidateQueries({ queryKey: queryKeys.status });
-      void qc.invalidateQueries({ queryKey: ['beads'] });
-      void qc.invalidateQueries({ queryKey: queryKeys.activity });
-    },
-  });
-}
-
-export function useReleaseWork() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (beadId: string) =>
-      apiClient.post<{ success: boolean }>(`/api/work/${encodeURIComponent(beadId)}/release`),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: queryKeys.convoys });
-      void qc.invalidateQueries({ queryKey: queryKeys.status });
-      void qc.invalidateQueries({ queryKey: ['beads'] });
-      void qc.invalidateQueries({ queryKey: queryKeys.activity });
-    },
-  });
-}
-
-export function useParkWork() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ beadId, reason }: { beadId: string; reason?: string }) =>
-      apiClient.post<{ success: boolean }>(`/api/work/${encodeURIComponent(beadId)}/park`, { reason }),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: queryKeys.convoys });
-      void qc.invalidateQueries({ queryKey: queryKeys.status });
-      void qc.invalidateQueries({ queryKey: ['beads'] });
-      void qc.invalidateQueries({ queryKey: queryKeys.activity });
-    },
-  });
-}
-
-export function useMarkWorkDone() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ beadId, summary }: { beadId: string; summary?: string }) =>
-      apiClient.post<{ success: boolean }>(`/api/work/${encodeURIComponent(beadId)}/done`, { summary }),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: queryKeys.convoys });
-      void qc.invalidateQueries({ queryKey: queryKeys.status });
-      void qc.invalidateQueries({ queryKey: ['beads'] });
-      void qc.invalidateQueries({ queryKey: queryKeys.activity });
     },
   });
 }
@@ -222,16 +172,6 @@ export function useBeads(status: string) {
   });
 }
 
-export function useBeadSearch(query: string) {
-  const normalized = query.trim();
-  return useQuery({
-    queryKey: queryKeys.beadSearch(normalized),
-    queryFn: () => apiClient.get<Bead[]>(`/api/beads/search?q=${encodeURIComponent(normalized)}`),
-    staleTime: 15_000,
-    enabled: normalized.length >= 2,
-  });
-}
-
 /** Full bead detail from `bd show --json`, fetched only when a bead is opened. */
 export function useBeadDetail(beadId: string | undefined) {
   return useQuery({
@@ -239,72 +179,6 @@ export function useBeadDetail(beadId: string | undefined) {
     queryFn: () => apiClient.get<BeadDetail>(`/api/bead/${encodeURIComponent(beadId ?? '')}`),
     staleTime: 15_000,
     enabled: Boolean(beadId),
-  });
-}
-
-export interface SaveBeadInput {
-  title: string;
-  description?: string;
-  priority?: number | string;
-  labels?: string[];
-}
-
-export function useCreateBead() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (input: SaveBeadInput) =>
-      apiClient.post<{ success: boolean; bead_id?: string }>('/api/beads', input),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ['beads'] });
-      void qc.invalidateQueries({ queryKey: queryKeys.activity });
-      void qc.invalidateQueries({ queryKey: queryKeys.status });
-    },
-  });
-}
-
-export interface UpdateBeadInput extends SaveBeadInput {
-  beadId: string;
-  status?: string;
-  assignee?: string;
-}
-
-export function useUpdateBead() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ beadId, ...body }: UpdateBeadInput) =>
-      apiClient.patch<{ success: boolean }>(`/api/bead/${encodeURIComponent(beadId)}`, body),
-    onSuccess: (_data, variables) => {
-      void qc.invalidateQueries({ queryKey: ['beads'] });
-      void qc.invalidateQueries({ queryKey: queryKeys.beadDetail(variables.beadId) });
-      void qc.invalidateQueries({ queryKey: queryKeys.activity });
-      void qc.invalidateQueries({ queryKey: queryKeys.status });
-      void qc.invalidateQueries({ queryKey: queryKeys.convoys });
-    },
-  });
-}
-
-export function useAddRig() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ name, url }: { name: string; url: string }) =>
-      apiClient.post<{ success: boolean; name: string }>('/api/rigs', { name, url }),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: queryKeys.status });
-      void qc.invalidateQueries({ queryKey: queryKeys.rigList });
-      void qc.invalidateQueries({ queryKey: queryKeys.activity });
-    },
-  });
-}
-
-export function useRemoveRig() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (name: string) => apiClient.del<{ success: boolean; name: string }>(`/api/rigs/${encodeURIComponent(name)}`),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: queryKeys.status });
-      void qc.invalidateQueries({ queryKey: queryKeys.rigList });
-      void qc.invalidateQueries({ queryKey: queryKeys.activity });
-    },
   });
 }
 
@@ -337,15 +211,6 @@ export function useFormulas() {
     queryKey: queryKeys.formulas,
     queryFn: () => apiClient.get<Formula[]>('/api/formulas'),
     refetchInterval: 60_000,
-  });
-}
-
-export function useFormulaDetail(name: string | undefined) {
-  return useQuery({
-    queryKey: queryKeys.formulaDetail(name ?? ''),
-    queryFn: () => apiClient.get<FormulaDetail>(`/api/formula/${encodeURIComponent(name ?? '')}`),
-    staleTime: 30_000,
-    enabled: Boolean(name),
   });
 }
 

@@ -112,7 +112,7 @@ export function FormulasView() {
           rows={rows}
           rowKey={(f) => f.name}
           onRowClick={setSelected}
-          empty={query ? 'No formulas match your filter.' : 'No formulas were discovered by the bridge.'}
+          empty={query ? 'No formulas match your filter.' : 'No formulas defined.'}
         />
       </CatalogPanel>
 

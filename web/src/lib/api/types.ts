@@ -198,8 +198,6 @@ export interface Bead {
   priority?: number;
   issue_type?: string;
   owner?: string;
-  assignee?: string | null;
-  labels?: string[];
   created_at?: string;
   created_by?: string;
   updated_at?: string;
@@ -222,6 +220,7 @@ export interface BeadDependency {
 }
 
 export interface BeadDetail extends Bead {
+  assignee?: string | null;
   dependencies?: BeadDependency[];
 }
 
@@ -324,20 +323,6 @@ export interface Formula {
   source?: string;
   steps?: number;
   vars?: number;
-}
-
-export interface FormulaStep {
-  title?: string;
-  description?: string;
-  [key: string]: unknown;
-}
-
-export interface FormulaDetail extends Omit<Formula, 'steps' | 'vars'> {
-  schema_version?: number;
-  steps?: FormulaStep[];
-  variables?: unknown[];
-  vars?: unknown[] | number;
-  [key: string]: unknown;
 }
 
 /** A node in the bead dependency graph (`/api/beads/graph`). */

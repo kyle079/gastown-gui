@@ -43,8 +43,6 @@ npm install -g gastown-gui
 git clone https://github.com/web3dev1337/gastown-gui.git
 cd gastown-gui
 npm install
-npm --prefix web install
-npm run build
 npm link
 ```
 
@@ -61,31 +59,6 @@ Opens `http://localhost:7667` in your browser.
 ```bash
 gastown-gui doctor
 ```
-
-## Mayor Preview Auto-Refresh
-
-The LAN preview at `http://192.168.2.40:8080/` is expected to run from the
-dedicated checkout at `/home/kyle/gt/gastown_gui/mayor/rig`. To keep that preview
-current after refinery merges land:
-
-```bash
-# Manual trigger from the preview checkout
-bash /home/kyle/gt/gastown_gui/mayor/rig/scripts/refresh-preview.sh --force
-
-# Install the polling loop on the mayor box
-cp scripts/gastown-gui-autodeploy.service /etc/systemd/system/
-cp scripts/gastown-gui-autodeploy.timer /etc/systemd/system/
-systemctl daemon-reload
-systemctl enable --now gastown-gui-autodeploy.timer
-```
-
-What the refresh script does:
-
-- Fast-forwards the `mayor/rig` checkout to `origin/master` only when the checkout is clean
-- Refuses to overwrite dirty or diverged local state
-- Runs `npm ci` in the repo root and `web/` when the relevant lockfiles change or `node_modules` is missing
-- Restarts `server.js` on `:7667` and the Vite dev server on `:8080`
-- Writes operator logs to `.runtime/logs/preview-refresh.log`, `.runtime/logs/preview-backend.log`, and `.runtime/logs/preview-vite.log`
 
 ---
 
@@ -208,10 +181,10 @@ gastown-gui help
 | `GASTOWN_PORT` | Server port | 7667 |
 | `HOST` | Server host | 127.0.0.1 |
 | `GT_ROOT` | Gas Town root directory | ~/gt |
-| `GT_BIN` | Override `gt` executable path | auto-detect (`PATH`, `~/.local/bin/gt`, `/opt/homebrew/bin/gt`, `/usr/local/bin/gt`) |
-| `BD_BIN` | Override `bd` executable path | auto-detect (`PATH`, `~/.local/bin/bd`, `/opt/homebrew/bin/bd`, `/usr/local/bin/bd`) |
+| `GT_BIN` | Override `gt` executable path | auto-detect (`PATH`, `/opt/homebrew/bin/gt`, `/usr/local/bin/gt`) |
+| `BD_BIN` | Override `bd` executable path | auto-detect (`PATH`, `/opt/homebrew/bin/bd`, `/usr/local/bin/bd`) |
 
-When `GT_BIN` or `BD_BIN` resolve outside the server's inherited `PATH`, the backend prepends those executable directories to subprocess `PATH` so `gt` subcommands that shell out to `bd` still work, including bridge-driven mail inbox requests and setup readiness checks. If you install either tool in a non-standard location, set the matching override env var to the absolute executable path. Changes to `PATH`, `GT_BIN`, or `BD_BIN` are picked up at bridge startup, so restart or redeploy the bridge after changing them.
+When `GT_BIN` or `BD_BIN` resolve outside the server's inherited `PATH`, the backend prepends those executable directories to subprocess `PATH` so `gt` subcommands that shell out to `bd` still work. If you install either tool in a non-standard location, set the matching override env var to the absolute executable path.
 
 ### GitHub OAuth (for PR/issue data enrichment)
 
@@ -263,14 +236,15 @@ All operations execute through the official `gt` and `bd` commands - the GUI nev
 
 ### Tech Stack
 
-- **Backend:** Node.js + Express bridge over `gt`, `bd`, `gh`, `git`, tmux, and direct Dolt/Beads reads for bead-heavy views
+- **Backend:** Node.js + Express bridge over `gt`, `bd`, `gh`, `git`, and tmux
 - **Primary frontend:** React + TypeScript + Vite + Tailwind + TanStack Router/Query (`web/`)
+- **Fallback frontend:** Legacy vanilla JS SPA (`js/`, `css/`, `index.html`) when `web/dist` is not present
 - **Communication:** HTTP API + WebSocket for real-time updates
 - **Testing:** Vitest unit/integration tests, Vitest browser coverage for the React app, and Puppeteer E2E tests
 
 ### Design Principles
 
-1. **Server-Authoritative** - Mutations still execute via `gt` and `bd`, while bead-heavy reads prefer structured Dolt queries with CLI fallback
+1. **Server-Authoritative** - All operations execute via `gt` and `bd` CLI commands
 2. **Non-Blocking UI** - Modals close immediately, operations run in background
 3. **Real-Time Updates** - WebSocket broadcasts status changes to all clients
 4. **Graceful Degradation** - UI handles missing data and command failures
@@ -308,7 +282,8 @@ gastown-gui/
 │       ├── features/    # Dashboard, fleet, work, mail, PRs, graph, help, terminal
 │       ├── lib/         # API client, query hooks, keyboard, utils
 │       └── styles/      # Design tokens + global styles
-├── js/                  # Archived legacy browser modules and shared test fixtures
+├── js/                  # Legacy SPA fallback
+├── css/                 # Legacy SPA styles
 ├── test/                # Unit, integration, and E2E coverage
 ├── assets/              # Favicons, screenshots, loading art
 └── docs/                # Audits, architecture notes, and reviews
@@ -336,9 +311,9 @@ npm run test:watch
 
 ## Delivery Notes
 
-- The Express server serves the built React frontend from `web/dist`.
-- Legacy root frontend paths (`/index.html`, `/js/*`, `/css/*`) are intentionally blocked so they cannot shadow the active UI.
-- The LAN preview on `:8080` is the Vite-served React app from `web/`; the backend bridge remains on `:7667`.
+- The Express server prefers the built React frontend at `web/dist` when present.
+- If `web/dist/index.html` is missing, the server falls back to the legacy SPA in the repo root.
+- The React app is the current information architecture and active product surface; the legacy SPA remains as a compatibility fallback while the bridge server still serves both asset trees.
 
 ---
 

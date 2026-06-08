@@ -14,8 +14,8 @@ export function registerFormulaRoutes(app, { formulaService } = {}) {
     try {
       const results = await formulaService.search(req.query.q || '');
       res.json(results);
-    } catch (err) {
-      res.status(500).json({ error: err.message });
+    } catch {
+      res.json([]);
     }
   });
 
@@ -74,3 +74,4 @@ export function registerFormulaRoutes(app, { formulaService } = {}) {
     }
   });
 }
+

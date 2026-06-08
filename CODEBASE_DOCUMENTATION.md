@@ -8,7 +8,7 @@
 ENTRY:    server.js - Express bridge server (gt/bd CLI → HTTP/WS)
 CLI:      bin/cli.js - npx gastown-gui entry point
 WEB:      web/ - Primary React/TS/Vite/Tailwind/TanStack frontend
-ARCHIVE:  js/ - Unshipped legacy browser modules and shared JS test fixtures
+LEGACY:   js/ + css/ + index.html - Legacy SPA fallback when web/dist is absent
 BACKEND:  server/ - Refactored backend modules (services, gateways, routes)
 TESTS:    test/ - Vitest unit + integration, Puppeteer E2E
 CONFIG:   vitest.config.js, vitest.unit.config.js, package.json, flake.nix
@@ -19,7 +19,7 @@ DOCS:     docs/, refactoring-analysis/, CLI-COMPATIBILITY.md, PRODUCT.md, DESIGN
 ## Frontend — Primary React Console (web/)
 
 The React app is the current information architecture for the console. The
-Express bridge server remains the backend and serves `web/dist`.
+Express bridge server remains the backend and serves `web/dist` when available.
 
 ```
 web/ - React + TS + Vite + Tailwind + TanStack Router/Query app
@@ -50,9 +50,8 @@ Design direction + tokens are documented in `DESIGN.md`; product brief in `PRODU
 
 ```
 server/app/frontendDelivery.js
-├─ Serves web/dist/index.html                 → mode: react-dist
-├─ Reports missing dist explicitly            → mode: react-dist-missing
-└─ Blocks legacy /index.html, /js/*, /css/*  → isLegacyFrontendPath()
+├─ Prefers web/dist/index.html when present   → mode: react-dist
+└─ Falls back to root index.html when absent  → mode: legacy-spa
 ```
 
 ## Backend — Entry & App
@@ -92,10 +91,6 @@ server/gateways/BDGateway.js - Wraps bd (beads) CLI commands
 ├─ list, search, create, show, close, defer, update
 └─ Maps GUI actions to current bd CLI syntax
 
-server/gateways/BeadsReadGateway.js - Direct Dolt-backed read path for beads data
-├─ Reads issues, labels, dependencies, graph nodes/edges from the Dolt server
-└─ Uses mysql2 pool + `.beads/metadata.json` / redirect resolution, with service-level CLI fallback
-
 server/gateways/GitHubGateway.js - Wraps gh CLI for PR/issue/repo queries
 server/gateways/GitGateway.js - Wraps git CLI for branch info
 server/gateways/TmuxGateway.js - Tmux session management for polecats
@@ -119,7 +114,7 @@ server/infrastructure/ExecutableResolver.js - Resolves gt/bd binaries from PATH,
 server/services/StatusService.js - Town status aggregation
 server/services/ConvoyService.js - Convoy CRUD via GTGateway
 server/services/FormulaService.js - Formula CRUD + run via GTGateway
-server/services/BeadService.js - Bead reads via BeadsReadGateway (cached, fallback to BDGateway), mutations via BDGateway
+server/services/BeadService.js - Bead CRUD via BDGateway
 server/services/WorkService.js - Work lifecycle (close, defer, reassign)
 server/services/GitHubService.js - PR/issue/repo queries via GitHubGateway
 server/services/TargetService.js - Available sling targets
@@ -138,11 +133,7 @@ server/routes/github.js - GET /api/github/{prs,issues,repos}
 server/routes/targets.js - GET /api/targets
 ```
 
-## Archive — Legacy Browser Modules (Unshipped)
-
-These files remain in-tree for historical reference and a few shared unit-test
-imports, but they are not served by `server.js` and are not included in the
-published package.
+## Frontend — Legacy SPA Core
 
 ```
 js/app.js - App init, tab routing, event wiring, status polling
@@ -150,7 +141,7 @@ js/api.js - HTTP client for /api/* + WebSocket client class
 js/state.js - Global reactive state store, component subscriptions
 ```
 
-## Archive — Legacy Browser Components
+## Frontend — Legacy SPA Components
 
 ```
 js/components/dashboard.js - Main dashboard layout + tab switching
@@ -173,7 +164,7 @@ js/components/autocomplete.js - Search input with suggestions
 js/components/toast.js - Toast notification system
 ```
 
-## Archive — Shared Legacy Utilities
+## Frontend — Legacy SPA Shared & Utils
 
 ```
 js/shared/agent-types.js - Agent type definitions, icons, colors
@@ -190,11 +181,15 @@ js/utils/performance.js - Debounce/throttle utilities
 js/utils/tooltip.js - Tooltip positioning helpers
 ```
 
-## Removed Root Static Shell
+## Styles
 
-The old root `index.html` and `css/` asset tree have been removed. React is the
-only shipped frontend surface; the root legacy browser shell is no longer
-served, packaged, or documented as a fallback.
+```
+css/variables.css - CSS custom properties (colors, spacing, z-index)
+css/reset.css - Browser reset
+css/layout.css - Grid/flex layouts, responsive breakpoints
+css/components.css - Component-specific styles
+css/animations.css - Transitions & keyframes
+```
 
 ## Tests
 
@@ -257,7 +252,7 @@ refactoring-analysis/trace/ - Sanitized prompt/trace exports
 - **Gateway pattern:** CLI tools (gt, bd, gh, git, tmux) wrapped in gateway classes; services compose gateways; routes call services
 - **Safe execution:** All CLI calls use `execFile` (no shell) + `SafeSegment` validation — prevents injection
 - **Cache + invalidation:** `CacheRegistry` with TTL; `EventBus` triggers cache clears on mutations
-- **Frontend delivery:** Express serves the built React app and blocks the removed legacy root frontend paths
+- **Frontend delivery:** Express serves the built React app when available and falls back to the legacy SPA otherwise
 - **React frontend:** TanStack Router drives the current IA; TanStack Query feeds presentational feature surfaces
-- **Legacy frontend:** Historical browser modules remain in-tree only as archival code and a small shared test surface
+- **Legacy frontend:** The vanilla JS SPA remains in-tree as a fallback path and compatibility surface
 - **Service controls:** Witness/refinery require a `rig` parameter for start/stop/restart; mayor/deacon do not

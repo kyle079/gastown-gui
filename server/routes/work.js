@@ -1,5 +1,6 @@
-export function registerWorkRoutes(app, { workService } = {}) {
+export function registerWorkRoutes(app, { workService, workCreationService } = {}) {
   if (!workService) throw new Error('registerWorkRoutes requires workService');
+  if (!workCreationService) throw new Error('registerWorkRoutes requires workCreationService');
 
   app.post('/api/sling', async (req, res) => {
     try {
@@ -13,6 +14,21 @@ export function registerWorkRoutes(app, { workService } = {}) {
       return res.json({ success: true, data: result.data, raw: result.raw });
     } catch (err) {
       return res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post('/api/workflows/create', async (req, res) => {
+    try {
+      const result = await workCreationService.create(req.body);
+      if (!result.ok) {
+        return res
+          .status(result.statusCode || 500)
+          .json({ success: false, error: result.error || 'Failed to create work', data: result.data || null });
+      }
+
+      return res.json({ success: true, data: result.data });
+    } catch (err) {
+      return res.status(500).json({ success: false, error: err.message || 'Failed to create work' });
     }
   });
 
@@ -94,4 +110,3 @@ export function registerWorkRoutes(app, { workService } = {}) {
     });
   });
 }
-

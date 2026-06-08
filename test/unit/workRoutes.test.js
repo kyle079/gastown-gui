@@ -39,9 +39,15 @@ describe('Work routes (real Express app)', () => {
         return { ok: true, raw: 'reassigned' };
       },
     };
+    const workCreationService = {
+      create: async (payload) => {
+        calls.push(['createWorkflow', payload]);
+        return { ok: true, data: { mode: payload.mode || 'single', beads: [], convoy: null } };
+      },
+    };
 
     const app = createApp({ allowedOrigins: ['*'] });
-    registerWorkRoutes(app, { workService });
+    registerWorkRoutes(app, { workService, workCreationService });
 
     server = createServer(app);
     await new Promise((resolve) => server.listen(0, resolve));
@@ -98,5 +104,24 @@ describe('Work routes (real Express app)', () => {
 
     expect(res.status).toBe(400);
   });
-});
 
+  it('POST /api/workflows/create forwards payload and returns success', async () => {
+    const payload = {
+      mode: 'convoy',
+      convoy: { name: 'Launch' },
+      beads: [{ title: 'One' }, { title: 'Two' }],
+    };
+    const res = await fetch(`${baseUrl}/api/workflows/create`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    expect(res.status).toBe(200);
+    await expect(res.json()).resolves.toEqual({
+      success: true,
+      data: { mode: 'convoy', beads: [], convoy: null },
+    });
+    expect(calls.at(-1)).toEqual(['createWorkflow', payload]);
+  });
+});

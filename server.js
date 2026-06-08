@@ -52,6 +52,7 @@ import { MayorRequestService } from './server/services/MayorRequestService.js';
 import { StatusService } from './server/services/StatusService.js';
 import { TargetService } from './server/services/TargetService.js';
 import { WorkService } from './server/services/WorkService.js';
+import { WorkCreationService } from './server/services/WorkCreationService.js';
 import { createCLICompatibilityService } from './server/services/CLICompatibilityService.js';
 import { registerBeadRoutes } from './server/routes/beads.js';
 import { registerConvoyRoutes } from './server/routes/convoys.js';
@@ -111,6 +112,11 @@ const workService = new WorkService({
   emit: (type, data) => emitMutationEvent(type, data),
 });
 const mayorRequestService = new MayorRequestService({ beadService, workService });
+const workCreationService = new WorkCreationService({
+  beadService,
+  convoyService,
+  workService,
+});
 // Server-side gateway uses GITHUB_TOKEN env var for background operations (default branch detection, PR linking).
 // User-facing API routes use the OAuth session token via gitHubGatewayFactory.
 const gitHubGateway = new GitHubGateway({ token: process.env.GITHUB_TOKEN });
@@ -709,7 +715,7 @@ registerStatusRoutes(app, { statusService });
 registerConvoyRoutes(app, { convoyService });
 
 // Work dispatch, escalation, and bead/work actions
-registerWorkRoutes(app, { workService });
+registerWorkRoutes(app, { workService, workCreationService });
 
 // Prompt-driven bead creation + dispatch workflow
 registerMayorRoutes(app, { mayorRequestService });

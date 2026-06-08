@@ -658,6 +658,48 @@ export async function startMockServer({ port = 0 } = {}) {
           stage: 'dispatched',
         },
       ],
+      convoy: null,
+    });
+  });
+  app.post('/api/workflows/create', (req, res) => {
+    const mode = req.body?.mode === 'convoy' ? 'convoy' : 'single';
+    const beadDrafts = mode === 'convoy'
+      ? Array.isArray(req.body?.beads) ? req.body.beads : []
+      : [req.body?.bead ?? {}];
+    const createdBeads = beadDrafts
+      .filter((draft) => draft?.title)
+      .map((draft, index) => ({
+        id: `bead-${Date.now()}-${index}`,
+        title: draft.title,
+        description: draft.description ?? '',
+        status: 'open',
+        priority: draft.priority ?? 2,
+        workflow_state: mode === 'single' && req.body?.dispatch?.sling ? 'slung' : 'created',
+        dispatch:
+          mode === 'single' && req.body?.dispatch?.sling
+            ? { ok: true, target: req.body?.dispatch?.target ?? null, error: null }
+            : null,
+      }));
+
+    createdBeads.forEach((bead) => beads.push(bead));
+
+    res.json({
+      success: true,
+      data: {
+        mode,
+        outcome: mode === 'single' && req.body?.dispatch?.sling ? 'slung' : 'created',
+        bead: mode === 'single' ? createdBeads[0] ?? null : null,
+        beads: createdBeads,
+        convoy:
+          mode === 'convoy'
+            ? {
+                id: `hq-${Date.now()}`,
+                title: req.body?.convoy?.name ?? 'New convoy',
+                total: createdBeads.length,
+                completed: 0,
+              }
+            : null,
+      },
     });
   });
   app.post('/api/escalate', (req, res) => {

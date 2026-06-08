@@ -3,7 +3,6 @@ import { Outlet, useNavigate, useParams } from '@tanstack/react-router';
 import { Surface } from '@/components/Surface';
 import { Panel, Spinner, Button } from '@/components/primitives';
 import { useStatus } from '@/lib/query/hooks';
-import { pluralize } from '@/lib/utils/format';
 import { compareRigs } from './rigHealth';
 import { RigList } from './RigList';
 import { DogsPanel } from './DogsPanel';
@@ -60,7 +59,7 @@ export function Fleet() {
   }
 
   return (
-    <Surface title="Fleet" description={pluralize(rigs.length, 'rig')}>
+    <Surface title="Fleet" description="Supervise rigs and agents — drill into a rig to view active sessions, hooks, and health.">
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="flex flex-col gap-4 lg:col-span-1">
           <RigList

@@ -2,6 +2,7 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
+  redirect,
   Outlet,
 } from '@tanstack/react-router';
 import { AppShell } from '@/app/AppShell';
@@ -13,7 +14,6 @@ import { Help } from '@/features/help/Help';
 import { ActivityFeed } from '@/features/activity/ActivityFeed';
 import { MailSurface } from '@/features/mail/MailSurface';
 import { MailMessagePage } from '@/features/mail/MailMessagePage';
-import { EscalationsSurface } from '@/features/mail/EscalationsSurface';
 import { OpsSurface } from '@/features/ops/OpsSurface';
 import { WorkSurface } from '@/features/work/WorkSurface';
 import { ConvoyDetailPage } from '@/features/work/ConvoyDetailPage';
@@ -128,17 +128,19 @@ const mailDetailRoute = createRoute({
   component: MailMessagePage,
 });
 
-// Escalations — triage view at /escalations; detail at /escalations/$messageId.
+// Escalations — legacy routes redirect to the unified Queue surface.
 const escalationsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/escalations',
-  component: EscalationsSurface,
+  beforeLoad: () => { throw redirect({ to: '/mail' }); },
 });
 
 const escalationDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/escalations/$messageId',
-  component: MailMessagePage,
+  beforeLoad: ({ params }) => {
+    throw redirect({ to: '/mail/$messageId', params: { messageId: params.messageId } });
+  },
 });
 
 const opsRoute = createRoute({

@@ -51,7 +51,7 @@ export function Dashboard() {
   return (
     <Surface
       title={data.name || 'Dashboard'}
-      description={data.location}
+      description="System health at a glance — attention signals, rig status, and service health."
     >
       <div className="flex flex-col gap-4">
         {(data.rigs ?? []).length === 0 && <FirstRunBanner />}

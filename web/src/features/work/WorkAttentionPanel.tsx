@@ -1,7 +1,10 @@
+import { useNavigate } from '@tanstack/react-router';
 import { ListRow, Panel, PanelHeader, StatusDot } from '@/components/primitives';
 import type { WorkAttentionItem } from './triageModel';
 
 export function WorkAttentionPanel({ items }: { items: WorkAttentionItem[] }) {
+  const navigate = useNavigate();
+
   return (
     <Panel flush>
       <PanelHeader title="Needs attention" hint={items.length ? String(items.length) : undefined} />
@@ -15,6 +18,8 @@ export function WorkAttentionPanel({ items }: { items: WorkAttentionItem[] }) {
           {items.map((item) => (
             <ListRow
               key={item.id}
+              interactive={!!item.route}
+              onClick={item.route ? () => void navigate({ to: item.route as string }) : undefined}
               leading={<StatusDot tone={item.tone} pulse={item.tone === 'accent'} />}
               title={<span className="font-mono text-sm">{item.title}</span>}
               subtitle={item.detail}

@@ -1,3 +1,4 @@
+import { useNavigate } from '@tanstack/react-router';
 import { Panel, PanelHeader, ListRow, StatusDot, type Tone } from '@/components/primitives';
 import type { TownStatus } from '@/lib/api/types';
 
@@ -6,6 +7,7 @@ interface AttentionItem {
   tone: Tone;
   title: string;
   detail: string;
+  route: string;
 }
 
 /**
@@ -22,19 +24,21 @@ function collect(status: TownStatus): AttentionItem[] {
   ];
 
   for (const a of everyAgent) {
+    const rig = a.address?.split('/')[0] ?? '';
+    const route = rig ? `/rigs/${rig}` : '/rigs';
     if (a.state === 'stalled') {
-      items.push({ id: `stall:${a.address}`, tone: 'danger', title: a.address || a.name, detail: 'stalled' });
+      items.push({ id: `stall:${a.address}`, tone: 'danger', title: a.address || a.name, detail: 'stalled', route });
     } else if (a.state === 'blocked') {
-      items.push({ id: `block:${a.address}`, tone: 'warn', title: a.address || a.name, detail: 'blocked' });
+      items.push({ id: `block:${a.address}`, tone: 'warn', title: a.address || a.name, detail: 'blocked', route });
     }
   }
 
   for (const rig of status.rigs ?? []) {
     if (!rig.has_witness) {
-      items.push({ id: `nowit:${rig.name}`, tone: 'warn', title: rig.name, detail: 'no witness' });
+      items.push({ id: `nowit:${rig.name}`, tone: 'warn', title: rig.name, detail: 'no witness', route: `/rigs/${rig.name}` });
     }
     if (!rig.has_refinery) {
-      items.push({ id: `noref:${rig.name}`, tone: 'warn', title: rig.name, detail: 'no refinery' });
+      items.push({ id: `noref:${rig.name}`, tone: 'warn', title: rig.name, detail: 'no refinery', route: `/rigs/${rig.name}` });
     }
   }
 
@@ -44,6 +48,7 @@ function collect(status: TownStatus): AttentionItem[] {
       tone: 'info',
       title: 'Overseer mail',
       detail: `${status.overseer.unread_mail} unread`,
+      route: '/mail',
     });
   }
 
@@ -53,6 +58,7 @@ function collect(status: TownStatus): AttentionItem[] {
 }
 
 export function AttentionPanel({ status }: { status: TownStatus }) {
+  const navigate = useNavigate();
   const items = collect(status);
 
   return (
@@ -68,6 +74,8 @@ export function AttentionPanel({ status }: { status: TownStatus }) {
           {items.map((item) => (
             <ListRow
               key={item.id}
+              interactive
+              onClick={() => void navigate({ to: item.route })}
               leading={<StatusDot tone={item.tone} />}
               title={<span className="font-mono text-sm">{item.title}</span>}
               trailing={

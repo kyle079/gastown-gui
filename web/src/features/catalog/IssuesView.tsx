@@ -1,21 +1,28 @@
 import { useMemo } from 'react';
-import { useNavigate, useSearch } from '@tanstack/react-router';
+import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import {
   Badge,
   Dialog,
   Input,
+  Panel,
+  PanelHeader,
   Select,
   Spinner,
   Table,
+  ListRow,
+  type Tone,
   type Column,
 } from '@/components/primitives';
 import { Surface } from '@/components/Surface';
-import type { Bead, BeadDetail } from '@/lib/api/types';
-import { useBeadDetail, useBeads } from '@/lib/query/hooks';
+import type { Bead, BeadDetail, Convoy, Agent } from '@/lib/api/types';
+import { useBeadDetail, useBeads, useConvoys, usePullRequests, useStatus } from '@/lib/query/hooks';
 import { relativeTime } from '@/lib/utils/format';
 import { CatalogPanel } from './CatalogPanel';
 import { DetailField } from './DetailField';
 import { byUrgency, priorityLabel, priorityTone, statusLabel, statusTone } from './catalogMeta';
+import { ActionHubPanel } from '@/features/work/ActionHubPanel';
+import { buildIssueHub, type RelatedPullRequest } from '@/features/work/detailHubModel';
+import { convoySignal } from '@/features/work/workState';
 
 const STATUS_FILTERS = [
   { value: 'open', label: 'Open' },
@@ -54,6 +61,26 @@ function formatTimestamp(value: string | undefined): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return `${date.toLocaleString()} · ${relativeTime(value)}`;
+}
+
+function rigFromAddress(value?: string | null): string | null {
+  if (!value) return null;
+  const [rig] = value.split('/');
+  return rig || null;
+}
+
+function relatedPrTone(pr: RelatedPullRequest): Tone {
+  if (pr.reviewDecision === 'CHANGES_REQUESTED') return 'danger';
+  if (pr.reviewDecision === 'APPROVED') return 'ok';
+  if (pr.isDraft) return 'neutral';
+  return 'accent';
+}
+
+function relatedPrLabel(pr: RelatedPullRequest): string {
+  if (pr.reviewDecision === 'CHANGES_REQUESTED') return 'Changes requested';
+  if (pr.reviewDecision === 'APPROVED') return 'Approved';
+  if (pr.isDraft) return 'Draft';
+  return 'Open review';
 }
 
 const columns: Column<Bead>[] = [
@@ -124,6 +151,21 @@ export function IssuesView() {
     isError: isDetailError,
     error: detailError,
   } = useBeadDetail(selectedId);
+  const convoyQuery = useConvoys();
+  const statusQuery = useStatus();
+  const prQuery = usePullRequests('open');
+  const hub = useMemo(
+    () =>
+      selected
+        ? buildIssueHub(
+            selected,
+            convoyQuery.data ?? [],
+            statusQuery.data?.agents ?? [],
+            prQuery.data ?? [],
+          )
+        : null,
+    [selected, convoyQuery.data, statusQuery.data?.agents, prQuery.data],
+  );
 
   const rows = useMemo(() => {
     const beads = data ?? [];
@@ -195,38 +237,171 @@ export function IssuesView() {
             {detailError instanceof Error ? detailError.message : 'Could not load bead detail.'}
           </div>
         )}
-        {selected && <BeadDetailBody bead={selected} />}
+        {selected && (
+          <BeadDetailBody
+            bead={selected}
+            convoy={hub?.convoy ?? null}
+            agent={hub?.agent ?? null}
+            rig={hub?.rig ?? null}
+            relatedPrs={hub?.relatedPrs ?? []}
+            actions={hub?.actions ?? []}
+            partialContext={convoyQuery.isError || statusQuery.isError || prQuery.isError}
+          />
+        )}
       </Dialog>
     </Surface>
   );
 }
 
-function BeadDetailBody({ bead }: { bead: BeadDetail }) {
+interface BeadDetailBodyProps {
+  bead: BeadDetail;
+  convoy: Convoy | null;
+  agent: Agent | null;
+  rig: string | null;
+  relatedPrs: RelatedPullRequest[];
+  actions: ReturnType<typeof buildIssueHub>['actions'];
+  partialContext: boolean;
+}
+
+function BeadDetailBody({
+  bead,
+  convoy,
+  agent,
+  rig,
+  relatedPrs,
+  actions,
+  partialContext,
+}: BeadDetailBodyProps) {
+  const convoyState = convoy ? convoySignal(convoy) : null;
+  const fallbackRig = rig ?? rigFromAddress(bead.assignee);
+
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <DetailField label="Status">
-          <Badge tone={statusTone(bead.status)}>{statusLabel(bead.status)}</Badge>
-        </DetailField>
-        <DetailField label="Priority">
-          <Badge tone={priorityTone(bead.priority)}>{priorityLabel(bead.priority)}</Badge>
-        </DetailField>
-        <DetailField label="Type">{bead.issue_type ?? '—'}</DetailField>
-        <DetailField label="Assignee">
-          <span className="font-mono text-xs">{bead.assignee ?? '—'}</span>
-        </DetailField>
-        <DetailField label="Owner">
-          <span className="font-mono text-xs">{bead.owner ?? '—'}</span>
-        </DetailField>
-        <DetailField label="Created by">
-          <span className="font-mono text-xs">{bead.created_by ?? '—'}</span>
-        </DetailField>
-        <DetailField label="Created">{formatTimestamp(bead.created_at)}</DetailField>
-        <DetailField label="Updated">{formatTimestamp(bead.updated_at)}</DetailField>
-        <DetailField label="Dependencies">{bead.dependency_count ?? bead.dependencies?.length ?? 0}</DetailField>
-        <DetailField label="Dependents">{bead.dependent_count ?? 0}</DetailField>
-        <DetailField label="Comments">{bead.comment_count ?? 0}</DetailField>
-      </div>
+      <ActionHubPanel actions={actions} />
+
+      {partialContext && (
+        <p className="text-xs text-faint">
+          Linked convoy, runtime, or PR data is partially unavailable. Core bead detail is still current.
+        </p>
+      )}
+
+      <Panel>
+        <PanelHeader title="Current state" hint={bead.id} />
+        <div className="grid gap-x-6 gap-y-1 pt-4 sm:grid-cols-2">
+          <div>
+            <DetailField label="Status">
+              <Badge tone={statusTone(bead.status)}>{statusLabel(bead.status)}</Badge>
+            </DetailField>
+            <DetailField label="Priority">
+              <Badge tone={priorityTone(bead.priority)}>{priorityLabel(bead.priority)}</Badge>
+            </DetailField>
+            <DetailField label="Type">{bead.issue_type ?? '—'}</DetailField>
+            <DetailField label="Assignee">
+              <span className="font-mono text-xs">{bead.assignee ?? '—'}</span>
+            </DetailField>
+            <DetailField label="Owner">
+              <span className="font-mono text-xs">{bead.owner ?? '—'}</span>
+            </DetailField>
+          </div>
+          <div>
+            <DetailField label="Created by">
+              <span className="font-mono text-xs">{bead.created_by ?? '—'}</span>
+            </DetailField>
+            <DetailField label="Created">{formatTimestamp(bead.created_at)}</DetailField>
+            <DetailField label="Updated">{formatTimestamp(bead.updated_at)}</DetailField>
+            <DetailField label="Dependencies">{bead.dependency_count ?? bead.dependencies?.length ?? 0}</DetailField>
+            <DetailField label="Dependents">{bead.dependent_count ?? 0}</DetailField>
+            <DetailField label="Comments">{bead.comment_count ?? 0}</DetailField>
+          </div>
+        </div>
+      </Panel>
+
+      <Panel flush>
+        <PanelHeader title="Related state" hint="connected context" />
+        <div className="divide-y divide-line">
+          {convoy && convoyState && (
+            <ListRow
+              title={
+                <Link
+                  to="/work/$convoyId"
+                  params={{ convoyId: convoy.id }}
+                  className="hover:text-accent"
+                >
+                  {convoy.title.replace(/^Work:\s*/i, '').trim() || convoy.title}
+                </Link>
+              }
+              subtitle={
+                <span className="font-mono">
+                  {convoy.id} · {convoy.completed}/{convoy.total} done
+                </span>
+              }
+              trailing={<Badge tone={convoyState.tone}>{convoyState.label}</Badge>}
+            />
+          )}
+
+          {agent ? (
+            <ListRow
+              title={
+                fallbackRig ? (
+                  <Link to="/rigs/$rig" params={{ rig: fallbackRig }} className="font-mono hover:text-accent">
+                    {agent.address}
+                  </Link>
+                ) : (
+                  <span className="font-mono">{agent.address}</span>
+                )
+              }
+              subtitle={agent.hook_bead ? `${agent.state} on ${agent.hook_bead}` : agent.state}
+              trailing={
+                <>
+                  {agent.unread_mail > 0 && <Badge tone="info">{agent.unread_mail} mail</Badge>}
+                  <Badge tone={agent.running ? 'accent' : 'danger'}>{agent.running ? 'running' : 'offline'}</Badge>
+                </>
+              }
+            />
+          ) : bead.assignee ? (
+            <ListRow
+              title={
+                fallbackRig ? (
+                  <Link to="/rigs/$rig" params={{ rig: fallbackRig }} className="font-mono hover:text-accent">
+                    {bead.assignee}
+                  </Link>
+                ) : (
+                  <span className="font-mono">{bead.assignee}</span>
+                )
+              }
+              subtitle="Assigned, but live runtime details are not linked right now."
+            />
+          ) : null}
+
+          {relatedPrs.map((pr) => (
+            <ListRow
+              key={`${pr.repoFullName}#${pr.number}`}
+              title={
+                <Link
+                  to="/prs/$owner/$repo/$prNumber"
+                  params={{ owner: pr.owner, repo: pr.repo, prNumber: String(pr.number) }}
+                  className="hover:text-accent"
+                >
+                  {pr.title}
+                </Link>
+              }
+              subtitle={
+                <span className="font-mono">
+                  {pr.repoFullName} · #{pr.number}
+                  {pr.rig ? ` · ${pr.rig}` : ''}
+                </span>
+              }
+              trailing={<Badge tone={relatedPrTone(pr)}>{relatedPrLabel(pr)}</Badge>}
+            />
+          ))}
+
+          {!convoy && !agent && !bead.assignee && relatedPrs.length === 0 && (
+            <div className="px-4 py-6 text-sm text-faint">
+              No linked convoy, runtime, or pull-request context is attached to this bead yet.
+            </div>
+          )}
+        </div>
+      </Panel>
 
       {Array.isArray(bead.dependencies) && bead.dependencies.length > 0 && (
         <div>
@@ -236,7 +411,13 @@ function BeadDetailBody({ bead }: { bead: BeadDetail }) {
               <div key={dependency.id} className="rounded-md border border-line/70 bg-surface px-3 py-2">
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="font-mono text-xs text-muted">{dependency.id}</p>
+                    <Link
+                      to="/issues"
+                      search={{ id: dependency.id, status: 'all' }}
+                      className="font-mono text-xs text-accent underline-offset-2 hover:underline"
+                    >
+                      {dependency.id}
+                    </Link>
                     <p className="truncate text-sm text-fg">{dependency.title}</p>
                   </div>
                   <Badge tone={statusTone(dependency.status)}>

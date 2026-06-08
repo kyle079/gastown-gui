@@ -1,10 +1,18 @@
-import { useNavigate, useParams } from '@tanstack/react-router';
+import { Link, useNavigate, useParams } from '@tanstack/react-router';
 import { Surface } from '@/components/Surface';
-import { Panel, Spinner, Button, StatusPill, Badge, Select, useToast, type Tone } from '@/components/primitives';
-import { useConvoys, useReassign, useTargets } from '@/lib/query/hooks';
+import { Panel, PanelHeader, Spinner, Button, StatusPill, Badge, Select, useToast, type Tone } from '@/components/primitives';
+import { useConvoys, useReassign, useStatus, useTargets } from '@/lib/query/hooks';
 import type { TrackedBead, Convoy } from '@/lib/api/types';
 import { relativeTime } from '@/lib/utils/format';
 import { convoySignal, shortAgent, trackedBeadState } from './workState';
+import { ActionHubPanel } from './ActionHubPanel';
+import { buildConvoyHub } from './detailHubModel';
+
+function rigFromAddress(value?: string | null): string | null {
+  if (!value) return null;
+  const [rig] = value.split('/');
+  return rig || null;
+}
 
 function beadTone(b: TrackedBead): Tone {
   switch (trackedBeadState(b)) {
@@ -23,6 +31,7 @@ function TrackedRow({ bead }: { bead: TrackedBead }) {
   const { data: targets } = useTargets();
   const reassign = useReassign();
   const { notify } = useToast();
+  const rig = rigFromAddress(bead.assignee);
 
   function onReassign(target: string) {
     if (!target) return;
@@ -63,6 +72,24 @@ function TrackedRow({ bead }: { bead: TrackedBead }) {
           ))}
         </Select>
       </div>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-2xs">
+        <Link
+          to="/issues"
+          search={{ id: bead.id, status: 'all' }}
+          className="font-mono text-accent underline-offset-2 hover:underline"
+        >
+          Open bead
+        </Link>
+        {rig && (
+          <Link
+            to="/rigs/$rig"
+            params={{ rig }}
+            className="font-mono text-accent underline-offset-2 hover:underline"
+          >
+            Inspect rig
+          </Link>
+        )}
+      </div>
     </div>
   );
 }
@@ -71,6 +98,8 @@ function ConvoyDetail({ convoy }: { convoy: Convoy }) {
   const sig = convoySignal(convoy);
   const tracked = convoy.tracked ?? [];
   const title = convoy.title.replace(/^Work:\s*/i, '').trim() || convoy.title;
+  const statusQuery = useStatus();
+  const hub = buildConvoyHub(convoy, statusQuery.data?.agents ?? []);
 
   return (
     <div className="flex flex-col gap-4">
@@ -89,6 +118,69 @@ function ConvoyDetail({ convoy }: { convoy: Convoy }) {
           <span className="font-mono text-xs tabular-nums text-muted">
             {convoy.completed}/{convoy.total} done
           </span>
+        </div>
+      </Panel>
+
+      <ActionHubPanel actions={hub.actions} title="Next operator moves" />
+
+      <Panel>
+        <PanelHeader title="Related state" hint="convoy context" />
+        <div className="grid gap-4 pt-4 md:grid-cols-[0.9fr_1.1fr]">
+          <div className="grid grid-cols-3 gap-2">
+            <div className="rounded border border-line/80 bg-base px-3 py-2">
+              <div className="font-mono text-2xs text-faint">Blocked</div>
+              <div className="mt-1 text-lg text-fg">{hub.blocked.length}</div>
+            </div>
+            <div className="rounded border border-line/80 bg-base px-3 py-2">
+              <div className="font-mono text-2xs text-faint">Active</div>
+              <div className="mt-1 text-lg text-fg">{hub.active.length}</div>
+            </div>
+            <div className="rounded border border-line/80 bg-base px-3 py-2">
+              <div className="font-mono text-2xs text-faint">Queued</div>
+              <div className="mt-1 text-lg text-fg">{hub.queued.length}</div>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            {hub.operators.length > 0 ? (
+              hub.operators.map((operator) => {
+                const rig = rigFromAddress(operator.address);
+                return (
+                  <div key={operator.address} className="rounded border border-line/80 bg-base px-3 py-2">
+                    <div className="flex items-center justify-between gap-3">
+                      {rig ? (
+                        <Link
+                          to="/rigs/$rig"
+                          params={{ rig }}
+                          className="font-mono text-xs text-accent underline-offset-2 hover:underline"
+                        >
+                          {operator.address}
+                        </Link>
+                      ) : (
+                        <span className="font-mono text-xs text-fg">{operator.address}</span>
+                      )}
+                      <Badge tone={operator.running ? 'accent' : 'danger'}>
+                        {operator.running ? operator.state : 'offline'}
+                      </Badge>
+                    </div>
+                    <p className="mt-1 text-xs text-muted">
+                      {operator.hook_bead ? `hooked on ${operator.hook_bead}` : 'No hooked bead reported.'}
+                    </p>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="rounded border border-dashed border-line/80 px-3 py-3 text-sm text-faint">
+                No live operator runtime is linked to this convoy right now.
+              </div>
+            )}
+
+            {statusQuery.isError && (
+              <p className="text-xs text-faint">
+                Runtime status is temporarily unavailable; convoy composition is still shown from tracked work.
+              </p>
+            )}
+          </div>
         </div>
       </Panel>
 

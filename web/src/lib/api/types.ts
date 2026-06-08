@@ -32,6 +32,22 @@ export interface Agent {
   /** Present on rig-scoped agents. */
   hook?: string | null;
   hook_bead?: string | null;
+  rig?: string | null;
+}
+
+export interface AgentRuntimeOutput {
+  session: string;
+  output: string | null;
+  running: boolean;
+}
+
+export interface OperatorCommandResult {
+  success: boolean;
+  message?: string;
+  error?: string;
+  raw?: string;
+  target?: string;
+  service?: string;
 }
 
 export interface Rig {

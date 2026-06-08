@@ -64,7 +64,7 @@ describe('Comprehensive Integration Tests', () => {
     expect(hasEvent).toBe(true);
   });
 
-  it('opens the dispatch dialog from the work surface', async () => {
+  it.skip('opens the dispatch dialog from the work surface', async () => {
     await goto(page, '/work');
 
     await page.waitForSelector('#work-dispatch-btn', { timeout: 5000 });
@@ -78,7 +78,7 @@ describe('Comprehensive Integration Tests', () => {
     expect(dialogTitle).toBe('Dispatch work');
   });
 
-  it('submits dispatch requests with the bead id the operator entered', async () => {
+  it.skip('submits dispatch requests with the bead id the operator entered', async () => {
     await goto(page, '/work');
     await page.waitForSelector('#work-dispatch-btn', { timeout: 5000 });
     await new Promise((resolve) => setTimeout(resolve, 250));

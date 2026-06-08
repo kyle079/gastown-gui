@@ -4,17 +4,19 @@ import { Panel, Spinner, Button, StatusPill, Badge, Select, useToast, type Tone 
 import { useConvoys, useReassign, useTargets } from '@/lib/query/hooks';
 import type { TrackedBead, Convoy } from '@/lib/api/types';
 import { relativeTime } from '@/lib/utils/format';
-import { convoySignal, shortAgent } from './workState';
+import { convoySignal, shortAgent, trackedBeadState } from './workState';
 
 function beadTone(b: TrackedBead): Tone {
-  if (b.blocked) return 'warn';
-  switch (String(b.status)) {
-    case 'closed': return 'ok';
-    case 'hooked':
-    case 'in_progress':
-    case 'working': return 'accent';
+  switch (trackedBeadState(b)) {
+    case 'blocked': return 'warn';
+    case 'done': return 'ok';
+    case 'active': return 'accent';
     default: return 'neutral';
   }
+}
+
+function beadLabel(bead: TrackedBead): string {
+  return trackedBeadState(bead) === 'blocked' ? 'blocked' : String(bead.status);
 }
 
 function TrackedRow({ bead }: { bead: TrackedBead }) {
@@ -40,7 +42,7 @@ function TrackedRow({ bead }: { bead: TrackedBead }) {
           <div className="break-words text-sm text-fg">{bead.title}</div>
           <div className="font-mono text-2xs text-faint">{bead.id}</div>
         </div>
-        <Badge tone={beadTone(bead)}>{bead.blocked ? 'blocked' : String(bead.status)}</Badge>
+        <Badge tone={beadTone(bead)}>{beadLabel(bead)}</Badge>
       </div>
       <div className="flex items-center justify-between gap-3">
         <span className="font-mono text-xs text-muted">

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { Convoy, TrackedBead } from '@/lib/api/types';
-import { assignees, convoySignal, groupConvoysByState, shortAgent, sortConvoys, workTotals } from './workState';
+import { assignees, convoySignal, groupConvoysByState, shortAgent, sortConvoys, trackedBeadState, workTotals } from './workState';
 
 function bead(partial: Partial<TrackedBead> = {}): TrackedBead {
   return { id: 'b', title: 't', status: 'open', ...partial };
@@ -19,8 +19,13 @@ describe('convoySignal', () => {
   });
 
   it('flags blocked over active', () => {
-    const tracked = [bead({ status: 'hooked', blocked: true })];
+    const tracked = [bead({ status: 'blocked', blocked: true })];
     expect(convoySignal({ tracked, completed: 0, total: 1 }).state).toBe('blocked');
+  });
+
+  it('keeps hooked work active even when the raw blocked flag is true', () => {
+    const tracked = [bead({ status: 'hooked', blocked: true })];
+    expect(convoySignal({ tracked, completed: 0, total: 1 }).state).toBe('active');
   });
 
   it('pulses for active (in-flight) work', () => {
@@ -35,9 +40,16 @@ describe('convoySignal', () => {
   });
 });
 
+describe('trackedBeadState', () => {
+  it('derives blocked from status instead of raw blocked truthiness', () => {
+    expect(trackedBeadState(bead({ status: 'hooked', blocked: true }))).toBe('active');
+    expect(trackedBeadState(bead({ status: 'blocked', blocked: false }))).toBe('blocked');
+  });
+});
+
 describe('sortConvoys', () => {
   it('orders blocked → active → queued → done, newest first within a tier', () => {
-    const blocked = convoy({ id: 'blk', tracked: [bead({ blocked: true })] });
+    const blocked = convoy({ id: 'blk', tracked: [bead({ status: 'blocked', blocked: true })] });
     const active = convoy({ id: 'act', tracked: [bead({ status: 'hooked' })] });
     const queuedOld = convoy({ id: 'q1', created_at: '2026-01-01', tracked: [bead()] });
     const queuedNew = convoy({ id: 'q2', created_at: '2026-02-01', tracked: [bead()] });
@@ -50,7 +62,7 @@ describe('sortConvoys', () => {
 
 describe('groupConvoysByState', () => {
   it('buckets convoys into state lanes using sorted order', () => {
-    const blocked = convoy({ id: 'blk', tracked: [bead({ blocked: true })] });
+    const blocked = convoy({ id: 'blk', tracked: [bead({ status: 'blocked', blocked: true })] });
     const active = convoy({ id: 'act', tracked: [bead({ status: 'hooked' })] });
     const queued = convoy({ id: 'q', tracked: [bead({ status: 'open' })] });
     const done = convoy({ id: 'dn', completed: 1, total: 1, tracked: [bead({ status: 'closed' })] });
@@ -86,7 +98,7 @@ describe('shortAgent', () => {
 describe('workTotals', () => {
   it('rolls convoy states into counts', () => {
     const list = [
-      convoy({ tracked: [bead({ blocked: true })] }),
+      convoy({ tracked: [bead({ status: 'blocked', blocked: true })] }),
       convoy({ tracked: [bead({ status: 'hooked' })] }),
       convoy({ tracked: [bead({ status: 'open' })] }),
       convoy({ completed: 1, total: 1, tracked: [bead({ status: 'closed' })] }),

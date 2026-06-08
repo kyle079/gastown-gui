@@ -1,6 +1,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
 import { queryKeys } from './keys';
+import { withRefresh } from './refresh';
 import type {
   ActivityResponse,
   Bead,
@@ -12,6 +13,7 @@ import type {
   DogsResponse,
   Escalation,
   Formula,
+  FormulaDetail,
   MailMessage,
   MergeRequest,
   PullRequest,
@@ -36,7 +38,7 @@ import type {
 export function useStatus() {
   return useQuery({
     queryKey: queryKeys.status,
-    queryFn: () => apiClient.get<TownStatus>('/api/status'),
+    queryFn: () => apiClient.get<TownStatus>(withRefresh('/api/status')),
     refetchInterval: 5_000,
   });
 }
@@ -44,7 +46,7 @@ export function useStatus() {
 export function useMail() {
   return useQuery({
     queryKey: queryKeys.mail,
-    queryFn: () => apiClient.get<MailMessage[]>('/api/mail'),
+    queryFn: () => apiClient.get<MailMessage[]>(withRefresh('/api/mail')),
     refetchInterval: 15_000,
   });
 }
@@ -104,7 +106,7 @@ export function useConvoys() {
   return useQuery({
     // Mirrors the server's 10s convoy cache — no point polling faster.
     queryKey: queryKeys.convoys,
-    queryFn: () => apiClient.get<Convoy[]>('/api/convoys'),
+    queryFn: () => apiClient.get<Convoy[]>(withRefresh('/api/convoys')),
     refetchInterval: 10_000,
   });
 }
@@ -121,14 +123,17 @@ export function useTargets() {
 interface SlingArgs {
   bead: string;
   target?: string;
+  molecule?: string;
+  quality?: string;
+  args?: string;
 }
 
 /** Sling a bead onto a target's hook — the primary dispatch action. */
 export function useSling() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ bead, target }: SlingArgs) =>
-      apiClient.post<{ success: boolean }>('/api/sling', { bead, target }),
+    mutationFn: ({ bead, target, molecule, quality, args }: SlingArgs) =>
+      apiClient.post<{ success: boolean }>('/api/sling', { bead, target, molecule, quality, args }),
     onSuccess: () => {
       // Dispatch changes both the convoy queue and who's-on-what.
       void qc.invalidateQueries({ queryKey: queryKeys.convoys });
@@ -164,7 +169,7 @@ export function useBeads(status: string) {
     queryKey: queryKeys.beads(status),
     queryFn: () => {
       const qs = status && status !== 'all' ? `?status=${encodeURIComponent(status)}` : '';
-      return apiClient.get<Bead[]>(`/api/beads${qs}`);
+      return apiClient.get<Bead[]>(withRefresh(`/api/beads${qs}`));
     },
     refetchInterval: 15_000,
     // Show previous status's data while new status loads (no blank flash on filter change).
@@ -179,6 +184,14 @@ export function useBeadDetail(beadId: string | undefined) {
     queryFn: () => apiClient.get<BeadDetail>(`/api/bead/${encodeURIComponent(beadId ?? '')}`),
     staleTime: 15_000,
     enabled: Boolean(beadId),
+  });
+}
+
+export function useBeadSearch(query: string) {
+  return useQuery({
+    queryKey: ['bead-search', query] as const,
+    queryFn: () => apiClient.get<Bead[]>(`/api/beads/search?q=${encodeURIComponent(query)}`),
+    enabled: query.trim().length >= 2,
   });
 }
 
@@ -214,6 +227,14 @@ export function useFormulas() {
   });
 }
 
+export function useFormulaDetail(name: string | undefined) {
+  return useQuery({
+    queryKey: ['formula-detail', name ?? ''] as const,
+    queryFn: () => apiClient.get<FormulaDetail>(`/api/formula/${encodeURIComponent(name ?? '')}`),
+    enabled: Boolean(name),
+  });
+}
+
 /** Bead dependency graph — nodes + typed edges. Changes slowly; poll every 30s. */
 export function useBeadGraph() {
   return useQuery({
@@ -227,7 +248,7 @@ export function useBeadGraph() {
 export function useSchedulerStatus() {
   return useQuery({
     queryKey: queryKeys.schedulerStatus,
-    queryFn: () => apiClient.get<SchedulerStatus>('/api/scheduler/status'),
+    queryFn: () => apiClient.get<SchedulerStatus>(withRefresh('/api/scheduler/status')),
     refetchInterval: 15_000,
   });
 }
@@ -236,7 +257,7 @@ export function useSchedulerStatus() {
 export function useDogs() {
   return useQuery({
     queryKey: queryKeys.dogs,
-    queryFn: () => apiClient.get<DogsResponse>('/api/dogs'),
+    queryFn: () => apiClient.get<DogsResponse>(withRefresh('/api/dogs')),
     refetchInterval: 15_000,
   });
 }
@@ -245,7 +266,7 @@ export function useDogs() {
 export function useEscalations() {
   return useQuery({
     queryKey: queryKeys.escalations,
-    queryFn: () => apiClient.get<Escalation[]>('/api/escalations'),
+    queryFn: () => apiClient.get<Escalation[]>(withRefresh('/api/escalations')),
     refetchInterval: 10_000,
   });
 }
@@ -271,7 +292,7 @@ export function useCloseEscalation() {
 export function useMergeQueue(rig: string) {
   return useQuery({
     queryKey: queryKeys.mergeQueue(rig),
-    queryFn: () => apiClient.get<MergeRequest[]>(`/api/mq/${encodeURIComponent(rig)}`),
+    queryFn: () => apiClient.get<MergeRequest[]>(withRefresh(`/api/mq/${encodeURIComponent(rig)}`)),
     refetchInterval: 10_000,
     enabled: Boolean(rig),
   });
@@ -281,7 +302,7 @@ export function useMergeQueue(rig: string) {
 export function useRefineryStatus(rig: string) {
   return useQuery({
     queryKey: queryKeys.refineryStatus(rig),
-    queryFn: () => apiClient.get<RefineryStatus>(`/api/refinery/${encodeURIComponent(rig)}/status`),
+    queryFn: () => apiClient.get<RefineryStatus>(withRefresh(`/api/refinery/${encodeURIComponent(rig)}/status`)),
     refetchInterval: 10_000,
     enabled: Boolean(rig),
   });
@@ -291,7 +312,7 @@ export function useRefineryStatus(rig: string) {
 export function useWitnessStatus(rig: string) {
   return useQuery({
     queryKey: queryKeys.witnessStatus(rig),
-    queryFn: () => apiClient.get<WitnessStatus>(`/api/witness/${encodeURIComponent(rig)}/status`),
+    queryFn: () => apiClient.get<WitnessStatus>(withRefresh(`/api/witness/${encodeURIComponent(rig)}/status`)),
     refetchInterval: 10_000,
     enabled: Boolean(rig),
   });
@@ -301,7 +322,7 @@ export function useWitnessStatus(rig: string) {
 export function useDoltHealth() {
   return useQuery({
     queryKey: queryKeys.doltHealth,
-    queryFn: () => apiClient.get<DoltHealth>('/api/dolt/health'),
+    queryFn: () => apiClient.get<DoltHealth>(withRefresh('/api/dolt/health')),
     refetchInterval: 30_000,
   });
 }
@@ -324,7 +345,7 @@ export function useChangelog(opts: ChangelogOptions = {}) {
 
   return useQuery({
     queryKey: queryKeys.changelog(opts),
-    queryFn: () => apiClient.get<ChangelogEntry[]>(`/api/changelog${qs}`),
+    queryFn: () => apiClient.get<ChangelogEntry[]>(withRefresh(`/api/changelog${qs}`)),
     refetchInterval: 60_000,
   });
 }
@@ -333,7 +354,7 @@ export function useChangelog(opts: ChangelogOptions = {}) {
 export function useRigList() {
   return useQuery({
     queryKey: queryKeys.rigList,
-    queryFn: () => apiClient.get<RigSummary[]>('/api/rig-list'),
+    queryFn: () => apiClient.get<RigSummary[]>(withRefresh('/api/rig-list')),
     refetchInterval: 30_000,
   });
 }
@@ -355,7 +376,7 @@ export function useTrail(opts: TrailOptions = {}) {
   return useQuery({
     queryKey: queryKeys.trail(opts),
     queryFn: () =>
-      apiClient.get<TrailBeadItem[] | TrailHookItem[] | null>(`/api/trail${qs}`),
+      apiClient.get<TrailBeadItem[] | TrailHookItem[] | null>(withRefresh(`/api/trail${qs}`)),
     refetchInterval: 15_000,
   });
 }
@@ -372,7 +393,7 @@ export function useReady(opts: ReadyOptions = {}) {
 
   return useQuery({
     queryKey: queryKeys.ready(opts),
-    queryFn: () => apiClient.get<ReadyResponse | null>(`/api/ready${qs}`),
+    queryFn: () => apiClient.get<ReadyResponse | null>(withRefresh(`/api/ready${qs}`)),
     refetchInterval: 20_000,
   });
 }

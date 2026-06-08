@@ -1,7 +1,7 @@
 import { Badge, StatusPill } from '@/components/primitives';
 import type { Convoy } from '@/lib/api/types';
 import { relativeTime } from '@/lib/utils/format';
-import { assignees, convoySignal, shortAgent } from './workState';
+import { assignees, convoySignal, shortAgent, trackedBeadState } from './workState';
 
 function convoyTitle(raw: string): string {
   return raw.replace(/^Work:\s*/i, '').trim() || raw;
@@ -12,7 +12,7 @@ function progressLabel(convoy: Convoy): string {
 }
 
 function blockedCount(convoy: Convoy): number {
-  return (convoy.tracked ?? []).filter((bead) => bead.blocked).length;
+  return (convoy.tracked ?? []).filter((bead) => trackedBeadState(bead) === 'blocked').length;
 }
 
 function pendingCount(convoy: Convoy): number {

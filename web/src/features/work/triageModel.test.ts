@@ -66,7 +66,7 @@ describe('triageBeads', () => {
 describe('collectWorkAttention', () => {
   it('surfaces blocked convoys and scheduler saturation first', () => {
     const items = collectWorkAttention(
-      [convoy({ title: 'Work: Convoy Alpha', tracked: [tracked({ blocked: true })] })],
+      [convoy({ title: 'Work: Convoy Alpha', tracked: [tracked({ status: 'blocked', blocked: true })] })],
       [bead({ id: 'gg-9', priority: 0 })],
       scheduler({ queued_ready: 2, capacity: { ...scheduler().capacity, free: 0 } }),
     );

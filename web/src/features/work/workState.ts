@@ -14,6 +14,15 @@ export interface ConvoySignal {
 }
 
 const ACTIVE_STATUSES = new Set(['hooked', 'in_progress', 'working']);
+const BLOCKED_STATUSES = new Set(['blocked']);
+
+export function trackedBeadState(bead: Pick<TrackedBead, 'status'>): ConvoyState | 'open' {
+  const status = String(bead.status ?? '').toLowerCase();
+  if (BLOCKED_STATUSES.has(status)) return 'blocked';
+  if (ACTIVE_STATUSES.has(status)) return 'active';
+  if (status === 'closed') return 'done';
+  return 'open';
+}
 
 /**
  * Derive a single convoy state from its tracked beads — the "signal over noise"
@@ -27,10 +36,10 @@ export function convoySignal(convoy: Pick<Convoy, 'tracked' | 'completed' | 'tot
   if (total > 0 && convoy.completed >= total) {
     return { state: 'done', tone: 'ok', label: 'done', pulse: false };
   }
-  if (tracked.some((b) => b.blocked)) {
+  if (tracked.some((b) => trackedBeadState(b) === 'blocked')) {
     return { state: 'blocked', tone: 'warn', label: 'blocked', pulse: false };
   }
-  if (tracked.some((b) => ACTIVE_STATUSES.has(String(b.status)))) {
+  if (tracked.some((b) => trackedBeadState(b) === 'active')) {
     return { state: 'active', tone: 'accent', label: 'active', pulse: true };
   }
   return { state: 'queued', tone: 'neutral', label: 'queued', pulse: false };

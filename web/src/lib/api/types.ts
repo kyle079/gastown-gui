@@ -323,6 +323,21 @@ export interface Formula {
   source?: string;
   steps?: number;
   vars?: number;
+  template?: string;
+}
+
+export interface FormulaStep {
+  title?: string;
+  description?: string;
+  [key: string]: unknown;
+}
+
+export interface FormulaDetail extends Omit<Formula, 'steps' | 'vars'> {
+  schema_version?: number;
+  variables?: unknown[];
+  vars?: number | unknown[];
+  steps?: FormulaStep[];
+  template?: string;
 }
 
 /** A node in the bead dependency graph (`/api/beads/graph`). */

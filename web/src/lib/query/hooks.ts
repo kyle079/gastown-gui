@@ -4,6 +4,7 @@ import { queryKeys } from './keys';
 import { withRefresh } from './refresh';
 import type {
   ActivityResponse,
+  AgentRuntimeOutput,
   Bead,
   BeadDetail,
   BeadGraphData,
@@ -17,6 +18,7 @@ import type {
   MailMessage,
   MayorRequestResponse,
   MergeRequest,
+  OperatorCommandResult,
   PullRequest,
   PullRequestDetail,
   ReadyResponse,
@@ -100,6 +102,64 @@ export function useSendMail() {
   return useMutation({
     mutationFn: (input: SendMailInput) => apiClient.post('/api/mail', input),
     onSuccess: () => void qc.invalidateQueries({ queryKey: queryKeys.mail }),
+  });
+}
+
+export function useSendNudge() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ target, message }: { target: string; message: string }) =>
+      apiClient.post<OperatorCommandResult>('/api/nudge', { target, message }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: queryKeys.activity }),
+  });
+}
+
+export function usePolecatOutput(rig: string | undefined, name: string | undefined, enabled = true) {
+  return useQuery({
+    queryKey: ['polecat-output', rig ?? '', name ?? ''] as const,
+    queryFn: () =>
+      apiClient.get<AgentRuntimeOutput>(
+        withRefresh(`/api/polecat/${encodeURIComponent(rig ?? '')}/${encodeURIComponent(name ?? '')}/output?lines=60`),
+      ),
+    enabled: enabled && Boolean(rig && name),
+    refetchInterval: 10_000,
+  });
+}
+
+export function usePolecatRuntimeAction() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ rig, name, action }: { rig: string; name: string; action: 'start' | 'restart' | 'stop' }) =>
+      apiClient.post<OperatorCommandResult>(
+        `/api/polecat/${encodeURIComponent(rig)}/${encodeURIComponent(name)}/${action}`,
+      ),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: queryKeys.status });
+      void qc.invalidateQueries({ queryKey: queryKeys.activity });
+    },
+  });
+}
+
+export function useServiceRuntimeAction() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      service,
+      action,
+      rig,
+    }: {
+      service: 'mayor' | 'deacon' | 'witness' | 'refinery';
+      action: 'up' | 'restart' | 'down';
+      rig?: string;
+    }) =>
+      apiClient.post<OperatorCommandResult>(
+        `/api/service/${encodeURIComponent(service)}/${action}`,
+        rig ? { rig } : undefined,
+      ),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: queryKeys.status });
+      void qc.invalidateQueries({ queryKey: queryKeys.activity });
+    },
   });
 }
 

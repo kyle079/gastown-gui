@@ -60,6 +60,8 @@ export function ReviewQueuePanel({
     ...(status.agents ?? []),
     ...(status.rigs ?? []).flatMap((rig) => rig.agents ?? []),
   ].filter((agent) => agent.running && (agent.has_work || agent.hook || agent.hook_bead));
+  const needsOperator = activeAgents.filter((agent) => agent.state === 'blocked' || agent.state === 'stalled');
+  const movingWork = activeAgents.filter((agent) => !needsOperator.includes(agent));
 
   return (
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
@@ -96,19 +98,22 @@ export function ReviewQueuePanel({
         </Panel>
 
         <Panel flush>
-          <PanelHeader title="Active Hooked Agents" hint={String(activeAgents.length)} />
+          <PanelHeader
+            title="Active Hooked Agents"
+            hint={needsOperator.length > 0 ? `${needsOperator.length} need operator action` : String(activeAgents.length)}
+          />
           {activeAgents.length === 0 ? (
             <div className="px-4 py-6 text-sm text-faint">No active hooks right now.</div>
           ) : (
             <div className="divide-hairline">
-              {activeAgents.map((agent) => (
+              {[...needsOperator, ...movingWork].map((agent) => (
                 <ListRow
                   key={agent.address || agent.name}
                   interactive
                   onClick={() => onSelectAgent(agent)}
                   leading={<StatusDot tone={agent.state === 'blocked' ? 'warn' : agent.state === 'stalled' ? 'danger' : 'accent'} />}
                   title={<span className="font-mono text-sm">{agent.address || agent.name}</span>}
-                  subtitle={agent.hook_bead || agent.hook || 'Hooked work'}
+                  subtitle={agent.hook_bead ? `${agent.state} on ${agent.hook_bead}` : agent.hook || 'Hooked work'}
                   trailing={
                     <>
                       {agent.unread_mail > 0 && <Badge tone="info">{agent.unread_mail} mail</Badge>}

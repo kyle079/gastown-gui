@@ -151,3 +151,25 @@ export function rigFromAddress(value?: string | null): string | null {
   const [rig] = value.split('/');
   return rig || null;
 }
+
+export function nameFromAddress(value?: string | null): string | null {
+  if (!value) return null;
+  const parts = value.split('/').filter(Boolean);
+  return parts.at(-1) || null;
+}
+
+export function isPolecatAgent(agent?: Pick<Agent, 'address' | 'role'> | null): boolean {
+  if (!agent) return false;
+  return agent.role === 'polecat' || String(agent.address || '').includes('/polecats/');
+}
+
+export function runtimeServiceForAgent(
+  agent?: Pick<Agent, 'address' | 'role'> | null,
+): 'mayor' | 'deacon' | 'witness' | 'refinery' | null {
+  const address = String(agent?.address || '').replace(/\/$/, '');
+  if (address === 'mayor' || agent?.role === 'coordinator') return 'mayor';
+  if (address === 'deacon') return 'deacon';
+  if (address.endsWith('/witness') || agent?.role === 'witness') return 'witness';
+  if (address.endsWith('/refinery') || agent?.role === 'refinery') return 'refinery';
+  return null;
+}

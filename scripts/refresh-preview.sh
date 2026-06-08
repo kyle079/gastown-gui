@@ -192,23 +192,34 @@ restart_preview() {
   : >"$BACKEND_LOG"
   : >"$FRONTEND_LOG"
 
+  start_detached() {
+    local pid_file="$1"
+    local work_dir="$2"
+    local log_file="$3"
+    shift 3
+
+    # `setsid` makes the child survive the calling CLI process; plain nohup is
+    # not enough under the Codex exec wrapper.
+    setsid -f bash -lc "
+      cd '$work_dir'
+      echo \$\$ > '$pid_file'
+      exec env $* >>'$log_file' 2>&1
+    "
+  }
+
   log "Starting backend on :$API_PORT"
-  (
-    cd "$REPO_DIR"
-    exec 9>&-
-    env HOST="$PREVIEW_HOST" GASTOWN_PORT="$API_PORT" GT_ROOT="$GT_ROOT" NODE_ENV=development \
-      nohup node server.js >>"$BACKEND_LOG" 2>&1 &
-    echo $! >"$BACKEND_PID_FILE"
-  )
+  start_detached \
+    "$BACKEND_PID_FILE" \
+    "$REPO_DIR" \
+    "$BACKEND_LOG" \
+    HOST="$PREVIEW_HOST" GASTOWN_PORT="$API_PORT" GT_ROOT="$GT_ROOT" NODE_ENV=development node server.js
 
   log "Starting Vite preview on :$PREVIEW_PORT"
-  (
-    cd "$REPO_DIR/web"
-    exec 9>&-
-    env HOST="$PREVIEW_HOST" \
-      nohup npm run dev -- --host "$PREVIEW_HOST" --port "$PREVIEW_PORT" --strictPort >>"$FRONTEND_LOG" 2>&1 &
-    echo $! >"$FRONTEND_PID_FILE"
-  )
+  start_detached \
+    "$FRONTEND_PID_FILE" \
+    "$REPO_DIR/web" \
+    "$FRONTEND_LOG" \
+    HOST="$PREVIEW_HOST" npm run dev -- --host "$PREVIEW_HOST" --port "$PREVIEW_PORT" --strictPort
 
   wait_for_http "backend" "http://127.0.0.1:$API_PORT/api/health" 30
   wait_for_http "preview" "http://127.0.0.1:$PREVIEW_PORT" 45

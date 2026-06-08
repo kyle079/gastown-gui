@@ -212,6 +212,7 @@ export interface Bead {
   description?: string;
   status: string;
   priority?: number;
+  labels?: string[];
   issue_type?: string;
   owner?: string;
   created_at?: string;

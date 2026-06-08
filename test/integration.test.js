@@ -74,10 +74,10 @@ describe('Comprehensive Integration Tests', () => {
     expect(dialogTitle).toBe('Dispatch work');
   });
 
-  it('submits dispatch requests with the bead id the operator entered', async () => {
+  it('submits dispatch requests from the default searchable bead picker', async () => {
     await goto(page, '/work');
     await page.click('main button');
-    await page.waitForSelector('[role="dialog"] input', { timeout: 5000 });
+    await page.waitForSelector('[role="dialog"] input[type="search"]', { timeout: 5000 });
 
     const requestCapture = page.evaluate(() => {
       return new Promise((resolve) => {
@@ -93,22 +93,90 @@ describe('Comprehensive Integration Tests', () => {
       });
     });
 
-    await page.$eval('[role="dialog"] input', (input) => {
+    await page.$eval('[role="dialog"] input[type="search"]', (input) => {
       const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
-      setter?.call(input, 'gg-luc');
+      setter?.call(input, 'root e2e');
       input.dispatchEvent(new Event('input', { bubbles: true }));
     });
     await page.waitForFunction(() => {
-      const button = document.querySelector('[role="dialog"] button:last-child');
+      return Array.from(document.querySelectorAll('[role="dialog"] button')).some((node) =>
+        node.textContent?.includes('Root e2e suite fails on current master'),
+      );
+    }, { timeout: 5000 });
+    await page.evaluate(() => {
+      const row = Array.from(document.querySelectorAll('[role="dialog"] button')).find((node) =>
+        node.textContent?.includes('Root e2e suite fails on current master'),
+      );
+      if (!(row instanceof HTMLButtonElement)) throw new Error('Search result button not found');
+      row.click();
+    });
+    await page.waitForFunction(() => {
+      const button = Array.from(document.querySelectorAll('[role="dialog"] button')).find((node) =>
+        node.textContent?.trim() === 'Dispatch',
+      );
       return button instanceof HTMLButtonElement && !button.disabled;
     }, { timeout: 5000 });
-    await page.click('[role="dialog"] button:last-child');
+    await page.evaluate(() => {
+      const button = Array.from(document.querySelectorAll('[role="dialog"] button')).find((node) =>
+        node.textContent?.trim() === 'Dispatch',
+      );
+      if (!(button instanceof HTMLButtonElement)) throw new Error('Dispatch button not found');
+      button.click();
+    });
 
     const request = await requestCapture;
     expect(request).toMatchObject({
       url: '/api/sling',
       method: 'POST',
       body: { bead: 'gg-luc' },
+    });
+  });
+
+  it('keeps a manual bead-id escape hatch for advanced dispatches', async () => {
+    await goto(page, '/work');
+    await page.click('main button');
+    await page.waitForFunction(() => document.querySelector('[role="dialog"] h2')?.textContent === 'Dispatch work', { timeout: 5000 });
+
+    const requestCapture = page.evaluate(() => {
+      return new Promise((resolve) => {
+        const originalFetch = window.fetch;
+        window.fetch = async (url, opts) => {
+          if (typeof url === 'string' && url === '/api/sling') {
+            window.fetch = originalFetch;
+            const body = opts?.body ? JSON.parse(String(opts.body)) : null;
+            resolve({ url, method: opts?.method, body });
+          }
+          return originalFetch(url, opts);
+        };
+      });
+    });
+
+    await page.evaluate(() => {
+      const toggle = Array.from(document.querySelectorAll('[role="dialog"] button')).find((node) =>
+        node.textContent?.includes('Use Bead ID Manually'),
+      );
+      if (!(toggle instanceof HTMLButtonElement)) throw new Error('Manual mode toggle not found');
+      toggle.click();
+    });
+    await page.waitForSelector('[role="dialog"] input[aria-label="Manual bead id"]', { timeout: 5000 });
+    await page.$eval('[role="dialog"] input[aria-label="Manual bead id"]', (input) => {
+      const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
+      setter?.call(input, 'gg-manual');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await page.evaluate(() => {
+      const button = Array.from(document.querySelectorAll('[role="dialog"] button')).find((node) =>
+        node.textContent?.trim() === 'Dispatch',
+      );
+      if (!(button instanceof HTMLButtonElement)) throw new Error('Dispatch button not found');
+      button.click();
+    });
+
+    const request = await requestCapture;
+    expect(request).toMatchObject({
+      url: '/api/sling',
+      method: 'POST',
+      body: { bead: 'gg-manual' },
     });
   });
 

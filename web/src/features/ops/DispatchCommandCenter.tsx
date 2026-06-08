@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Badge,
   Button,
@@ -9,8 +9,10 @@ import {
   Select,
   useToast,
 } from '@/components/primitives';
+import { BeadPicker } from '@/components/dispatch/BeadPicker';
+import { targetOptionLabel } from '@/components/dispatch/beadPickerModel';
 import { ApiError } from '@/lib/api/client';
-import { useBeadDetail, useBeadSearch, useSling, useTargets } from '@/lib/query/hooks';
+import { useBeadDetail, useSling, useTargets } from '@/lib/query/hooks';
 import { priorityLabel, priorityTone, statusLabel, statusTone } from '@/features/catalog/catalogMeta';
 import { compactAddress, rankTargets } from './opsModel';
 
@@ -28,20 +30,12 @@ export function DispatchCommandCenter({
   const { notify } = useToast();
   const { data: targets } = useTargets();
   const sling = useSling();
-  const [query, setQuery] = useState('');
   const [beadId, setBeadId] = useState('');
-  const [selectedBeadId, setSelectedBeadId] = useState('');
   const [target, setTarget] = useState('');
 
-  const { data: searchResults } = useBeadSearch(query);
-  const { data: bead } = useBeadDetail(selectedBeadId || beadId.trim());
+  const { data: bead } = useBeadDetail(beadId.trim() || undefined);
   const sortedTargets = useMemo(() => rankTargets(targets ?? []), [targets]);
   const suggestions = sortedTargets.slice(0, 5);
-
-  useEffect(() => {
-    if (!selectedBeadId || beadId.trim()) return;
-    setBeadId(selectedBeadId);
-  }, [selectedBeadId, beadId]);
 
   const error =
     sling.error instanceof ApiError
@@ -63,9 +57,7 @@ export function DispatchCommandCenter({
       {
         onSuccess: () => {
           notify(`Dispatched ${id}${target ? ` → ${target}` : ''}`, 'accent');
-          setQuery('');
           setBeadId('');
-          setSelectedBeadId('');
           setTarget('');
         },
       },
@@ -76,50 +68,9 @@ export function DispatchCommandCenter({
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
       <Panel flush>
         <PanelHeader title="Dispatch Command Center" hint="search + target + workflow" />
-        <PanelBody className="flex flex-col gap-3 border-b border-line">
-          <Input
-            type="search"
-            placeholder="Search bead id, title, or type…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-          <Input
-            placeholder="Selected bead id"
-            className="font-mono"
-            value={beadId}
-            onChange={(e) => setBeadId(e.target.value)}
-          />
+        <PanelBody className="border-b border-line">
+          <BeadPicker value={beadId} onChange={setBeadId} />
         </PanelBody>
-
-        {(searchResults ?? []).length === 0 ? (
-          <div className="px-4 py-6 text-sm text-faint">
-            {query.trim().length > 1 ? 'No beads match this query.' : 'Type at least two characters to search.'}
-          </div>
-        ) : (
-          <div className="divide-hairline">
-            {(searchResults ?? []).slice(0, 8).map((result) => (
-              <button
-                key={result.id}
-                type="button"
-                onClick={() => {
-                  setSelectedBeadId(result.id);
-                  setBeadId(result.id);
-                }}
-                className={`w-full px-4 py-3 text-left transition-colors ${
-                  selectedBeadId === result.id ? 'bg-raised' : 'hover:bg-raised'
-                }`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="font-mono text-xs text-fg">{result.id}</div>
-                    <div className="mt-0.5 truncate text-sm text-muted">{result.title}</div>
-                  </div>
-                  <Badge tone={statusTone(result.status)}>{statusLabel(result.status)}</Badge>
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
       </Panel>
 
       <Panel>
@@ -140,7 +91,7 @@ export function DispatchCommandCenter({
               <option value="">Auto (let gt choose)</option>
               {sortedTargets.map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.name}
+                  {targetOptionLabel(item)}
                 </option>
               ))}
             </Select>

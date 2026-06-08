@@ -1,22 +1,23 @@
-import { useState } from 'react';
-import { Dialog, Button, Input, Select, useToast } from '@/components/primitives';
+import { useMemo, useState } from 'react';
+import { Badge, Button, Dialog, Select, useToast } from '@/components/primitives';
+import { BeadPicker } from '@/components/dispatch/BeadPicker';
+import { targetOptionLabel } from '@/components/dispatch/beadPickerModel';
+import { priorityLabel, priorityTone, statusLabel, statusTone } from '@/features/catalog/catalogMeta';
 import { ApiError } from '@/lib/api/client';
-import { useSling, useTargets } from '@/lib/query/hooks';
+import { useBeadDetail, useSling, useTargets } from '@/lib/query/hooks';
+import { rankTargets } from '@/features/ops/opsModel';
 
-/**
- * Dispatch a bead onto a target's hook. Deliberately minimal: a bead id and a
- * target — the two things `gt sling` needs. The surface does the inspecting;
- * this does the one write action.
- */
 export function DispatchDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { data: targets } = useTargets();
   const sling = useSling();
   const { notify } = useToast();
-  const [bead, setBead] = useState('');
+  const [beadId, setBeadId] = useState('');
   const [target, setTarget] = useState('');
+  const { data: bead } = useBeadDetail(beadId.trim() || undefined);
+  const sortedTargets = useMemo(() => rankTargets(targets ?? []), [targets]);
 
   function reset() {
-    setBead('');
+    setBeadId('');
     setTarget('');
     sling.reset();
   }
@@ -27,7 +28,7 @@ export function DispatchDialog({ open, onClose }: { open: boolean; onClose: () =
   }
 
   function submit() {
-    const id = bead.trim();
+    const id = beadId.trim();
     if (!id) return;
     sling.mutate(
       { bead: id, target: target || undefined },
@@ -52,7 +53,7 @@ export function DispatchDialog({ open, onClose }: { open: boolean; onClose: () =
       open={open}
       onClose={close}
       title="Dispatch work"
-      description="Sling a bead onto an agent's hook."
+      description="Browse active beads, search by title or id, then sling the selected work onto a target hook."
       footer={
         <>
           <Button size="sm" variant="ghost" onClick={close} disabled={sling.isPending}>
@@ -62,7 +63,7 @@ export function DispatchDialog({ open, onClose }: { open: boolean; onClose: () =
             size="sm"
             variant="primary"
             onClick={submit}
-            disabled={!bead.trim() || sling.isPending}
+            disabled={!beadId.trim() || sling.isPending}
           >
             {sling.isPending ? 'Dispatching…' : 'Dispatch'}
           </Button>
@@ -77,28 +78,39 @@ export function DispatchDialog({ open, onClose }: { open: boolean; onClose: () =
         }}
       >
         <label className="flex flex-col gap-1.5">
-          <span className="text-2xs uppercase tracking-wider text-faint">Bead</span>
-          <Input
-            value={bead}
-            onChange={(e) => setBead(e.target.value)}
-            placeholder="e.g. gg-071"
-            className="font-mono"
-            autoFocus
-          />
+          <BeadPicker value={beadId} onChange={setBeadId} autoFocus />
         </label>
 
         <label className="flex flex-col gap-1.5">
           <span className="text-2xs uppercase tracking-wider text-faint">Target</span>
           <Select value={target} onChange={(e) => setTarget(e.target.value)}>
             <option value="">Auto (let gt choose)</option>
-            {(targets ?? []).map((t) => (
+            {sortedTargets.map((t) => (
               <option key={t.id} value={t.id}>
-                {t.name}
-                {t.type !== 'agent' ? ` — ${t.type}` : t.role ? ` — ${t.role}` : ''}
+                {targetOptionLabel(t)}
               </option>
             ))}
           </Select>
         </label>
+
+        {beadId && (
+          <div className="rounded-md border border-line bg-surface-alt p-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="font-mono text-xs text-fg">{bead?.id || beadId}</div>
+                <div className="mt-1 text-sm text-muted">
+                  {bead?.title || 'Manual bead id will be dispatched exactly as entered.'}
+                </div>
+              </div>
+              {bead && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge tone={priorityTone(bead.priority)}>{priorityLabel(bead.priority)}</Badge>
+                  <Badge tone={statusTone(bead.status)}>{statusLabel(bead.status)}</Badge>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {error && <p className="font-mono text-xs text-danger">{error}</p>}
       </form>

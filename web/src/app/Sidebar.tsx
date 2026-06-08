@@ -4,7 +4,7 @@ import { NAV_ITEMS } from './navigation';
 import { useStatus } from '@/lib/query/hooks';
 import { StatusDot } from '@/components/primitives';
 
-const NAV_SECTIONS = ['Run', 'Coordinate', 'Inspect', 'Reference'] as const;
+const NAV_SECTIONS = ['Surfaces', 'Reference'] as const;
 
 /**
  * Primary navigation rail. Quiet, structural, keyboard-discoverable

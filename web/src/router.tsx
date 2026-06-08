@@ -11,19 +11,17 @@ import { Dashboard } from '@/features/dashboard/Dashboard';
 import { Fleet } from '@/features/fleet/Fleet';
 import { RigDetailPage } from '@/features/fleet/RigDetailPage';
 import { Help } from '@/features/help/Help';
-import { ActivityFeed } from '@/features/activity/ActivityFeed';
 import { MailSurface } from '@/features/mail/MailSurface';
 import { MailMessagePage } from '@/features/mail/MailMessagePage';
-import { OpsSurface } from '@/features/ops/OpsSurface';
 import { WorkSurface } from '@/features/work/WorkSurface';
 import { ConvoyDetailPage } from '@/features/work/ConvoyDetailPage';
 import { CatalogRedirect } from '@/features/catalog/CatalogRedirect';
-import { FormulasView, validateFormulasSearch } from '@/features/catalog/FormulasView';
-import { IssuesView, validateIssuesSearch } from '@/features/catalog/IssuesView';
+import { validateFormulasSearch } from '@/features/catalog/FormulasView';
+import { validateIssuesSearch } from '@/features/catalog/IssuesView';
 import { PullRequestsPage, validatePrsSearch } from '@/features/prs/PullRequestsPage';
 import { PullRequestDetailPage } from '@/features/prs/PullRequestDetailPage';
 import { TerminalSurface } from '@/features/terminal/TerminalSurface';
-import { BeadGraph } from '@/features/graph/BeadGraph';
+import { InvestigateSurface, validateInvestigateSearch } from '@/features/investigate/InvestigateSurface';
 
 /**
  * Code-based route tree (no codegen). The keyboard layer + shell live in the
@@ -39,155 +37,236 @@ const rootRoute = createRootRoute({
   ),
 });
 
+// ── Primary surfaces ────────────────────────────────────────────────────────
+
+// Overview — system health at a glance.
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
   component: Dashboard,
 });
 
-// Activity — live event stream.
-const activityRoute = createRoute({
+// Needs Attention — unified queue: mail, escalations, blocked work.
+const attentionRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/activity',
-  component: ActivityFeed,
+  path: '/attention',
+  component: MailSurface,
 });
 
-// Legacy Catalog route kept as a redirect so old deep links still resolve.
-const catalogRoute = createRoute({
+const attentionDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/catalog',
-  component: CatalogRedirect,
+  path: '/attention/$messageId',
+  component: MailMessagePage,
 });
 
-const issuesRoute = createRoute({
+// Dispatch — create, route, and confirm new work.
+const dispatchRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/issues',
-  validateSearch: validateIssuesSearch,
-  component: IssuesView,
+  path: '/dispatch',
+  component: WorkSurface,
 });
 
-const formulasRoute = createRoute({
+const dispatchDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/formulas',
-  validateSearch: validateFormulasSearch,
-  component: FormulasView,
+  path: '/dispatch/$convoyId',
+  component: ConvoyDetailPage,
 });
 
-// Fleet — master/detail. /rigs renders the layout (list + outlet); /rigs/$rig
-// renders the selected rig's detail in the outlet.
-const rigsRoute = createRoute({
+// Fleet — supervise rigs and agents.
+const fleetRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/rigs',
+  path: '/fleet',
   component: Fleet,
 });
 
-const rigDetailRoute = createRoute({
-  getParentRoute: () => rigsRoute,
+const fleetDetailRoute = createRoute({
+  getParentRoute: () => fleetRoute,
   path: '$rig',
   component: RigDetailPage,
 });
 
-// Work — convoy list at /work; detail is a full-page view at /work/$convoyId.
-const workRoute = createRoute({
+// Landing — PR queue and merge queue.
+const landingRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/work',
-  component: WorkSurface,
-});
-
-const workDetailRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/work/$convoyId',
-  component: ConvoyDetailPage,
-});
-
-// Pull requests — own top-level page with state/query search params.
-const prsRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/prs',
+  path: '/landing',
   validateSearch: validatePrsSearch,
   component: PullRequestsPage,
 });
 
-// PR detail — routed full-page view at /prs/$owner/$repo/$prNumber.
-const prDetailRoute = createRoute({
+const landingDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/prs/$owner/$repo/$prNumber',
+  path: '/landing/$owner/$repo/$prNumber',
   component: PullRequestDetailPage,
 });
 
-// Mail — inbox at /mail; message detail at /mail/$messageId.
-const mailRoute = createRoute({
+// Investigate — timeline, issues, formulas, and dependency graph.
+const investigateRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/mail',
-  component: MailSurface,
+  path: '/investigate',
+  validateSearch: validateInvestigateSearch,
+  component: InvestigateSurface,
 });
 
-const mailDetailRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/mail/$messageId',
-  component: MailMessagePage,
-});
-
-// Escalations — legacy routes redirect to the unified Queue surface.
-const escalationsRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/escalations',
-  beforeLoad: () => { throw redirect({ to: '/mail' }); },
-});
-
-const escalationDetailRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/escalations/$messageId',
-  beforeLoad: ({ params }) => {
-    throw redirect({ to: '/mail/$messageId', params: { messageId: params.messageId } });
-  },
-});
-
-const opsRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/ops',
-  component: OpsSurface,
-});
-
-const terminalRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/terminal',
-  component: TerminalSurface,
-});
-
-// Bead dependency graph.
-const graphRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/graph',
-  component: BeadGraph,
-});
-
-// Help / Getting Started.
+// Help — documentation and getting started.
 const helpRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/help',
   component: Help,
 });
 
+// Terminal — kept as a deep link; removed from primary nav.
+const terminalRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/terminal',
+  component: TerminalSurface,
+});
+
+// ── Legacy redirects ─────────────────────────────────────────────────────────
+// Old routes redirect to their new homes. Deep links are preserved.
+
+const mailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/mail',
+  beforeLoad: () => { throw redirect({ to: '/attention' }); },
+});
+
+const mailDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/mail/$messageId',
+  beforeLoad: ({ params }) => {
+    throw redirect({ to: '/attention/$messageId', params: { messageId: params.messageId } });
+  },
+});
+
+const rigsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/rigs',
+  beforeLoad: () => { throw redirect({ to: '/fleet' }); },
+});
+
+const rigDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/rigs/$rig',
+  beforeLoad: ({ params }) => {
+    throw redirect({ to: '/fleet/$rig', params: { rig: params.rig } });
+  },
+});
+
+const workRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/work',
+  beforeLoad: () => { throw redirect({ to: '/dispatch' }); },
+});
+
+const workDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/work/$convoyId',
+  beforeLoad: ({ params }) => {
+    throw redirect({ to: '/dispatch/$convoyId', params: { convoyId: params.convoyId } });
+  },
+});
+
+const prsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/prs',
+  beforeLoad: () => { throw redirect({ to: '/landing' }); },
+});
+
+const prDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/prs/$owner/$repo/$prNumber',
+  beforeLoad: ({ params }) => {
+    throw redirect({
+      to: '/landing/$owner/$repo/$prNumber',
+      params: { owner: params.owner, repo: params.repo, prNumber: params.prNumber },
+    });
+  },
+});
+
+const activityRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/activity',
+  beforeLoad: () => { throw redirect({ to: '/investigate', search: { mode: 'timeline' } }); },
+});
+
+const issuesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/issues',
+  validateSearch: validateIssuesSearch,
+  beforeLoad: () => { throw redirect({ to: '/investigate', search: { mode: 'issues' } }); },
+});
+
+const formulasRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/formulas',
+  validateSearch: validateFormulasSearch,
+  beforeLoad: () => { throw redirect({ to: '/investigate', search: { mode: 'formulas' } }); },
+});
+
+const graphRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/graph',
+  beforeLoad: () => { throw redirect({ to: '/investigate', search: { mode: 'graph' } }); },
+});
+
+const opsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/ops',
+  beforeLoad: () => { throw redirect({ to: '/attention' }); },
+});
+
+// Legacy Catalog route.
+const catalogRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/catalog',
+  component: CatalogRedirect,
+});
+
+// Escalations — already redirected to mail, now chain to attention.
+const escalationsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/escalations',
+  beforeLoad: () => { throw redirect({ to: '/attention' }); },
+});
+
+const escalationDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/escalations/$messageId',
+  beforeLoad: ({ params }) => {
+    throw redirect({ to: '/attention/$messageId', params: { messageId: params.messageId } });
+  },
+});
+
 const routeTree = rootRoute.addChildren([
+  // Primary surfaces
   indexRoute,
-  activityRoute,
-  catalogRoute,
-  issuesRoute,
-  formulasRoute,
-  rigsRoute.addChildren([rigDetailRoute]),
+  attentionRoute,
+  attentionDetailRoute,
+  dispatchRoute,
+  dispatchDetailRoute,
+  fleetRoute.addChildren([fleetDetailRoute]),
+  landingRoute,
+  landingDetailRoute,
+  investigateRoute,
+  helpRoute,
+  terminalRoute,
+  // Legacy redirects
+  mailRoute,
+  mailDetailRoute,
+  rigsRoute,
+  rigDetailRoute,
   workRoute,
   workDetailRoute,
   prsRoute,
   prDetailRoute,
-  mailRoute,
-  mailDetailRoute,
+  activityRoute,
+  issuesRoute,
+  formulasRoute,
+  graphRoute,
+  opsRoute,
+  catalogRoute,
   escalationsRoute,
   escalationDetailRoute,
-  opsRoute,
-  terminalRoute,
-  graphRoute,
-  helpRoute,
 ]);
 
 export const router = createRouter({

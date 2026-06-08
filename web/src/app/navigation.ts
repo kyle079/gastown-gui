@@ -6,12 +6,12 @@
 export interface NavItem {
   path: string;
   label: string;
-  /** Secondary object-type noun so the operator still knows what's underneath. */
+  /** Secondary plain-language description answering "why would I come here?" */
   objectLabel: string;
   /** Mono glyph — a single technical character, never an icon-font. */
   glyph: string;
   /** Intent-focused grouping in the rail/palette docs. */
-  section: 'Run' | 'Coordinate' | 'Inspect' | 'Reference';
+  section: 'Surfaces' | 'Reference';
   /** Sequence hint shown in the palette (chord after `g`). */
   seq: string;
   /** False until the surface is built. */
@@ -19,16 +19,11 @@ export interface NavItem {
 }
 
 export const NAV_ITEMS: NavItem[] = [
-  { path: '/', label: 'Monitor', objectLabel: 'Dashboard', glyph: '◇', section: 'Run', seq: 'd', ready: true },
-  { path: '/activity', label: 'Watch', objectLabel: 'Activity feed', glyph: '≋', section: 'Run', seq: 'a', ready: true },
-  { path: '/mail', label: 'Queue', objectLabel: 'Mail and escalations queue', glyph: '✉', section: 'Run', seq: 'm', ready: true },
-  { path: '/ops', label: 'Operator', objectLabel: 'Agent control workflows', glyph: '⌘', section: 'Coordinate', seq: 'o', ready: true },
-  { path: '/rigs', label: 'Fleet', objectLabel: 'Rigs and agents', glyph: '▤', section: 'Coordinate', seq: 'r', ready: true },
-  { path: '/work', label: 'Track', objectLabel: 'Convoys and work', glyph: '◷', section: 'Coordinate', seq: 'w', ready: true },
-  { path: '/prs', label: 'Review', objectLabel: 'Pull requests', glyph: '⌥', section: 'Inspect', seq: 'p', ready: true },
-  { path: '/issues', label: 'Search', objectLabel: 'Issues', glyph: '⊟', section: 'Inspect', seq: 'i', ready: true },
-  { path: '/formulas', label: 'Browse', objectLabel: 'Formulas', glyph: 'ƒ', section: 'Inspect', seq: 'f', ready: true },
-  { path: '/graph', label: 'Trace', objectLabel: 'Dependency graph', glyph: '⬡', section: 'Inspect', seq: 'g', ready: true },
-  { path: '/terminal', label: 'Command', objectLabel: 'Terminal', glyph: '⌗', section: 'Reference', seq: 't', ready: true },
-  { path: '/help', label: 'Learn', objectLabel: 'Help', glyph: '?', section: 'Reference', seq: 'h', ready: true },
+  { path: '/', label: 'Overview', objectLabel: 'System health and top signals', glyph: '◇', section: 'Surfaces', seq: 'o', ready: true },
+  { path: '/attention', label: 'Needs Attention', objectLabel: 'Mail, escalations, blocked work', glyph: '✉', section: 'Surfaces', seq: 'n', ready: true },
+  { path: '/dispatch', label: 'Dispatch', objectLabel: 'Targets and workflow templates', glyph: '⌘', section: 'Surfaces', seq: 'd', ready: true },
+  { path: '/fleet', label: 'Fleet', objectLabel: 'Rigs and agents', glyph: '▤', section: 'Surfaces', seq: 'f', ready: true },
+  { path: '/landing', label: 'Landing', objectLabel: 'Pull requests and merge queue', glyph: '⌥', section: 'Surfaces', seq: 'l', ready: true },
+  { path: '/investigate', label: 'Investigate', objectLabel: 'Timeline, issues, formulas, graph', glyph: '⬡', section: 'Surfaces', seq: 'i', ready: true },
+  { path: '/help', label: 'Help', objectLabel: 'Documentation and getting started', glyph: '?', section: 'Reference', seq: 'h', ready: true },
 ];

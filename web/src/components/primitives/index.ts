@@ -19,4 +19,3 @@ export { Kbd } from './Kbd';
 export { Spinner } from './Spinner';
 export { Dialog, type DialogProps } from './Dialog';
 export { ToastProvider, useToast, type Toast } from './Toast';
-export { Textarea, type TextareaProps } from './Textarea';

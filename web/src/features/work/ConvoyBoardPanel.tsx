@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Badge, Button, Panel, PanelBody, PanelHeader } from '@/components/primitives';
+import { Badge, Panel, PanelBody, PanelHeader } from '@/components/primitives';
 import type { Tone } from '@/components/primitives';
 import type { Convoy } from '@/lib/api/types';
 import { pluralize } from '@/lib/utils/format';
@@ -99,11 +99,9 @@ function ConvoyLane({
 export function ConvoyBoardPanel({
   convoys,
   onInspect,
-  onDispatch,
 }: {
   convoys: Convoy[];
   onInspect: (convoy: Convoy) => void;
-  onDispatch: () => void;
 }) {
   const grouped = useMemo(() => groupConvoysByState(convoys), [convoys]);
   const [mobileState, setMobileState] = useState<ConvoyState>('blocked');
@@ -117,11 +115,6 @@ export function ConvoyBoardPanel({
       <PanelHeader
         title="Convoy board"
         hint={pluralize(convoys.length, 'convoy')}
-        actions={
-          <Button variant="primary" size="sm" onClick={onDispatch}>
-            Dispatch
-          </Button>
-        }
       />
 
       <PanelBody className="flex flex-col gap-4 md:hidden">

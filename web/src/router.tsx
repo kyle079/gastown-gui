@@ -13,7 +13,7 @@ import { RigDetailPage } from '@/features/fleet/RigDetailPage';
 import { Help } from '@/features/help/Help';
 import { MailSurface } from '@/features/mail/MailSurface';
 import { MailMessagePage } from '@/features/mail/MailMessagePage';
-import { WorkSurface } from '@/features/work/WorkSurface';
+import { DispatchSurface } from '@/features/dispatch/DispatchSurface';
 import { ConvoyDetailPage } from '@/features/work/ConvoyDetailPage';
 import { CatalogRedirect } from '@/features/catalog/CatalogRedirect';
 import { validateFormulasSearch } from '@/features/catalog/FormulasView';
@@ -59,11 +59,11 @@ const attentionDetailRoute = createRoute({
   component: MailMessagePage,
 });
 
-// Dispatch — create, route, and confirm new work.
+// Dispatch — single home for ask-mayor, bead routing, formula selection, and work tracking.
 const dispatchRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/dispatch',
-  component: WorkSurface,
+  component: DispatchSurface,
 });
 
 const dispatchDetailRoute = createRoute({

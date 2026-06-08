@@ -62,7 +62,9 @@ export function MailQueuePanel({
 
       {rows.length === 0 ? (
         <div className="px-4 py-8 text-center text-sm text-faint">
-          {filter === 'all' ? 'Queue is clear' : 'Nothing matches this filter'}
+          {filter === 'all'
+            ? 'Queue is clear — no messages, escalations, or blocked work.'
+            : 'Nothing matches this filter.'}
         </div>
       ) : (
         <div className="divide-hairline">

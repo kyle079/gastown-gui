@@ -224,7 +224,13 @@ export function PullRequestsPage() {
             rows={rows}
             rowKey={(pr) => `${pr.repo ?? ''}#${pr.number}`}
             onRowClick={openPr}
-            empty={query ? 'No pull requests match your filter.' : `No ${state === 'all' ? '' : state + ' '}pull requests.`}
+            empty={
+              query
+                ? 'No pull requests match your filter.'
+                : state === 'open'
+                  ? 'No open pull requests — work in progress will appear here once agents submit branches.'
+                  : `No ${state} pull requests.`
+            }
           />
         </CatalogPanel>
       </div>

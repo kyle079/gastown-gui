@@ -13,22 +13,22 @@ import {
 const laneMeta: Record<ConvoyState, { title: string; empty: string; tone: Tone }> = {
   blocked: {
     title: 'Blocked',
-    empty: 'No blocked convoys.',
+    empty: 'No blocked convoys — nothing needs attention here.',
     tone: 'warn',
   },
   active: {
     title: 'Active',
-    empty: 'No convoy is currently in flight.',
+    empty: 'No convoys in flight. Use Dispatch to start new work.',
     tone: 'accent',
   },
   queued: {
     title: 'Queued',
-    empty: 'No queued convoy work.',
+    empty: 'Nothing queued. Dispatch work to fill this lane.',
     tone: 'neutral',
   },
   done: {
     title: 'Done',
-    empty: 'No finished convoys yet.',
+    empty: 'Nothing finished yet. Check Landing once work merges.',
     tone: 'ok',
   },
 };

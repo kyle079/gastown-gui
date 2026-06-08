@@ -1,3 +1,4 @@
+import { Link } from '@tanstack/react-router';
 import { Panel, PanelHeader, ListRow, StatusDot } from '@/components/primitives';
 import type { Rig } from '@/lib/api/types';
 import { pluralize } from '@/lib/utils/format';
@@ -29,7 +30,12 @@ export function RigList({
     <Panel flush>
       <PanelHeader title="Fleet" hint={pluralize(rigs.length, 'rig')} />
       {sorted.length === 0 ? (
-        <div className="px-4 py-8 text-center text-sm text-faint">No rigs configured</div>
+        <div className="flex flex-col items-center gap-2 px-4 py-8 text-center">
+          <p className="text-sm text-faint">No projects connected yet.</p>
+          <Link to="/dispatch" className="text-xs text-accent hover:underline underline-offset-2">
+            Go to Dispatch to ask the mayor to add one →
+          </Link>
+        </div>
       ) : (
         <div className="divide-hairline">
           {sorted.map((rig) => {

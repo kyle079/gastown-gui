@@ -2,14 +2,13 @@ import { Panel, PanelHeader } from '@/components/primitives';
 import { CONCEPTS, CONCEPT_GROUPS, type ConceptGroup } from './content';
 
 /**
- * The "what is this" glossary — a technical reference, not a tour. A term/value
- * definition list (mono term, prose definition), hairline-separated and grouped.
- * Deliberately not an icon-card grid: the structure is the type, not decoration.
+ * Plain-language glossary. Plain action label first; Gas Town term appears as a
+ * secondary mono tag so experts can cross-reference but newcomers aren't blocked.
  */
 export function ConceptsPanel() {
   return (
     <Panel flush>
-      <PanelHeader title="Concepts" hint="the vocabulary" />
+      <PanelHeader title="Glossary" hint="plain language first" />
       <div className="divide-hairline">
         {CONCEPT_GROUPS.map((group) => (
           <ConceptGroupRows key={group} group={group} />
@@ -30,9 +29,14 @@ function ConceptGroupRows({ group }: { group: ConceptGroup }) {
         {items.map((c) => (
           <div
             key={c.term}
-            className="grid grid-cols-1 gap-x-4 gap-y-0.5 py-2 sm:grid-cols-[8rem_1fr]"
+            className="grid grid-cols-1 gap-x-4 gap-y-0.5 py-2 sm:grid-cols-[10rem_1fr]"
           >
-            <dt className="font-mono text-sm text-fg">{c.term}</dt>
+            <dt className="flex flex-wrap items-baseline gap-x-1.5 text-sm text-fg">
+              <span>{c.term}</span>
+              {c.gasLabel && (
+                <span className="font-mono text-2xs text-faint">({c.gasLabel})</span>
+              )}
+            </dt>
             <dd className="text-sm text-muted">{c.definition}</dd>
           </div>
         ))}

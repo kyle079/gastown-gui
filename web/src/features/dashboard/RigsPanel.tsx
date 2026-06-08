@@ -61,7 +61,7 @@ export function RigsPanel({ rigs }: { rigs: Rig[] }) {
         columns={columns}
         rows={sorted}
         rowKey={(r) => r.name}
-        empty="No rigs configured"
+        empty="No projects connected yet — go to Dispatch to ask the mayor to add one."
       />
     </Panel>
   );

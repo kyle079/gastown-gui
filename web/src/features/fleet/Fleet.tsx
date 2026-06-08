@@ -74,7 +74,7 @@ export function Fleet() {
             <Outlet />
           ) : (
             <Panel className="py-16 text-center text-sm text-faint">
-              No rig selected.
+              Select a rig from the list to inspect its agents, sessions, and health.
             </Panel>
           )}
         </div>

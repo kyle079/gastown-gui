@@ -1,109 +1,160 @@
 /**
- * Static orientation content for the Help surface — the "what is this" glossary
- * and the core workflow. Kept as plain data so the views stay presentational and
- * the vocabulary lives in one editable place.
+ * Static orientation content for the Help surface.
+ * Kept as plain data so the views stay presentational and the vocabulary lives
+ * in one editable place.
+ *
+ * Ordering principle: plain language first, Gas Town term as secondary label.
+ * Terms appear after the action they support, not before.
  */
 
 export interface Concept {
   term: string;
-  /** Optional grouping label (structure / agents / work / comms). */
-  group: ConceptGroup;
+  /** Plain-language description of what the operator does with this thing. */
   definition: string;
+  /** Optional grouping label. */
+  group: ConceptGroup;
+  /** Optional secondary Gas Town label shown smaller after the term. */
+  gasLabel?: string;
 }
 
-export type ConceptGroup = 'Structure' | 'Agents' | 'Work' | 'Signals';
+export type ConceptGroup = 'Projects and structure' | 'The agents' | 'Tracking work' | 'Signals';
 
+/** Concepts ordered so each is introduced after the action it supports. */
 export const CONCEPTS: Concept[] = [
+  // Projects and structure — understand the workspace before anything else
   {
-    term: 'Town',
-    group: 'Structure',
-    definition: 'The workspace. Everything — rigs, agents, the work and mail queues — lives inside one town.',
+    term: 'The workspace',
+    gasLabel: 'town',
+    group: 'Projects and structure',
+    definition: 'Everything lives here — projects, agents, work, and messages. One workspace, one overview.',
   },
   {
-    term: 'Rig',
-    group: 'Structure',
-    definition: 'A project: one git repository connected to the town. Agents do their work within a rig.',
+    term: 'A connected project',
+    gasLabel: 'rig',
+    group: 'Projects and structure',
+    definition: 'One git repository linked to the workspace. Agents do their work inside a rig.',
+  },
+
+  // The agents — who does what
+  {
+    term: 'Global coordinator',
+    gasLabel: 'mayor',
+    group: 'The agents',
+    definition: 'Ask it to break down a goal and dispatch the work across every project automatically.',
   },
   {
-    term: 'Mayor',
-    group: 'Agents',
-    definition: 'The global coordinator. Breaks down requests and dispatches work across every rig.',
+    term: 'Project monitor',
+    gasLabel: 'witness',
+    group: 'The agents',
+    definition: 'Watches each rig — checks agent health and verifies finished work before it merges.',
   },
   {
-    term: 'Witness',
-    group: 'Agents',
-    definition: 'A rig’s monitor. Watches agent health and verifies completed work before it lands.',
+    term: 'Merge queue',
+    gasLabel: 'refinery',
+    group: 'The agents',
+    definition: 'Batches finished branches and lands them to main safely, running tests on the combined stack.',
   },
   {
-    term: 'Refinery',
-    group: 'Agents',
-    definition: 'A rig’s merge queue. Batches finished branches and lands them to the main branch.',
+    term: 'Task worker',
+    gasLabel: 'polecat',
+    group: 'The agents',
+    definition: 'An ephemeral agent spawned for one issue. It does the work, submits it, then self-cleans.',
   },
   {
-    term: 'Polecat',
-    group: 'Agents',
-    definition: 'An ephemeral worker spawned for a single issue. It does the work, submits it, then self-cleans.',
+    term: 'Persistent worker',
+    gasLabel: 'crew',
+    group: 'The agents',
+    definition: 'A longer-lived agent that handles ongoing work — unlike a polecat, it stays across tasks.',
+  },
+
+  // Tracking work — what gets done
+  {
+    term: 'A task (tracked issue)',
+    gasLabel: 'bead',
+    group: 'Tracking work',
+    definition: 'The unit of work. Has an ID, title, status, and assignee. Stored in git alongside the code.',
   },
   {
-    term: 'Crew',
-    group: 'Agents',
-    definition: 'A longer-lived worker that persists across tasks, where a polecat is one-and-done.',
+    term: 'Assigned work',
+    gasLabel: 'hook',
+    group: 'Tracking work',
+    definition: 'The slot an agent\'s current task hangs on. Work "on the hook" means the agent is working it.',
   },
   {
-    term: 'Bead',
-    group: 'Work',
-    definition: 'A git-tracked issue — the unit of work. Has an id, a title, a status, and an assignee.',
+    term: 'Send work to an agent',
+    gasLabel: 'sling',
+    group: 'Tracking work',
+    definition: 'Assign a task to a rig or agent. It lands on their hook and they pick it up automatically.',
   },
   {
-    term: 'Hook',
-    group: 'Work',
-    definition: 'The slot an agent’s assigned work hangs on. Work “on the hook” triggers the agent to run it.',
+    term: 'A feature batch',
+    gasLabel: 'convoy',
+    group: 'Tracking work',
+    definition: 'A named group of related tasks so you can track a whole feature as one thing.',
   },
   {
-    term: 'Sling',
-    group: 'Work',
-    definition: 'Assign a bead to a rig or agent. The work lands on their hook and they pick it up.',
+    term: 'A workflow template',
+    gasLabel: 'formula',
+    group: 'Tracking work',
+    definition: 'A reusable checklist that drives how agents approach a class of work (e.g. "implement a feature").',
   },
+
+  // Signals — how things communicate
   {
-    term: 'Convoy',
-    group: 'Work',
-    definition: 'A batch grouping related beads, so progress on a feature is tracked as one thing.',
-  },
-  {
-    term: 'Mail',
+    term: 'Messages between agents',
+    gasLabel: 'mail',
     group: 'Signals',
     definition: 'How agents — and you — communicate: status, questions, handoffs. Persistent and addressable.',
   },
   {
-    term: 'Escalation',
+    term: 'A decision request',
+    gasLabel: 'escalation',
     group: 'Signals',
-    definition: 'An agent asking for a decision it can’t make. Ranked by severity; it waits on your authorization.',
+    definition: 'An agent asking for a call it can\'t make alone. Ranked by severity; waits on your response.',
   },
 ];
 
-export const CONCEPT_GROUPS: ConceptGroup[] = ['Structure', 'Agents', 'Work', 'Signals'];
+export const CONCEPT_GROUPS: ConceptGroup[] = [
+  'Projects and structure',
+  'The agents',
+  'Tracking work',
+  'Signals',
+];
 
 export interface WorkflowStep {
   title: string;
   detail: string;
+  surface?: string;
 }
 
-/** The core loop, stated plainly — no celebration, no fanfare. */
-export const WORKFLOW: WorkflowStep[] = [
+/** The first operator workflow — plain language, surface-first. */
+export const FIRST_WORKFLOW: WorkflowStep[] = [
   {
-    title: 'File a bead',
-    detail: 'Capture the work as an issue — bd create "title". It becomes a git-tracked unit of work.',
+    title: 'Start at Overview',
+    detail: 'Open Overview to see what needs you first — top attention signals, active agents, rig health.',
+    surface: 'Overview',
   },
   {
-    title: 'Sling it to a rig',
-    detail: 'Assign the bead; it lands on an agent’s hook in the target project.',
+    title: 'Clear your queue',
+    detail: 'Open Needs Attention to reply to messages, acknowledge escalations, and unblock stalled work.',
+    surface: 'Needs Attention',
   },
   {
-    title: 'The agent runs',
-    detail: 'A polecat picks the work off its hook and works autonomously through to submission.',
+    title: 'Start new work',
+    detail: 'Open Dispatch, describe what you want built, pick a rig target, and send it. The mayor routes it.',
+    surface: 'Dispatch',
   },
   {
-    title: 'It lands',
-    detail: 'The witness verifies and the refinery merges the branch to main. Watch it from the Dashboard.',
+    title: 'Supervise the agents',
+    detail: 'Open Fleet to see which rigs and agents are active. Drill into a rig to inspect sessions and hooks.',
+    surface: 'Fleet',
+  },
+  {
+    title: 'Land finished work',
+    detail: 'Open Landing to review PRs and watch the merge queue. Clear blockers so finished work gets in.',
+    surface: 'Landing',
   },
 ];
+
+/** The shorter core loop for the sidebar panel. */
+export const WORKFLOW: WorkflowStep[] = FIRST_WORKFLOW;

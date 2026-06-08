@@ -216,7 +216,13 @@ export function IssuesView() {
           rows={rows}
           rowKey={(b) => b.id}
           onRowClick={(b) => setSelectedId(b.id)}
-          empty={query ? 'No issues match your filter.' : 'No issues in this status.'}
+          empty={
+            query
+              ? 'No tasks match your filter.'
+              : status === 'open'
+                ? 'No open tasks — use Dispatch to create new work.'
+                : `No tasks in this status.`
+          }
         />
       </CatalogPanel>
 

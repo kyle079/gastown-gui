@@ -112,6 +112,41 @@ describe('Comprehensive Integration Tests', () => {
     });
   });
 
+  it('submits ask-mayor requests from the operator dispatch surface', async () => {
+    await goto(page, '/ops');
+
+    await page.click('button[role="tab"]:nth-of-type(2)');
+    await page.waitForFunction(() => document.body.innerText.includes('Ask Mayor'), { timeout: 5000 });
+
+    const requestCapture = page.evaluate(() => {
+      return new Promise((resolve) => {
+        const originalFetch = window.fetch;
+        window.fetch = async (url, opts) => {
+          if (typeof url === 'string' && url === '/api/mayor/requests') {
+            window.fetch = originalFetch;
+            const body = opts?.body ? JSON.parse(String(opts.body)) : null;
+            resolve({ url, method: opts?.method, body });
+          }
+          return originalFetch(url, opts);
+        };
+      });
+    });
+
+    await page.$eval('textarea', (input) => {
+      const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
+      setter?.call(input, 'Add a mayor workflow for operator-created dispatch.');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await page.click('main button');
+
+    const request = await requestCapture;
+    expect(request).toMatchObject({
+      url: '/api/mayor/requests',
+      method: 'POST',
+      body: { prompt: 'Add a mayor workflow for operator-created dispatch.', molecule: 'mol-polecat-work' },
+    });
+  });
+
   it('opens compose and posts mail through the React queue surface', async () => {
     await goto(page, '/mail');
 

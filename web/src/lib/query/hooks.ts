@@ -15,6 +15,7 @@ import type {
   Formula,
   FormulaDetail,
   MailMessage,
+  MayorRequestResponse,
   MergeRequest,
   PullRequest,
   PullRequestDetail,
@@ -138,6 +139,28 @@ export function useSling() {
       // Dispatch changes both the convoy queue and who's-on-what.
       void qc.invalidateQueries({ queryKey: queryKeys.convoys });
       void qc.invalidateQueries({ queryKey: queryKeys.status });
+    },
+  });
+}
+
+interface MayorRequestInput {
+  prompt: string;
+  target?: string;
+  molecule?: string;
+  args?: string;
+}
+
+export function useMayorRequest() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ prompt, target, molecule, args }: MayorRequestInput) =>
+      apiClient.post<MayorRequestResponse>('/api/mayor/requests', { prompt, target, molecule, args }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: queryKeys.convoys });
+      void qc.invalidateQueries({ queryKey: queryKeys.status });
+      void qc.invalidateQueries({ queryKey: queryKeys.activity });
+      void qc.invalidateQueries({ queryKey: ['beads'] });
+      void qc.invalidateQueries({ queryKey: queryKeys.beadGraph });
     },
   });
 }

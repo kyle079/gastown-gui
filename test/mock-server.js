@@ -638,6 +638,28 @@ export async function startMockServer({ port = 0 } = {}) {
       timestamp: new Date().toISOString(),
     });
   });
+  app.post('/api/mayor/requests', (req, res) => {
+    const beadId = `gg-mayor-${Date.now()}`;
+    const target = req.body?.target ?? null;
+    recordActivity('sling', { bead: beadId, target });
+    res.json({
+      success: true,
+      status: 'ok',
+      prompt: req.body?.prompt ?? '',
+      target,
+      molecule: req.body?.molecule ?? null,
+      args: req.body?.args ?? null,
+      summary: { created: 1, dispatched: 1, failed: 0 },
+      items: [
+        {
+          beadId,
+          title: String(req.body?.prompt ?? 'Operator request').split(/[.!?\n]/)[0] || 'Operator request',
+          target,
+          stage: 'dispatched',
+        },
+      ],
+    });
+  });
   app.post('/api/escalate', (req, res) => {
     recordActivity('escalation_sent', { convoy_id: req.body?.convoy_id ?? null, reason: req.body?.reason ?? '' });
     res.json({ success: true, convoy_id: req.body?.convoy_id ?? null, reason: req.body?.reason ?? '', priority: req.body?.priority ?? 'normal' });

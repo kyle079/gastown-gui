@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils/cn';
 import { useStatus } from '@/lib/query/hooks';
 import type { Agent } from '@/lib/api/types';
 import { AttentionInboxPanel } from './AttentionInboxPanel';
+import { AskMayorPanel } from './AskMayorPanel';
 import { ActivityContextPanel } from './ActivityContextPanel';
 import { DispatchCommandCenter } from './DispatchCommandCenter';
 import { ReviewQueuePanel } from './ReviewQueuePanel';
@@ -36,6 +37,7 @@ export function OpsSurface() {
   const { data: status, isLoading, isError, error, refetch } = useStatus();
   const [tab, setTab] = useState<OpsTab>('inbox');
   const [selectedFormula, setSelectedFormula] = useState('mol-polecat-work');
+  const [formulaArgs, setFormulaArgs] = useState('');
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
 
   if (isLoading) {
@@ -102,9 +104,12 @@ export function OpsSurface() {
 
         {tab === 'dispatch' && (
           <div className="flex flex-col gap-4">
+            <AskMayorPanel selectedFormula={selectedFormula} formulaArgs={formulaArgs} />
             <DispatchCommandCenter
               selectedFormula={selectedFormula}
               onSelectedFormula={setSelectedFormula}
+              formulaArgs={formulaArgs}
+              onFormulaArgs={setFormulaArgs}
             />
             <FormulaExplorerPanel
               selectedName={selectedFormula}

@@ -17,9 +17,13 @@ import { compactAddress, rankTargets } from './opsModel';
 export function DispatchCommandCenter({
   selectedFormula,
   onSelectedFormula,
+  formulaArgs,
+  onFormulaArgs,
 }: {
   selectedFormula: string;
   onSelectedFormula: (name: string) => void;
+  formulaArgs: string;
+  onFormulaArgs: (value: string) => void;
 }) {
   const { notify } = useToast();
   const { data: targets } = useTargets();
@@ -28,7 +32,6 @@ export function DispatchCommandCenter({
   const [beadId, setBeadId] = useState('');
   const [selectedBeadId, setSelectedBeadId] = useState('');
   const [target, setTarget] = useState('');
-  const [formulaArgs, setFormulaArgs] = useState('');
 
   const { data: searchResults } = useBeadSearch(query);
   const { data: bead } = useBeadDetail(selectedBeadId || beadId.trim());
@@ -158,7 +161,7 @@ export function DispatchCommandCenter({
           <span className="text-2xs uppercase tracking-wider text-faint">Args</span>
           <Input
             value={formulaArgs}
-            onChange={(e) => setFormulaArgs(e.target.value)}
+            onChange={(e) => onFormulaArgs(e.target.value)}
             className="font-mono"
             placeholder="base_branch=master"
           />

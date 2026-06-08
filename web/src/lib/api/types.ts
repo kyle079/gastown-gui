@@ -224,6 +224,31 @@ export interface BeadDetail extends Bead {
   dependencies?: BeadDependency[];
 }
 
+export type MayorRequestStage = 'dispatched' | 'dispatch_failed' | 'create_failed';
+
+export interface MayorRequestItem {
+  beadId?: string;
+  title: string;
+  target?: string | null;
+  stage: MayorRequestStage;
+  error?: string;
+}
+
+export interface MayorRequestResponse {
+  success: boolean;
+  status: 'ok' | 'partial' | 'failed';
+  prompt: string;
+  target?: string | null;
+  molecule?: string | null;
+  args?: string | null;
+  summary: {
+    created: number;
+    dispatched: number;
+    failed: number;
+  };
+  items: MayorRequestItem[];
+}
+
 /** GitHub author object (`author.login`). */
 export interface GitHubUser {
   login?: string;

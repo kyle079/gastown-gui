@@ -84,7 +84,7 @@ export function WorkSurface() {
       description="Operator triage board for convoys, queued beads, and the next move."
       actions={
         <>
-          <Button variant="default" size="sm" onClick={() => setDispatching(true)}>
+          <Button id="work-dispatch-btn" variant="default" size="sm" onClick={() => setDispatching(true)}>
             Dispatch
           </Button>
           <Button variant="primary" size="sm" onClick={() => setCreating(true)}>
